@@ -1928,6 +1928,7 @@ void OBSBasic::RemoveScene(OBSSource source)
 
 	QListWidgetItem *sel = nullptr;
 	int count = ui->scenes->count();
+
 	for (int i = 0; i < count; i++) {
 		auto item = ui->scenes->item(i);
 		auto cur_scene = GetOBSRef<OBSScene>(item);
@@ -2139,6 +2140,17 @@ void OBSBasic::DeactivateAudioSource(OBSSource source)
 
 bool OBSBasic::QueryRemoveSource(obs_source_t *source)
 {
+	if (obs_source_get_type(source) == OBS_SOURCE_TYPE_SCENE) {
+		int count = ui->scenes->count();
+
+		if (count == 1) {
+			QMessageBox::information(this,
+						QTStr("FinalScene.Title"),
+						QTStr("FinalScene.Text"));
+			return false;
+		}
+	}
+
 	const char *name  = obs_source_get_name(source);
 
 	QString text = QTStr("ConfirmRemove.Text");
@@ -2918,6 +2930,7 @@ void OBSBasic::changeEvent(QEvent *event)
 {
 	if (event->type() == QEvent::WindowStateChange &&
 	    isMinimized() &&
+	    trayIcon &&
 	    trayIcon->isVisible() &&
 	    sysTrayMinimizeToTray()) {
 
@@ -3337,6 +3350,19 @@ void OBSBasic::CreateSourcePopupMenu(QListWidgetItem *item, bool preview)
 	if (addSourceMenu)
 		popup.addMenu(addSourceMenu);
 
+	ui->actionCopyFilters->setEnabled(false);
+
+	popup.addSeparator();
+	popup.addAction(ui->actionCopySource);
+	popup.addAction(ui->actionPasteRef);
+	popup.addAction(ui->actionPasteDup);
+	popup.addSeparator();
+
+	popup.addSeparator();
+	popup.addAction(ui->actionCopyFilters);
+	popup.addAction(ui->actionPasteFilters);
+	popup.addSeparator();
+
 	if (item) {
 		if (addSourceMenu)
 			popup.addSeparator();
@@ -3383,6 +3409,8 @@ void OBSBasic::CreateSourcePopupMenu(QListWidgetItem *item, bool preview)
 				SLOT(OpenFilters()));
 		popup.addAction(QTStr("Properties"), this,
 				SLOT(on_actionSourceProperties_triggered()));
+
+		ui->actionCopyFilters->setEnabled(true);
 	}
 
 	popup.exec(QCursor::pos());
@@ -5259,4 +5287,61 @@ bool OBSBasic::sysTrayMinimizeToTray()
 {
 	return config_get_bool(GetGlobalConfig(),
 			"BasicWindow", "SysTrayMinimizeToTray");
+}
+
+void OBSBasic::on_actionCopySource_triggered()
+{
+	on_actionCopyTransform_triggered();
+
+	OBSSceneItem item = GetCurrentSceneItem();
+
+	if (!item)
+		return;
+
+	OBSSource source = obs_sceneitem_get_source(item);
+
+	copyString = obs_source_get_name(source);
+	copyVisible = obs_sceneitem_visible(item);
+
+	ui->actionPasteRef->setEnabled(true);
+	ui->actionPasteDup->setEnabled(true);
+}
+
+void OBSBasic::on_actionPasteRef_triggered()
+{
+	OBSBasicSourceSelect::SourcePaste(copyString, copyVisible, false);
+	on_actionPasteTransform_triggered();
+}
+
+void OBSBasic::on_actionPasteDup_triggered()
+{
+	OBSBasicSourceSelect::SourcePaste(copyString, copyVisible, true);
+	on_actionPasteTransform_triggered();
+}
+
+void OBSBasic::on_actionCopyFilters_triggered()
+{
+	OBSSceneItem item = GetCurrentSceneItem();
+
+	if (!item)
+		return;
+
+	OBSSource source = obs_sceneitem_get_source(item);
+
+	copyFiltersString = obs_source_get_name(source);
+
+	ui->actionPasteFilters->setEnabled(true);
+}
+
+void OBSBasic::on_actionPasteFilters_triggered()
+{
+	OBSSource source = obs_get_source_by_name(copyFiltersString);
+	OBSSceneItem sceneItem = GetCurrentSceneItem();
+
+	OBSSource dstSource = obs_sceneitem_get_source(sceneItem);
+
+	if (source == dstSource)
+		return;
+
+	obs_source_copy_filters(dstSource, source);
 }
