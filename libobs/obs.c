@@ -390,6 +390,7 @@ static int obs_init_video(struct obs_video_info *ovi)
 		return OBS_VIDEO_FAIL;
 
 	video->thread_initialized = true;
+	video->ovi = *ovi;
 	return OBS_VIDEO_SUCCESS;
 }
 
@@ -541,6 +542,7 @@ static bool obs_init_data(void)
 	assert(data != NULL);
 
 	pthread_mutex_init_value(&obs->data.displays_mutex);
+	pthread_mutex_init_value(&obs->data.draw_callbacks_mutex);
 
 	if (pthread_mutexattr_init(&attr) != 0)
 		return false;
@@ -557,6 +559,8 @@ static bool obs_init_data(void)
 	if (pthread_mutex_init(&data->encoders_mutex, &attr) != 0)
 		goto fail;
 	if (pthread_mutex_init(&data->services_mutex, &attr) != 0)
+		goto fail;
+	if (pthread_mutex_init(&obs->data.draw_callbacks_mutex, NULL) != 0)
 		goto fail;
 	if (!obs_view_init(&data->main_view))
 		goto fail;
@@ -613,6 +617,8 @@ static void obs_free_data(void)
 	pthread_mutex_destroy(&data->outputs_mutex);
 	pthread_mutex_destroy(&data->encoders_mutex);
 	pthread_mutex_destroy(&data->services_mutex);
+	pthread_mutex_destroy(&data->draw_callbacks_mutex);
+	da_free(data->draw_callbacks);
 }
 
 static const char *obs_signals[] = {
@@ -1008,28 +1014,11 @@ bool obs_reset_audio(const struct obs_audio_info *oai)
 bool obs_get_video_info(struct obs_video_info *ovi)
 {
 	struct obs_core_video *video = &obs->video;
-	const struct video_output_info *info;
 
 	if (!obs || !video->graphics)
 		return false;
 
-	info = video_output_get_info(video->video);
-	if (!info)
-		return false;
-
-	memset(ovi, 0, sizeof(struct obs_video_info));
-	ovi->base_width    = video->base_width;
-	ovi->base_height   = video->base_height;
-	ovi->gpu_conversion= video->gpu_conversion;
-	ovi->scale_type    = video->scale_type;
-	ovi->colorspace    = info->colorspace;
-	ovi->range         = info->range;
-	ovi->output_width  = info->width;
-	ovi->output_height = info->height;
-	ovi->output_format = info->format;
-	ovi->fps_num       = info->fps_num;
-	ovi->fps_den       = info->fps_den;
-
+	*ovi = video->ovi;
 	return true;
 }
 
@@ -1934,4 +1923,32 @@ void obs_get_audio_monitoring_device(const char **name, const char **id)
 		*name = obs->audio.monitoring_device_name;
 	if (id)
 		*id = obs->audio.monitoring_device_id;
+}
+
+void obs_add_main_render_callback(
+		void (*draw)(void *param, uint32_t cx, uint32_t cy),
+		void *param)
+{
+	if (!obs)
+		return;
+
+	struct draw_callback data = {draw, param};
+
+	pthread_mutex_lock(&obs->data.draw_callbacks_mutex);
+	da_push_back(obs->data.draw_callbacks, &data);
+	pthread_mutex_unlock(&obs->data.draw_callbacks_mutex);
+}
+
+void obs_remove_main_render_callback(
+		void (*draw)(void *param, uint32_t cx, uint32_t cy),
+		void *param)
+{
+	if (!obs)
+		return;
+
+	struct draw_callback data = {draw, param};
+
+	pthread_mutex_lock(&obs->data.draw_callbacks_mutex);
+	da_erase_item(obs->data.draw_callbacks, &data);
+	pthread_mutex_unlock(&obs->data.draw_callbacks_mutex);
 }

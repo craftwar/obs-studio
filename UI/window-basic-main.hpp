@@ -314,6 +314,8 @@ private:
 	int   programCX = 0, programCY = 0;
 	float programScale = 0.0f;
 
+	bool enableOutputs = true;
+
 	inline bool IsPreviewProgramMode() const
 	{
 		return os_atomic_load_bool(&previewProgramMode);
@@ -493,6 +495,11 @@ public:
 	void SaveService();
 	bool LoadService();
 
+	inline void EnableOutputs(bool enable)
+	{
+		enableOutputs = enable;
+	}
+
 	void ReorderSceneItem(obs_sceneitem_t *item, size_t idx);
 
 	QMenu *AddDeinterlacingMenu(obs_source_t *source);
@@ -605,6 +612,8 @@ private slots:
 	void on_transitionProps_clicked();
 
 	void on_modeSwitch_clicked();
+
+	void on_autoConfigure_triggered();
 
 	void logUploadFinished(const QString &text, const QString &error);
 

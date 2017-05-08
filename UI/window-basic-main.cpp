@@ -40,6 +40,7 @@
 #include "item-widget-helpers.hpp"
 #include "window-basic-settings.hpp"
 #include "window-namedialog.hpp"
+#include "window-basic-auto-config.hpp"
 #include "window-basic-source-select.hpp"
 #include "window-basic-main.hpp"
 #include "window-basic-main-outputs.hpp"
@@ -913,6 +914,17 @@ bool OBSBasic::InitBasicConfigDefaults()
 	uint32_t cx = primaryScreen->size().width();
 	uint32_t cy = primaryScreen->size().height();
 
+	bool oldResolutionDefaults = config_get_bool(App()->GlobalConfig(),
+			"General", "Pre19Defaults");
+
+	/* use 1920x1080 for new default base res if main monitor is above
+	 * 1920x1080, but don't apply for people from older builds -- only to
+	 * new users */
+	if (!oldResolutionDefaults && (cx * cy) > (1920 * 1080)) {
+		cx = 1920;
+		cy = 1080;
+	}
+
 	/* ----------------------------------------------------- */
 	/* move over mixer values in advanced if older config */
 	if (config_has_user_value(basicConfig, "AdvOut", "RecTrackIndex") &&
@@ -996,6 +1008,14 @@ bool OBSBasic::InitBasicConfigDefaults()
 	config_set_default_uint  (basicConfig, "Video", "BaseCX",   cx);
 	config_set_default_uint  (basicConfig, "Video", "BaseCY",   cy);
 
+	/* don't allow BaseCX/BaseCY to be susceptible to defaults changing */
+	if (!config_has_user_value(basicConfig, "Video", "BaseCX") ||
+	    !config_has_user_value(basicConfig, "Video", "BaseCY")) {
+		config_set_uint(basicConfig, "Video", "BaseCX", cx);
+		config_set_uint(basicConfig, "Video", "BaseCY", cy);
+		config_save_safe(basicConfig, "tmp", nullptr);
+	}
+
 	config_set_default_string(basicConfig, "Output", "FilenameFormatting",
 			"%CCYY-%MM-%DD %hh-%mm-%ss");
 
@@ -1027,6 +1047,15 @@ bool OBSBasic::InitBasicConfigDefaults()
 
 	config_set_default_uint  (basicConfig, "Video", "OutputCX", scale_cx);
 	config_set_default_uint  (basicConfig, "Video", "OutputCY", scale_cy);
+
+	/* don't allow OutputCX/OutputCY to be susceptible to defaults
+	 * changing */
+	if (!config_has_user_value(basicConfig, "Video", "OutputCX") ||
+	    !config_has_user_value(basicConfig, "Video", "OutputCY")) {
+		config_set_uint(basicConfig, "Video", "OutputCX", scale_cx);
+		config_set_uint(basicConfig, "Video", "OutputCY", scale_cy);
+		config_save_safe(basicConfig, "tmp", nullptr);
+	}
 
 	config_set_default_uint  (basicConfig, "Video", "FPSType", 0);
 	config_set_default_string(basicConfig, "Video", "FPSCommon", "30");
@@ -1394,6 +1423,36 @@ void OBSBasic::OBSInit()
 	SystemTray(true);
 
 	OpenSavedProjectors();
+
+	bool has_last_version = config_has_user_value(App()->GlobalConfig(),
+			"General", "LastVersion");
+	bool first_run = config_get_bool(App()->GlobalConfig(), "General",
+			"FirstRun");
+
+	if (!first_run) {
+		config_set_bool(App()->GlobalConfig(), "General", "FirstRun",
+				true);
+		config_save_safe(App()->GlobalConfig(), "tmp", nullptr);
+	}
+
+	if (!first_run && !has_last_version && !Active()) {
+		QString msg;
+		msg = QTStr("Basic.FirstStartup.RunWizard");
+		msg += "\n\n";
+		msg += QTStr("Basic.FirstStartup.RunWizard.BetaWarning");
+
+		QMessageBox::StandardButton button =
+			QMessageBox::question(this, QTStr("Basic.AutoConfig"),
+					msg);
+
+		if (button == QMessageBox::Yes) {
+			on_autoConfigure_triggered();
+		} else {
+			msg = QTStr("Basic.FirstStartup.RunWizard.NoClicked");
+			QMessageBox::information(this,
+					QTStr("Basic.AutoConfig"), msg);
+		}
+	}
 }
 
 void OBSBasic::InitHotkeys()
@@ -3881,6 +3940,8 @@ void OBSBasic::StartStreaming()
 {
 	if (outputHandler->StreamingActive())
 		return;
+	if (!enableOutputs)
+		return;
 
 	if (api)
 		api->on_event(OBS_FRONTEND_EVENT_STREAMING_STARTING);
@@ -3946,6 +4007,7 @@ inline void OBSBasic::OnActivate()
 {
 	if (ui->profileMenu->isEnabled()) {
 		ui->profileMenu->setEnabled(false);
+		ui->autoConfigure->setEnabled(false);
 		App()->IncrementSleepInhibition();
 		UpdateProcessPriority();
 
@@ -3958,6 +4020,7 @@ inline void OBSBasic::OnDeactivate()
 {
 	if (!outputHandler->Active() && !ui->profileMenu->isEnabled()) {
 		ui->profileMenu->setEnabled(true);
+		ui->autoConfigure->setEnabled(true);
 		App()->DecrementSleepInhibition();
 		ClearProcessPriority();
 
@@ -4158,6 +4221,8 @@ void OBSBasic::StartRecording()
 {
 	if (outputHandler->RecordingActive())
 		return;
+	if (!enableOutputs)
+		return;
 
 	if (api)
 		api->on_event(OBS_FRONTEND_EVENT_RECORDING_STARTING);
@@ -4257,6 +4322,8 @@ void OBSBasic::StartReplayBuffer()
 	if (!outputHandler || !outputHandler->replayBuffer)
 		return;
 	if (outputHandler->ReplayBufferActive())
+		return;
+	if (!enableOutputs)
 		return;
 
 	obs_output_t *output = outputHandler->replayBuffer;
@@ -5410,4 +5477,12 @@ void OBSBasic::on_actionPasteFilters_triggered()
 		return;
 
 	obs_source_copy_filters(dstSource, source);
+}
+
+void OBSBasic::on_autoConfigure_triggered()
+{
+	AutoConfig test(this);
+	test.setModal(true);
+	test.show();
+	test.exec();
 }

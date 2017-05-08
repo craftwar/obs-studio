@@ -275,6 +275,8 @@ struct obs_core_video {
 	gs_effect_t                     *deinterlace_blend_2x_effect;
 	gs_effect_t                     *deinterlace_yadif_effect;
 	gs_effect_t                     *deinterlace_yadif_2x_effect;
+
+	struct obs_video_info           ovi;
 };
 
 struct audio_monitor;
@@ -313,6 +315,8 @@ struct obs_core_data {
 	pthread_mutex_t                 encoders_mutex;
 	pthread_mutex_t                 services_mutex;
 	pthread_mutex_t                 audio_sources_mutex;
+	pthread_mutex_t                 draw_callbacks_mutex;
+	DARRAY(struct draw_callback)    draw_callbacks;
 
 	struct obs_view                 main_view;
 
@@ -830,7 +834,6 @@ struct obs_output {
 	uint32_t                        starting_drawn_count;
 	uint32_t                        starting_lagged_count;
 	uint32_t                        starting_frame_count;
-	uint32_t                        starting_skipped_frame_count;
 
 	int                             total_frames;
 

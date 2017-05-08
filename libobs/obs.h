@@ -591,6 +591,13 @@ EXPORT void obs_enum_audio_monitoring_devices(obs_enum_audio_device_cb cb,
 EXPORT bool obs_set_audio_monitoring_device(const char *name, const char *id);
 EXPORT void obs_get_audio_monitoring_device(const char **name, const char **id);
 
+EXPORT void obs_add_main_render_callback(
+		void (*draw)(void *param, uint32_t cx, uint32_t cy),
+		void *param);
+EXPORT void obs_remove_main_render_callback(
+		void (*draw)(void *param, uint32_t cx, uint32_t cy),
+		void *param);
+
 
 /* ------------------------------------------------------------------------- */
 /* View context */
@@ -1489,6 +1496,7 @@ EXPORT void obs_output_output_caption_text1(obs_output_t *output,
 #endif
 
 EXPORT float obs_output_get_congestion(obs_output_t *output);
+EXPORT int obs_output_get_connect_time_ms(obs_output_t *output);
 
 /* ------------------------------------------------------------------------- */
 /* Functions used by outputs */
