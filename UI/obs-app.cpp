@@ -69,6 +69,8 @@ bool opt_start_recording = false;
 bool opt_studio_mode = false;
 bool opt_start_replaybuffer = false;
 bool opt_minimize_tray = false;
+bool opt_allow_opengl = false;
+bool opt_always_on_top = false;
 string opt_starting_collection;
 string opt_starting_profile;
 string opt_starting_scene;
@@ -408,6 +410,11 @@ bool OBSApp::InitGlobalConfigDefaults()
 	config_set_default_bool(globalConfig, "BasicWindow",
 			"ShowStatusBar", true);
 
+#ifdef _WIN32
+	config_set_default_bool(globalConfig, "Audio", "DisableAudioDucking",
+			true);
+#endif
+
 #ifdef __APPLE__
 	config_set_default_bool(globalConfig, "Video", "DisableOSXVSync", true);
 	config_set_default_bool(globalConfig, "Video", "ResetOSXVSyncOnExit",
@@ -576,6 +583,7 @@ static string GetSceneCollectionFileFromName(const char *name)
 bool OBSApp::InitGlobalConfig()
 {
 	char path[512];
+	bool changed = false;
 
 	int len = GetConfigPath(path, sizeof(path),
 			"obs-studio/global.ini");
@@ -599,6 +607,7 @@ bool OBSApp::InitGlobalConfig()
 			config_set_string(globalConfig,
 					"Basic", "SceneCollectionFile",
 					path.c_str());
+			changed = true;
 		}
 	}
 
@@ -610,8 +619,23 @@ bool OBSApp::InitGlobalConfig()
 					opt_starting_profile.c_str());
 			config_set_string(globalConfig, "Basic", "ProfileDir",
 					path.c_str());
+			changed = true;
 		}
 	}
+
+	if (!config_has_user_value(globalConfig, "General", "OldDefaults")) {
+		uint32_t lastVersion = config_get_int(globalConfig, "General",
+				"LastVersion");
+		bool useOldDefaults = lastVersion &&
+		    lastVersion < MAKE_SEMANTIC_VERSION(19, 0, 0);
+
+		config_set_bool(globalConfig, "General", "Pre19Defaults",
+				useOldDefaults);
+		changed = true;
+	}
+
+	if (changed)
+		config_save_safe(globalConfig, "tmp", nullptr);
 
 	return InitGlobalConfigDefaults();
 }
@@ -731,6 +755,13 @@ OBSApp::OBSApp(int &argc, char **argv, profiler_name_store_t *store)
 
 OBSApp::~OBSApp()
 {
+#ifdef _WIN32
+	bool disableAudioDucking = config_get_bool(globalConfig, "Audio",
+			"DisableAudioDucking");
+	if (disableAudioDucking)
+		DisableAudioDucking(false);
+#endif
+
 #ifdef __APPLE__
 	bool vsyncDiabled = config_get_bool(globalConfig, "Video",
 			"DisableOSXVSync");
@@ -848,6 +879,13 @@ void OBSApp::AppInit()
 			Str("Untitled"));
 	config_set_default_string(globalConfig, "Basic", "SceneCollectionFile",
 			Str("Untitled"));
+
+#ifdef _WIN32
+	bool disableAudioDucking = config_get_bool(globalConfig, "Audio",
+			"DisableAudioDucking");
+	if (disableAudioDucking)
+		DisableAudioDucking(true);
+#endif
 
 #ifdef __APPLE__
 	if (config_get_bool(globalConfig, "Video", "DisableOSXVSync"))
@@ -1302,7 +1340,7 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 	return ret;
 }
 
-#define MAX_CRASH_REPORT_SIZE (50 * 1024)
+#define MAX_CRASH_REPORT_SIZE (150 * 1024)
 
 #ifdef _WIN32
 
@@ -1756,6 +1794,9 @@ int main(int argc, char *argv[])
 		} else if (arg_is(argv[i], "--verbose", nullptr)) {
 			log_verbose = true;
 
+		} else if (arg_is(argv[i], "--always-on-top", nullptr)) {
+			opt_always_on_top = true;
+
 		} else if (arg_is(argv[i], "--unfiltered_log", nullptr)) {
 			unfiltered_log = true;
 
@@ -1783,6 +1824,9 @@ int main(int argc, char *argv[])
 		} else if (arg_is(argv[i], "--studio-mode", nullptr)) {
 			opt_studio_mode = true;
 
+		} else if (arg_is(argv[i], "--allow-opengl", nullptr)) {
+			opt_allow_opengl = true;
+
 		} else if (arg_is(argv[i], "--help", "-h")) {
 			std::cout <<
 			"--help, -h: Get list of available commands.\n\n" << 
@@ -1797,7 +1841,9 @@ int main(int argc, char *argv[])
 			"--minimize-to-tray: Minimize to system tray.\n" <<
 			"--portable, -p: Use portable mode.\n\n" <<
 			"--verbose: Make log more verbose.\n" <<
+			"--always-on-top: Start in 'always on top' mode.\n\n" <<
 			"--unfiltered_log: Make log unfiltered.\n\n" <<
+			"--allow-opengl: Allow OpenGL on Windows.\n\n" <<
 			"--version, -V: Get current version.\n";
 
 			exit(0);

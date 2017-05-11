@@ -119,6 +119,10 @@ private:
 	bool projectChanged = false;
 	bool previewEnabled = true;
 
+	const char *copyString;
+	const char *copyFiltersString;
+	bool copyVisible = true;
+
 	QPointer<QThread> updateCheckThread;
 	QPointer<QThread> logUploadThread;
 
@@ -154,6 +158,7 @@ private:
 	ConfigFile    basicConfig;
 
 	QPointer<QWidget> projectors[10];
+	QList<QPointer<QWidget>> windowProjectors;
 
 	QPointer<QMenu> startStreamMenu;
 
@@ -229,7 +234,8 @@ private:
 	void ClearSceneData();
 
 	void Nudge(int dist, MoveDir dir);
-	void OpenProjector(obs_source_t *source, int monitor);
+	void OpenProjector(obs_source_t *source, int monitor, bool window,
+			QString title = nullptr);
 
 	void GetAudioSourceFilters();
 	void GetAudioSourceProperties();
@@ -307,6 +313,8 @@ private:
 	int   programX = 0,  programY = 0;
 	int   programCX = 0, programCY = 0;
 	float programScale = 0.0f;
+
+	bool enableOutputs = true;
 
 	inline bool IsPreviewProgramMode() const
 	{
@@ -413,6 +421,13 @@ private slots:
 
 	void ToggleShowHide();
 
+	void on_actionCopySource_triggered();
+	void on_actionPasteRef_triggered();
+	void on_actionPasteDup_triggered();
+
+	void on_actionCopyFilters_triggered();
+	void on_actionPasteFilters_triggered();
+
 private:
 	/* OBS Callbacks */
 	static void SceneReordered(void *data, calldata_t *params);
@@ -479,6 +494,11 @@ public:
 
 	void SaveService();
 	bool LoadService();
+
+	inline void EnableOutputs(bool enable)
+	{
+		enableOutputs = enable;
+	}
 
 	void ReorderSceneItem(obs_sceneitem_t *item, size_t idx);
 
@@ -593,6 +613,8 @@ private slots:
 
 	void on_modeSwitch_clicked();
 
+	void on_autoConfigure_triggered();
+
 	void logUploadFinished(const QString &text, const QString &error);
 
 	void updateCheckFinished();
@@ -624,6 +646,10 @@ private slots:
 	void OpenPreviewProjector();
 	void OpenSourceProjector();
 	void OpenSceneProjector();
+
+	void OpenPreviewWindow();
+	void OpenSourceWindow();
+	void OpenSceneWindow();
 
 public slots:
 	void on_actionResetTransform_triggered();
