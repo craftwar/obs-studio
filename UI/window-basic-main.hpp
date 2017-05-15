@@ -282,6 +282,7 @@ private:
 	void RemoveQuickTransitionHotkey(QuickTransition *qt);
 	void LoadQuickTransitions(obs_data_array_t *array);
 	obs_data_array_t *SaveQuickTransitions();
+	void ClearQuickTransitionWidgets();
 	void RefreshQuickTransitions();
 	void CreateDefaultQuickTransitions();
 
@@ -362,7 +363,7 @@ public slots:
 
 	void StreamingStart();
 	void StreamStopping();
-	void StreamingStop(int errorcode);
+	void StreamingStop(int errorcode, QString last_error);
 
 	void StartRecording();
 	void StopRecording();
