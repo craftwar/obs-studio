@@ -427,14 +427,14 @@ static bool mp_media_reset(mp_media_t *m)
 	m->eof = false;
 	m->base_ts += next_ts;
 
-	if (!mp_media_prepare_frames(m))
-		return false;
-
 	pthread_mutex_lock(&m->mutex);
 	stopping = m->stopping;
 	active = m->active;
 	m->stopping = false;
 	pthread_mutex_unlock(&m->mutex);
+
+	if (!mp_media_prepare_frames(m))
+		return false;
 
 	if (active) {
 		if (!m->play_sys_ts)
@@ -455,12 +455,25 @@ static bool mp_media_reset(mp_media_t *m)
 	return true;
 }
 
-static inline void mp_media_sleepto(mp_media_t *m)
+static inline bool mp_media_sleepto(mp_media_t *m)
 {
-	if (!m->next_ns)
+	bool timeout = false;
+
+	if (!m->next_ns) {
 		m->next_ns = os_gettime_ns();
-	else
-		os_sleepto_ns(m->next_ns);
+	} else {
+		uint64_t t = os_gettime_ns();
+		const uint64_t timeout_ns = 200000000;
+
+		if (m->next_ns > t && (m->next_ns - t) > timeout_ns) {
+			os_sleepto_ns(t + timeout_ns);
+			timeout = true;
+		} else {
+			os_sleepto_ns(m->next_ns);
+		}
+	}
+
+	return timeout;
 }
 
 static inline bool mp_media_eof(mp_media_t *m)
@@ -486,6 +499,23 @@ static inline bool mp_media_eof(mp_media_t *m)
 	return eof;
 }
 
+static int interrupt_callback(void *data)
+{
+	mp_media_t *m = data;
+	bool stop = false;
+	uint64_t ts = os_gettime_ns();
+
+	if ((ts - m->interrupt_poll_ts) > 20000000) {
+		pthread_mutex_lock(&m->mutex);
+		stop = m->kill || m->stopping;
+		pthread_mutex_unlock(&m->mutex);
+
+		m->interrupt_poll_ts = ts;
+	}
+
+	return stop;
+}
+
 static bool init_avformat(mp_media_t *m)
 {
 	AVInputFormat *format = NULL;
@@ -500,6 +530,10 @@ static bool init_avformat(mp_media_t *m)
 	AVDictionary *opts = NULL;
 	if (m->buffering && m->is_network)
 		av_dict_set_int(&opts, "buffer_size", m->buffering, 0);
+
+	m->fmt = avformat_alloc_context();
+	m->fmt->interrupt_callback.callback = interrupt_callback;
+	m->fmt->interrupt_callback.opaque = m;
 
 	int ret = avformat_open_input(&m->fmt, m->path, format,
 			opts ? &opts : NULL);
@@ -541,6 +575,7 @@ static inline bool mp_media_thread(mp_media_t *m)
 
 	for (;;) {
 		bool reset, kill, is_active;
+		bool timeout = false;
 
 		pthread_mutex_lock(&m->mutex);
 		is_active = m->active;
@@ -550,7 +585,7 @@ static inline bool mp_media_thread(mp_media_t *m)
 			if (os_sem_wait(m->sem) < 0)
 				return false;
 		} else {
-			mp_media_sleepto(m);
+			timeout = mp_media_sleepto(m);
 		}
 
 		pthread_mutex_lock(&m->mutex);
@@ -571,7 +606,7 @@ static inline bool mp_media_thread(mp_media_t *m)
 		}
 
 		/* frames are ready */
-		if (is_active) {
+		if (is_active && !timeout) {
 			if (m->has_video)
 				mp_media_next_video(m, false);
 			if (m->has_audio)
@@ -695,9 +730,9 @@ void mp_media_free(mp_media_t *media)
 	mp_kill_thread(media);
 	mp_decode_free(&media->v);
 	mp_decode_free(&media->a);
+	avformat_close_input(&media->fmt);
 	pthread_mutex_destroy(&media->mutex);
 	os_sem_destroy(media->sem);
-	avformat_close_input(&media->fmt);
 	sws_freeContext(media->swscale);
 	av_freep(&media->scale_pic[0]);
 	bfree(media->path);
