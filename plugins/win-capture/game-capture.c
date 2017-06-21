@@ -910,8 +910,6 @@ static const char *blacklisted_exes[] = {
 	"origin",
 	"devenv",
 	"taskmgr",
-	"chrome",
-	"firefox",
 	"systemsettings",
 	"applicationframehost",
 	"cmd",
