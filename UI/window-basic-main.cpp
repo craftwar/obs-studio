@@ -1431,6 +1431,9 @@ void OBSBasic::OBSInit()
 
 	OpenSavedProjectors();
 
+	if (windowState().testFlag(Qt::WindowFullScreen))
+		fullscreenInterface = true;
+
 	bool has_last_version = config_has_user_value(App()->GlobalConfig(),
 			"General", "LastVersion");
 	bool first_run = config_get_bool(App()->GlobalConfig(), "General",
@@ -5177,6 +5180,16 @@ void OBSBasic::RemoveSavedProjectors(int monitor)
 	projectorArray.at((size_t)monitor) = "";
 }
 
+void OBSBasic::on_actionFullscreenInterface_triggered()
+{
+	if (!fullscreenInterface)
+		showFullScreen();
+	else
+		showNormal();
+
+	fullscreenInterface = !fullscreenInterface;
+}
+
 void OBSBasic::UpdateTitleBar()
 {
 	stringstream name;
@@ -5396,8 +5409,13 @@ void OBSBasic::SystemTrayInit()
 	connect(exit, SIGNAL(triggered()),
 			this, SLOT(close()));
 
+	QMenu *previewProjector = new QMenu(QTStr("PreviewProjector"));
+	AddProjectorMenuMonitors(previewProjector, this,
+			SLOT(OpenPreviewProjector()));
+
 	trayMenu = new QMenu;
 	trayMenu->addAction(showHide);
+	trayMenu->addMenu(previewProjector);
 	trayMenu->addAction(sysTrayStream);
 	trayMenu->addAction(sysTrayRecord);
 	trayMenu->addAction(sysTrayReplayBuffer);
