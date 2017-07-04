@@ -737,14 +737,19 @@ bool OBSApp::SetTheme(std::string name, std::string path)
 bool OBSApp::InitTheme()
 {
 	const char *themeName = config_get_string(globalConfig, "General",
-			"Theme");
+			"CurrentTheme");
+	if (!themeName) {
+		/* Use deprecated "Theme" value if available */
+		themeName = config_get_string(globalConfig,
+				"General", "Theme");
+		if (!themeName)
+			themeName = "Default";
+	}
 
-	if (!themeName)
-		themeName = "Default";
+	if (strcmp(themeName, "Default") != 0 && SetTheme(themeName))
+		return true;
 
-	stringstream t;
-	t << themeName;
-	return SetTheme(t.str());
+	return SetTheme("Default");
 }
 
 OBSApp::OBSApp(int &argc, char **argv, profiler_name_store_t *store)
