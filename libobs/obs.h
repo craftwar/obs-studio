@@ -1524,6 +1524,11 @@ EXPORT bool obs_output_reconnecting(const obs_output_t *output);
 EXPORT void obs_output_set_last_error(obs_output_t *output,
 		const char *message);
 
+EXPORT const char *obs_output_get_supported_video_codecs(
+		const obs_output_t *output);
+EXPORT const char *obs_output_get_supported_audio_codecs(
+		const obs_output_t *output);
+
 /* ------------------------------------------------------------------------- */
 /* Functions used by outputs */
 
@@ -1803,6 +1808,10 @@ EXPORT void obs_service_apply_encoder_settings(obs_service_t *service,
 EXPORT void *obs_service_get_type_data(obs_service_t *service);
 
 EXPORT const char *obs_service_get_id(const obs_service_t *service);
+
+/* NOTE: This function is temporary and should be removed/replaced at a later
+ * date. */
+EXPORT const char *obs_service_get_output_type(const obs_service_t *service);
 
 
 /* ------------------------------------------------------------------------- */
