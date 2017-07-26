@@ -486,7 +486,10 @@ static inline void render_item(struct obs_scene_item *item)
 					-(float)item->crop.top,
 					0.0f);
 
+			gs_blend_state_push();
+			gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 			obs_source_video_render(item->source);
+			gs_blend_state_pop();
 			gs_texrender_end(item->item_render);
 		}
 	}
@@ -1117,6 +1120,14 @@ obs_scene_t *obs_scene_duplicate(obs_scene_t *scene, const char *name,
 			new_item->bounds = item->bounds;
 
 			obs_sceneitem_set_crop(new_item, &item->crop);
+
+			if (!new_item->item_render &&
+			    item_texture_enabled(new_item)) {
+				obs_enter_graphics();
+				new_item->item_render = gs_texrender_create(
+						GS_RGBA, GS_ZS_NONE);
+				obs_leave_graphics();
+			}
 
 			obs_source_release(source);
 		}
