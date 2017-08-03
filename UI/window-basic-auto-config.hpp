@@ -34,7 +34,6 @@ class AutoConfig : public QWizard {
 	enum class Service {
 		Twitch,
 		Hitbox,
-		Beam,
 		Other
 	};
 
@@ -88,6 +87,7 @@ class AutoConfig : public QWizard {
 	bool customServer = false;
 	bool bandwidthTest = false;
 	bool testRegions = true;
+	bool twitchAuto = false;
 	bool regionUS = true;
 	bool regionEU = true;
 	bool regionAsia = true;

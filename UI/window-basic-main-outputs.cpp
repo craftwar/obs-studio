@@ -555,20 +555,17 @@ void SimpleOutput::UpdateStreamingSettings_amd(obs_data_t *settings,
 	// Static Properties
 	obs_data_set_int(settings, "Usage", 0);
 	obs_data_set_int(settings, "Profile", 100); // High
-	obs_data_set_string(settings, "profile", "high"); // High
-	
+
 	// Rate Control Properties
-	obs_data_set_int(settings, "RateControlMethod", 1);
-	obs_data_set_string(settings, "rate_control", "CBR");
+	obs_data_set_int(settings, "RateControlMethod", 3);
 	obs_data_set_int(settings, "Bitrate.Target", bitrate);
-	obs_data_set_int(settings, "bitrate", bitrate);
 	obs_data_set_int(settings, "FillerData", 1);
 	obs_data_set_int(settings, "VBVBuffer", 1);
 	obs_data_set_int(settings, "VBVBuffer.Size", bitrate);
-	
+
 	// Picture Control Properties
 	obs_data_set_double(settings, "KeyframeInterval", 2.0);
-	obs_data_set_int(settings, "keyint_sec", 2);
+	obs_data_set_int(settings, "BFrame.Pattern", 0);
 }
 
 void SimpleOutput::UpdateRecordingSettings_amd_cqp(int cqp)
@@ -578,11 +575,9 @@ void SimpleOutput::UpdateRecordingSettings_amd_cqp(int cqp)
 	// Static Properties
 	obs_data_set_int(settings, "Usage", 0);
 	obs_data_set_int(settings, "Profile", 100); // High
-	obs_data_set_string(settings, "profile", "high"); // High
 
 	// Rate Control Properties
 	obs_data_set_int(settings, "RateControlMethod", 0);
-	obs_data_set_string(settings, "rate_control", "CQP");
 	obs_data_set_int(settings, "QP.IFrame", cqp);
 	obs_data_set_int(settings, "QP.PFrame", cqp);
 	obs_data_set_int(settings, "QP.BFrame", cqp);
@@ -591,7 +586,7 @@ void SimpleOutput::UpdateRecordingSettings_amd_cqp(int cqp)
 
 	// Picture Control Properties
 	obs_data_set_double(settings, "KeyframeInterval", 2.0);
-	obs_data_set_int(settings, "keyint_sec", 2);
+	obs_data_set_int(settings, "BFrame.Pattern", 0);
 
 	// Update and release
 	obs_encoder_update(h264Recording, settings);
@@ -689,6 +684,9 @@ bool SimpleOutput::StartStreaming(obs_service_t *service)
 
 		const char *codec =
 			obs_output_get_supported_audio_codecs(streamOutput);
+		if (!codec) {
+			return false;
+		}
 
 		if (strcmp(codec, "aac") != 0) {
 			const char *id = FindAudioEncoderFromCodec(codec);
@@ -1381,6 +1379,9 @@ bool AdvancedOutput::StartStreaming(obs_service_t *service)
 
 		const char *codec =
 			obs_output_get_supported_audio_codecs(streamOutput);
+		if (!codec) {
+			return false;
+		}
 
 		if (strcmp(codec, "aac") == 0) {
 			streamAudioEnc = aacTrack[trackIndex - 1];
