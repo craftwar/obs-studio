@@ -834,7 +834,7 @@ bool SimpleOutput::ConfigureRecording(bool updateReplayBuffer)
 	int rbSize = config_get_int(main->Config(), "SimpleOutput",
 			"RecRBSize");
 
-	os_dir_t *dir = path ? os_opendir(path) : nullptr;
+	os_dir_t *dir = path && path[0] ? os_opendir(path) : nullptr;
 
 	if (!dir) {
 		if (main->isVisible())
@@ -910,9 +910,15 @@ bool SimpleOutput::StartRecording()
 	if (!ConfigureRecording(false))
 		return false;
 	if (!obs_output_start(fileOutput))  {
+		QString error_reason;
+		const char *error = obs_output_get_last_error(fileOutput);
+		if (error)
+			error_reason = QT_UTF8(error);
+		else
+			error_reason = QTStr("Output.StartFailedGeneric");
 		QMessageBox::critical(main,
-				QTStr("Output.StartRecordingFailed"),
-				QTStr("Output.StartFailedGeneric"));
+			QTStr("Output.StartRecordingFailed"),
+			error_reason);
 		return false;
 	}
 
@@ -1489,7 +1495,7 @@ bool AdvancedOutput::StartRecording()
 				"FFFileNameWithoutSpace" :
 				"RecFileNameWithoutSpace");
 
-		os_dir_t *dir = path ? os_opendir(path) : nullptr;
+		os_dir_t *dir = path && path[0] ? os_opendir(path) : nullptr;
 
 		if (!dir) {
 			if (main->isVisible())
@@ -1528,9 +1534,15 @@ bool AdvancedOutput::StartRecording()
 	}
 
 	if (!obs_output_start(fileOutput)) {
+		QString error_reason;
+		const char *error = obs_output_get_last_error(fileOutput);
+		if (error)
+			error_reason = QT_UTF8(error);
+		else
+			error_reason = QTStr("Output.StartFailedGeneric");
 		QMessageBox::critical(main,
 				QTStr("Output.StartRecordingFailed"),
-				QTStr("Output.StartFailedGeneric"));
+				error_reason);
 		return false;
 	}
 
