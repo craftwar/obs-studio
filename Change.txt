@@ -1,0 +1,15 @@
+Changes on OBS made by caftwar
+
+cmake
+-DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true
+-DBUILDER_CA_ENCODER=false會被無視，只能直接改
+\plugins
+\UI 拿掉frontend-plugins
+
+\obs-studio\plugins\win-capture\
+window-helpers.c
+PSAPI_VERSION=1拿掉，用新版PSAPI要win7以後系統才能用 (改用kernel function，效能較好)
+
+game-capture.c
+static const char *blacklisted_exes[]  拿掉firefox黑名單 (抓firefox會出事嗎?)
+chrome無法用game capture，放回黑名單
