@@ -1775,7 +1775,7 @@ static void game_capture_defaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, SETTING_CURSOR, true);
 	obs_data_set_default_bool(settings, SETTING_TRANSPARENCY, false);
 	obs_data_set_default_string(settings, SETTING_SCALE_RES, "0x0");
-	obs_data_set_default_bool(settings, SETTING_LIMIT_FRAMERATE, false);
+	obs_data_set_default_bool(settings, SETTING_LIMIT_FRAMERATE, true);
 	obs_data_set_default_bool(settings, SETTING_CAPTURE_OVERLAYS, false);
 	obs_data_set_default_bool(settings, SETTING_ANTI_CHEAT_HOOK, true);
 }
