@@ -151,23 +151,6 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	ui->sources->setItemDelegate(new VisibilityItemDelegate(ui->sources));
 
-	const char *geometry = config_get_string(App()->GlobalConfig(),
-			"BasicWindow", "geometry");
-	if (geometry != NULL) {
-		QByteArray byteArray = QByteArray::fromBase64(
-				QByteArray(geometry));
-		restoreGeometry(byteArray);
-
-		QRect windowGeometry = normalGeometry();
-		if (!WindowPositionValid(windowGeometry)) {
-			QRect rect = App()->desktop()->geometry();
-			setGeometry(QStyle::alignedRect(
-						Qt::LeftToRight,
-						Qt::AlignCenter,
-						size(), rect));
-		}
-	}
-
 	char styleSheetPath[512];
 	int ret = GetProfilePath(styleSheetPath, sizeof(styleSheetPath),
 			"stylesheet.qss");
@@ -286,6 +269,31 @@ OBSBasic::OBSBasic(QWidget *parent)
 	assignDockToggle(ui->mixerDock, ui->toggleMixer);
 	assignDockToggle(ui->transitionsDock, ui->toggleTransitions);
 	assignDockToggle(ui->controlsDock, ui->toggleControls);
+
+	//hide all docking panes
+	ui->toggleScenes->setChecked(false);
+	ui->toggleSources->setChecked(false);
+	ui->toggleMixer->setChecked(false);
+	ui->toggleTransitions->setChecked(false);
+	ui->toggleControls->setChecked(false);
+
+	//restore parent window geometry
+	const char *geometry = config_get_string(App()->GlobalConfig(),
+			"BasicWindow", "geometry");
+	if (geometry != NULL) {
+		QByteArray byteArray = QByteArray::fromBase64(
+				QByteArray(geometry));
+		restoreGeometry(byteArray);
+
+		QRect windowGeometry = normalGeometry();
+		if (!WindowPositionValid(windowGeometry)) {
+			QRect rect = App()->desktop()->geometry();
+			setGeometry(QStyle::alignedRect(
+						Qt::LeftToRight,
+						Qt::AlignCenter,
+						size(), rect));
+		}
+	}
 }
 
 static void SaveAudioDevice(const char *name, int channel, obs_data_t *parent,
@@ -2327,12 +2335,25 @@ void OBSBasic::VolControlContextMenu()
 void OBSBasic::on_mixerScrollArea_customContextMenuRequested()
 {
 	QAction unhideAllAction(QTStr("UnhideAll"), this);
+
+	QAction advPropAction(QTStr("Basic.MainMenu.Edit.AdvAudio"), this);
+
+	/* ------------------- */
+
 	connect(&unhideAllAction, &QAction::triggered,
 			this, &OBSBasic::UnhideAllAudioControls,
 			Qt::DirectConnection);
 
+	connect(&advPropAction, &QAction::triggered,
+			this, &OBSBasic::on_actionAdvAudioProperties_triggered,
+			Qt::DirectConnection);
+
+	/* ------------------- */
+
 	QMenu popup(this);
 	popup.addAction(&unhideAllAction);
+	popup.addSeparator();
+	popup.addAction(&advPropAction);
 	popup.exec(QCursor::pos());
 }
 
