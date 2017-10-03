@@ -1062,6 +1062,10 @@ static inline size_t conv_time_to_frames(const size_t sample_rate,
 /* maximum buffer size */
 #define MAX_BUF_SIZE        (1000 * AUDIO_OUTPUT_FRAMES * sizeof(float))
 
+/* time threshold in nanoseconds to ensure audio timing is as seamless as
+ * possible */
+#define TS_SMOOTHING_THRESHOLD 70000000ULL
+
 static inline void reset_audio_timing(obs_source_t *source, uint64_t timestamp,
 		uint64_t os_time)
 {
@@ -1672,7 +1676,7 @@ static void obs_source_update_async_video(obs_source_t *source)
 		source->async_rendered = true;
 		if (frame) {
 			source->timing_adjust =
-				os_gettime_ns() - frame->timestamp;
+				obs->video.video_time - frame->timestamp;
 			source->timing_set = true;
 
 			if (source->async_update_texture) {
