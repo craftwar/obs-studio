@@ -1,3 +1,5 @@
+version: '{build}'
+image: Visual Studio 2015
 environment:
   CURL_VERSION: 7.39.0
 
