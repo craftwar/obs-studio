@@ -841,12 +841,14 @@ retryScene:
 		opt_starting_scene.clear();
 
 	if (opt_start_streaming) {
+		blog(LOG_INFO, "Starting stream due to command line parameter");
 		QMetaObject::invokeMethod(this, "StartStreaming",
 				Qt::QueuedConnection);
 		opt_start_streaming = false;
 	}
 
 	if (opt_start_recording) {
+		blog(LOG_INFO, "Starting recording due to command line parameter");
 		QMetaObject::invokeMethod(this, "StartRecording",
 				Qt::QueuedConnection);
 		opt_start_recording = false;
@@ -1632,11 +1634,12 @@ void OBSBasic::CreateHotkeys()
 		obs_data_array_release(array1);
 	};
 
-#define MAKE_CALLBACK(pred, method) \
+#define MAKE_CALLBACK(pred, method, log_action) \
 	[](void *data, obs_hotkey_pair_id, obs_hotkey_t*, bool pressed) \
 	{ \
 		OBSBasic &basic = *static_cast<OBSBasic*>(data); \
 		if (pred && pressed) { \
+			blog(LOG_INFO, log_action " due to hotkey"); \
 			method(); \
 			return true; \
 		} \
@@ -1649,9 +1652,9 @@ void OBSBasic::CreateHotkeys()
 			"OBSBasic.StopStreaming",
 			Str("Basic.Main.StopStreaming"),
 			MAKE_CALLBACK(!basic.outputHandler->StreamingActive(),
-				basic.StartStreaming),
+				basic.StartStreaming, "Starting stream"),
 			MAKE_CALLBACK(basic.outputHandler->StreamingActive(),
-				basic.StopStreaming),
+				basic.StopStreaming, "Stopping stream"),
 			this, this);
 	LoadHotkeyPair(streamingHotkeys,
 			"OBSBasic.StartStreaming", "OBSBasic.StopStreaming");
@@ -1677,9 +1680,9 @@ void OBSBasic::CreateHotkeys()
 			"OBSBasic.StopRecording",
 			Str("Basic.Main.StopRecording"),
 			MAKE_CALLBACK(!basic.outputHandler->RecordingActive(),
-				basic.StartRecording),
+				basic.StartRecording, "Starting recording"),
 			MAKE_CALLBACK(basic.outputHandler->RecordingActive(),
-				basic.StopRecording),
+				basic.StopRecording, "Stopping recording"),
 			this, this);
 	LoadHotkeyPair(recordingHotkeys,
 			"OBSBasic.StartRecording", "OBSBasic.StopRecording");
@@ -1690,9 +1693,9 @@ void OBSBasic::CreateHotkeys()
 			"OBSBasic.StopReplayBuffer",
 			Str("Basic.Main.StopReplayBuffer"),
 			MAKE_CALLBACK(!basic.outputHandler->ReplayBufferActive(),
-				basic.StartReplayBuffer),
+				basic.StartReplayBuffer, "Starting replay buffer"),
 			MAKE_CALLBACK(basic.outputHandler->ReplayBufferActive(),
-				basic.StopReplayBuffer),
+				basic.StopReplayBuffer, "Stopping replay buffer"),
 			this, this);
 	LoadHotkeyPair(replayBufHotkeys,
 			"OBSBasic.StartReplayBuffer", "OBSBasic.StopReplayBuffer");
@@ -2921,7 +2924,8 @@ int OBSBasic::ResetVideo()
 		VIDEO_CS_601 : VIDEO_CS_709;
 	ovi.range          = astrcmpi(colorRange, "Full") == 0 ?
 		VIDEO_RANGE_FULL : VIDEO_RANGE_PARTIAL;
-	ovi.adapter        = 0;
+	ovi.adapter        = config_get_uint(App()->GlobalConfig(),
+			"Video", "AdapterIdx");
 	ovi.gpu_conversion = true;
 	ovi.scale_type     = GetScaleType(basicConfig);
 

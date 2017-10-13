@@ -257,7 +257,6 @@ static void ftl_stream_stop(void *data, uint64_t ts)
 	}
 
 	stream->stop_ts = ts / 1000ULL;
-	os_event_signal(stream->stop_event);
 
 	if (ts) {
 		stream->shutdown_timeout_ts = ts +
@@ -265,8 +264,11 @@ static void ftl_stream_stop(void *data, uint64_t ts)
 	}
 
 	if (active(stream)) {
+		os_event_signal(stream->stop_event);
 		if (stream->stop_ts == 0)
 			os_sem_post(stream->send_sem);
+	} else {
+		obs_output_signal_stop(stream->output, OBS_OUTPUT_SUCCESS);
 	}
 }
 
