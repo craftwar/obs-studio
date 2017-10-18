@@ -6,13 +6,16 @@ environment:
 install:
   - git submodule update --init --recursive
   - curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -z dependencies2015.zip
+  - if not exist build.VS.7z curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/build.VS.7z -f --retry 5 -C -
 #  - curl -kLO https://obsproject.com/downloads/vlc.zip -f --retry 5 -z vlc.zip
 #  - curl -kLO https://obsproject.com/downloads/vlc.zip -f --retry 5 -C -
   - 7z x dependencies2015.zip -odependencies2015
+  - 7z x build.VS.7z -ox264
 #  - 7z x vlc.zip -ovlc
   - set DepsPath32=%CD%\dependencies2015\win32
   - set DepsPath64=%CD%\dependencies2015\win64
   - set VLCPath=%CD%\vlc
+  - set x264Path=%CD%\x264\include
   - set QTDIR32=C:\Qt\5.9\msvc2015
   - set QTDIR64=C:\Qt\5.9\msvc2017_64
   - set build_config=Release
@@ -45,4 +48,5 @@ test: off
 
 cache:
   - dependencies2015.zip
+  - build.VS.7z
 #  - vlc.zip
