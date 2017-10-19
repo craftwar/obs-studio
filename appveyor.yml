@@ -2,19 +2,25 @@ version: '{build}'
 image: Visual Studio 2017
 environment:
   CURL_VERSION: 7.39.0
-
+#rdp debug
+init:
+#  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 install:
   - git submodule update --init --recursive
   - curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -z dependencies2015.zip
-  - if not exist build.VS.7z curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/build.VS.7z -f --retry 5 -C -
+  - if not exist x264.7z curl -kLo x264.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/x264/artifacts/x264\build\x264.7z?branch=master -f --retry 5 -C -
+  - curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/fix.7z -f --retry 5 -C -
+#  - if not exist fix.7z curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/fix.7z -f --retry 5 -C -  
 #  - curl -kLO https://obsproject.com/downloads/vlc.zip -f --retry 5 -z vlc.zip
 #  - curl -kLO https://obsproject.com/downloads/vlc.zip -f --retry 5 -C -
   - 7z x dependencies2015.zip -odependencies2015
-  - 7z x build.VS.7z -ox264
+  - 7z x x264.7z -ox264
+# delete x264 from dependencies or obs will copy old libx264 dll
+  - del dependencies2015\win64\include\x264* dependencies2015\win64\bin\libx264* dependencies2015\win64\bin\x264.lib
 #  - 7z x vlc.zip -ovlc
   - set DepsPath32=%CD%\dependencies2015\win32
   - set DepsPath64=%CD%\dependencies2015\win64
-  - set VLCPath=%CD%\vlc
+#  - set VLCPath=%CD%\vlc
   - set x264Path=%CD%\x264\include
   - set QTDIR32=C:\Qt\5.9\msvc2015
   - set QTDIR64=C:\Qt\5.9\msvc2017_64
@@ -26,27 +32,31 @@ install:
   - mkdir build32
   - mkdir build64
   - cd ./build32
-#  - cmake -G "Visual Studio 14 2015" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false ..
+#  - cmake -G "Visual Studio 15 2017" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true ..
   - cd ../build64
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
   - cmake -G "Visual Studio 15 2017 Win64" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true ..
 
 build_script:
 #  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+# build 32bit game capture plugin
 #  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/get-graphics-offsets/get-graphics-offsets.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 #  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/graphics-hook/graphics-hook.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 #  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/inject-helper/inject-helper.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 before_deploy:
+  - 7z x C:\projects\obs-studio\fix.7z -oC:\projects\obs-studio\fix
+  - copy /Y C:\projects\obs-studio\fix\* C:\projects\obs-studio\build64\rundir\Release\bin\64bit
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
 
 deploy_script:
-  - ps: Push-AppveyorArtifact "build.zip" -FileName "$(git describe).zip"
+  - ps: Push-AppveyorArtifact "build.zip" -FileName "OBS-git-craftwar.zip"
 
 test: off
 
 cache:
   - dependencies2015.zip
-  - build.VS.7z
+  - x264.7z
+  - fix.7z
 #  - vlc.zip
