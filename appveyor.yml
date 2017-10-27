@@ -6,9 +6,8 @@ environment:
 #init:
 #  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 install:
-  - git submodule update --init --recursive
-  - curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -z dependencies2015.zip
-#  - curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs_deps/artifacts/VCdeps.7z -f --retry 5 -C -
+  - git submodule update --init --recursive plugins\win-dshow
+  - if exist dependencies2015.zip (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -z dependencies2015.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -C -)
   - if exist VCdeps.7z (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -z VCdeps.7z) else (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -C -)
 #  - curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/fix.7z -f --retry 5 -C -
 #  - if not exist fix.7z curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/fix.7z -f --retry 5 -C -
