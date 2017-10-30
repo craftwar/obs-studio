@@ -686,7 +686,7 @@ static void receive_video(void *param, struct video_data *frame)
 	else
 		copy_data(&data->dst_picture, frame, context->height, context->pix_fmt);
 
-	if (data->output->flags & AVFMT_RAWPICTURE) {
+	if (data->output->flags) {
 		packet.flags        |= AV_PKT_FLAG_KEY;
 		packet.stream_index  = data->video->index;
 		packet.data          = data->dst_picture.data[0];

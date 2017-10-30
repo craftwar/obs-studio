@@ -37,8 +37,8 @@ int ffmpeg_decode_init(struct ffmpeg_decode *decode, enum AVCodecID id)
 		return ret;
 	}
 
-	if (decode->codec->capabilities & CODEC_CAP_TRUNCATED)
-		decode->decoder->flags |= CODEC_FLAG_TRUNCATED;
+	if (decode->codec->capabilities & AV_CODEC_CAP_TRUNCATED)
+		decode->decoder->flags |= AV_CODEC_FLAG_TRUNCATED;
 
 	return 0;
 }
@@ -96,7 +96,7 @@ static inline enum audio_format convert_sample_format(int f)
 static inline void copy_data(struct ffmpeg_decode *decode, uint8_t *data,
 		size_t size)
 {
-	size_t new_size = size + FF_INPUT_BUFFER_PADDING_SIZE;
+	size_t new_size = size + AV_INPUT_BUFFER_PADDING_SIZE;
 
 	if (decode->packet_size < new_size) {
 		decode->packet_buffer = brealloc(decode->packet_buffer,
@@ -104,7 +104,7 @@ static inline void copy_data(struct ffmpeg_decode *decode, uint8_t *data,
 		decode->packet_size   = new_size;
 	}
 
-	memset(decode->packet_buffer + size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+	memset(decode->packet_buffer + size, 0, AV_INPUT_BUFFER_PADDING_SIZE);
 	memcpy(decode->packet_buffer, data, size);
 }
 
