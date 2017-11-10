@@ -31,7 +31,7 @@ add_library(win-capture MODULE
 target_link_libraries(win-capture
 	libobs
 	ipc-util
-	psapi)
+	Kernel32)
 
 install_obs_plugin_with_data(win-capture data)
 
