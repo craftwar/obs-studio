@@ -419,6 +419,8 @@ EXPORT gs_texture_t *gs_texrender_get_texture(const gs_texrender_t *texrender);
 #define GS_DYNAMIC       (1<<1)
 #define GS_RENDER_TARGET (1<<2)
 #define GS_GL_DUMMYTEX   (1<<3) /**<< texture with no allocated texture data */
+#define GS_DUP_BUFFER    (1<<4) /**<< do not pass buffer ownership when
+				 *    creating a vertex/index buffer */
 
 /* ---------------- */
 /* global functions */
@@ -716,11 +718,15 @@ EXPORT void     gs_samplerstate_destroy(gs_samplerstate_t *samplerstate);
 
 EXPORT void     gs_vertexbuffer_destroy(gs_vertbuffer_t *vertbuffer);
 EXPORT void     gs_vertexbuffer_flush(gs_vertbuffer_t *vertbuffer);
+EXPORT void     gs_vertexbuffer_flush_direct(gs_vertbuffer_t *vertbuffer,
+		const struct gs_vb_data *data);
 EXPORT struct gs_vb_data *gs_vertexbuffer_get_data(
 		const gs_vertbuffer_t *vertbuffer);
 
 EXPORT void     gs_indexbuffer_destroy(gs_indexbuffer_t *indexbuffer);
 EXPORT void     gs_indexbuffer_flush(gs_indexbuffer_t *indexbuffer);
+EXPORT void     gs_indexbuffer_flush_direct(gs_indexbuffer_t *indexbuffer,
+		const void *data);
 EXPORT void     *gs_indexbuffer_get_data(const gs_indexbuffer_t *indexbuffer);
 EXPORT size_t   gs_indexbuffer_get_num_indices(
 		const gs_indexbuffer_t *indexbuffer);

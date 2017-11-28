@@ -8,6 +8,7 @@ environment:
   CURL_VERSION: 7.39.0
   APPVEYOR_RDP_PASSWORD:
     secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
+
 install:
   - git submodule update --init --recursive plugins\win-dshow
   - if exist dependencies2015.zip (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -z dependencies2015.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -C -)

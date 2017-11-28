@@ -337,6 +337,15 @@ static bool create_audio_stream(struct ffmpeg_data *data)
 	context->sample_rate = aoi.samples_per_sec;
 	context->channel_layout =
 			av_get_default_channel_layout(context->channels);
+
+	//AVlib default channel layout for 4 channels is 4.0 ; fix for quad
+	if (aoi.speakers == SPEAKERS_QUAD)
+		context->channel_layout = av_get_channel_layout("quad");
+
+	//AVlib default channel layout for 5 channels is 5.0 ; fix for 4.1
+	if (aoi.speakers == SPEAKERS_4POINT1)
+		context->channel_layout = av_get_channel_layout("4.1");
+
 	context->sample_fmt  = data->acodec->sample_fmts ?
 		data->acodec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
 
@@ -373,20 +382,6 @@ static inline bool open_output_file(struct ffmpeg_data *data)
 	AVOutputFormat *format = data->output->oformat;
 	int ret;
 
-	if ((format->flags & AVFMT_NOFILE) == 0) {
-		ret = avio_open(&data->output->pb, data->config.url,
-				AVIO_FLAG_WRITE);
-		if (ret < 0) {
-			blog(LOG_WARNING, "Couldn't open '%s', %s",
-					data->config.url, av_err2str(ret));
-			return false;
-		}
-	}
-
-	strncpy(data->output->filename, data->config.url,
-			sizeof(data->output->filename));
-	data->output->filename[sizeof(data->output->filename) - 1] = 0;
-
 	AVDictionary *dict = NULL;
 	if ((ret = av_dict_parse_string(&dict, data->config.muxer_settings,
 				"=", " ", 0))) {
@@ -405,15 +400,42 @@ static inline bool open_output_file(struct ffmpeg_data *data)
 						AV_DICT_IGNORE_SUFFIX)))
 			dstr_catf(&str, "\n\t%s=%s", entry->key, entry->value);
 
-		blog(LOG_INFO, "Using muxer settings:%s", str.array);
+		blog(LOG_INFO, "Using muxer settings: %s", str.array);
 		dstr_free(&str);
 	}
+
+	if ((format->flags & AVFMT_NOFILE) == 0) {
+		ret = avio_open2(&data->output->pb, data->config.url,
+				AVIO_FLAG_WRITE, NULL, &dict);
+		if (ret < 0) {
+			blog(LOG_WARNING, "Couldn't open '%s', %s",
+					data->config.url, av_err2str(ret));
+			av_dict_free(&dict);
+			return false;
+		}
+	}
+
+	strncpy(data->output->filename, data->config.url,
+			sizeof(data->output->filename));
+	data->output->filename[sizeof(data->output->filename) - 1] = 0;
 
 	ret = avformat_write_header(data->output, &dict);
 	if (ret < 0) {
 		blog(LOG_WARNING, "Error opening '%s': %s",
 				data->config.url, av_err2str(ret));
 		return false;
+	}
+
+	if (av_dict_count(dict) > 0) {
+		struct dstr str = {0};
+
+		AVDictionaryEntry *entry = NULL;
+		while ((entry = av_dict_get(dict, "", entry,
+						AV_DICT_IGNORE_SUFFIX)))
+			dstr_catf(&str, "\n\t%s=%s", entry->key, entry->value);
+
+		blog(LOG_INFO, "Invalid muxer settings: %s", str.array);
+		dstr_free(&str);
 	}
 
 	av_dict_free(&dict);
