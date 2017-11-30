@@ -114,7 +114,7 @@ private:
 	std::vector<OBSSignal> signalHandlers;
 
 	std::vector<std::string> projectorArray;
-	std::vector<std::string> studioProgramProjectorArray;
+	std::vector<int> studioProgramProjectorArray;
 	std::vector<int> previewProjectorArray;
 
 	bool loaded = false;
@@ -494,6 +494,7 @@ public:
 	bool StreamingActive() const;
 	bool Active() const;
 
+	void ResetUI();
 	int  ResetVideo();
 	bool ResetAudio();
 
