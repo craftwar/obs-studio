@@ -249,8 +249,9 @@ static void *enc_create(obs_data_t *settings, obs_encoder_t *encoder,
 	}
 
 	info("bitrate: %" PRId64 ", channels: %d, channel_layout: %x\n",
-			enc->context->bit_rate / 1000, enc->context->channels,
-			enc->context->channel_layout);
+			(int64_t)enc->context->bit_rate / 1000,
+			(int)enc->context->channels,
+			(unsigned int)enc->context->channel_layout);
 
 	init_sizes(enc, audio);
 
@@ -300,8 +301,19 @@ static bool do_encode(struct enc_encoder *enc,
 
 	enc->total_samples += enc->frame_size;
 
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(57, 40, 101)
+	ret = avcodec_send_frame(enc->context, enc->aframe);
+	if (ret == 0)
+		ret = avcodec_receive_packet(enc->context, &avpacket);
+
+	got_packet = (ret == 0);
+
+	if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN))
+		ret = 0;
+#else
 	ret = avcodec_encode_audio2(enc->context, &avpacket, enc->aframe,
 			&got_packet);
+#endif
 	if (ret < 0) {
 		warn("avcodec_encode_audio2 failed: %s", av_err2str(ret));
 		return false;
