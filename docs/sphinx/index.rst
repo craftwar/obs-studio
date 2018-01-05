@@ -15,6 +15,7 @@ Welcome to OBS Studio's documentation!
    plugins
    frontends
    graphics
+   scripting
    reference-core
    reference-modules
    reference-core-objects
@@ -22,3 +23,4 @@ Welcome to OBS Studio's documentation!
    reference-libobs-callback
    reference-libobs-graphics
    reference-libobs-media-io
+   reference-frontend-api

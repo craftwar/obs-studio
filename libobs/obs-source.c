@@ -39,7 +39,7 @@ static inline bool deinterlacing_enabled(const struct obs_source *source)
 	return source->deinterlace_mode != OBS_DEINTERLACE_MODE_DISABLE;
 }
 
-const struct obs_source_info *get_source_info(const char *id)
+struct obs_source_info *get_source_info(const char *id)
 {
 	for (size_t i = 0; i < obs->source_types.num; i++) {
 		struct obs_source_info *info = &obs->source_types.array[i];
@@ -323,8 +323,13 @@ static obs_source_t *obs_source_create_internal(const char *id,
 				private))
 		goto fail;
 
-	if (info && info->get_defaults)
-		info->get_defaults(source->context.settings);
+	if (info) {
+		if (info->get_defaults2)
+			info->get_defaults2(info->type_data,
+					source->context.settings);
+		else if (info->get_defaults)
+			info->get_defaults(source->context.settings);
+	}
 
 	if (!obs_source_init(source))
 		goto fail;
@@ -695,7 +700,9 @@ bool obs_source_removed(const obs_source_t *source)
 static inline obs_data_t *get_defaults(const struct obs_source_info *info)
 {
 	obs_data_t *settings = obs_data_create();
-	if (info->get_defaults)
+	if (info->get_defaults2)
+		info->get_defaults2(info->type_data, settings);
+	else if (info->get_defaults)
 		info->get_defaults(settings);
 	return settings;
 }
@@ -715,14 +722,18 @@ obs_data_t *obs_get_source_defaults(const char *id)
 obs_properties_t *obs_get_source_properties(const char *id)
 {
 	const struct obs_source_info *info = get_source_info(id);
-	if (info && info->get_properties) {
+	if (info && (info->get_properties || info->get_properties2)) {
 		obs_data_t       *defaults = get_defaults(info);
-		obs_properties_t *properties;
+		obs_properties_t *props;
 
-		properties = info->get_properties(NULL);
-		obs_properties_apply_settings(properties, defaults);
+		if (info->get_properties2)
+			props = info->get_properties2(NULL, info->type_data);
+		else
+			props = info->get_properties(NULL);
+
+		obs_properties_apply_settings(props, defaults);
 		obs_data_release(defaults);
-		return properties;
+		return props;
 	}
 	return NULL;
 }
@@ -730,13 +741,13 @@ obs_properties_t *obs_get_source_properties(const char *id)
 bool obs_is_source_configurable(const char *id)
 {
 	const struct obs_source_info *info = get_source_info(id);
-	return info && info->get_properties;
+	return info && (info->get_properties || info->get_properties2);
 }
 
 bool obs_source_configurable(const obs_source_t *source)
 {
 	return data_valid(source, "obs_source_configurable") &&
-		source->info.get_properties;
+		(source->info.get_properties || source->info.get_properties2);
 }
 
 obs_properties_t *obs_source_properties(const obs_source_t *source)
@@ -744,7 +755,14 @@ obs_properties_t *obs_source_properties(const obs_source_t *source)
 	if (!data_valid(source, "obs_source_properties"))
 		return NULL;
 
-	if (source->info.get_properties) {
+	if (source->info.get_properties2) {
+		obs_properties_t *props;
+		props = source->info.get_properties2(source->context.data,
+				source->info.type_data);
+		obs_properties_apply_settings(props, source->context.settings);
+		return props;
+
+	} else if (source->info.get_properties) {
 		obs_properties_t *props;
 		props = source->info.get_properties(source->context.data);
 		obs_properties_apply_settings(props, source->context.settings);
@@ -4096,4 +4114,17 @@ bool obs_source_async_decoupled(const obs_source_t *source)
 {
 	return obs_source_valid(source, "obs_source_async_decoupled") ?
 		source->async_decoupled : false;
+}
+
+/* hidden/undocumented export to allow source type redefinition for scripts */
+EXPORT void obs_enable_source_type(const char *name, bool enable)
+{
+	struct obs_source_info *info = get_source_info(name);
+	if (!info)
+		return;
+
+	if (enable)
+		info->output_flags &= ~OBS_SOURCE_CAP_DISABLED;
+	else
+		info->output_flags |= OBS_SOURCE_CAP_DISABLED;
 }
