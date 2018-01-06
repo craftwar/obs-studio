@@ -335,10 +335,6 @@ static bool create_audio_stream(struct ffmpeg_data *data)
 	context->channel_layout =
 			av_get_default_channel_layout(context->channels);
 
-	//AVlib default channel layout for 4 channels is 4.0 ; fix for quad
-	if (aoi.speakers == SPEAKERS_QUAD)
-		context->channel_layout = av_get_channel_layout("quad");
-
 	//AVlib default channel layout for 5 channels is 5.0 ; fix for 4.1
 	if (aoi.speakers == SPEAKERS_4POINT1)
 		context->channel_layout = av_get_channel_layout("4.1");
@@ -704,8 +700,8 @@ static void receive_video(void *param, struct video_data *frame)
 				data->vframe->linesize);
 	else
 		copy_data(data->vframe, frame, context->height, context->pix_fmt);
-
-	if (data->output->flags) {
+#if LIBAVFORMAT_VERSION_MAJOR < 58
+	if (data->output->flags & AVFMT_RAWPICTURE) {
 		packet.flags        |= AV_PKT_FLAG_KEY;
 		packet.stream_index  = data->video->index;
 		packet.data          = data->vframe->data[0];
@@ -717,6 +713,7 @@ static void receive_video(void *param, struct video_data *frame)
 		os_sem_post(output->write_sem);
 
 	} else {
+#endif
 		data->vframe->pts = data->total_frames;
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(57, 40, 101)
 		ret = avcodec_send_frame(context, data->vframe);
@@ -753,8 +750,9 @@ static void receive_video(void *param, struct video_data *frame)
 		} else {
 			ret = 0;
 		}
+#if LIBAVFORMAT_VERSION_MAJOR < 58
 	}
-
+#endif
 	if (ret != 0) {
 		blog(LOG_WARNING, "receive_video: Error writing video: %s",
 				av_err2str(ret));
