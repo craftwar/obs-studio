@@ -39,6 +39,7 @@ using namespace Gdiplus;
 
 #define S_FONT                          "font"
 #define S_USE_FILE                      "read_from_file"
+#define S_USE_SONG                      "get_playing_song"
 #define S_FILE                          "file"
 #define S_TEXT                          "text"
 #define S_COLOR                         "color"
@@ -75,6 +76,7 @@ using namespace Gdiplus;
 #define T_FONT                          T_("Font")
 #define T_USE_FILE                      T_("ReadFromFile")
 #define T_FILE                          T_("TextFile")
+#define T_USE_SONG                      T_("GetPlayingSong")
 #define T_TEXT                          T_("Text")
 #define T_COLOR                         T_("Color")
 #define T_GRADIENT                      T_("Gradient")
@@ -138,6 +140,8 @@ static inline uint32_t rgb_to_bgr(uint32_t rgb)
 	return ((rgb & 0xFF) << 16) | (rgb & 0xFF00) | ((rgb & 0xFF0000) >> 16);
 }
 
+BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam);
+
 /* ------------------------------------------------------------------------- */
 
 template<typename T, typename T2, BOOL WINAPI deleter(T2)> class GDIObj {
@@ -199,6 +203,8 @@ struct TextSource {
 	time_t file_timestamp = 0;
 	bool update_file = false;
 	float update_time_elapsed = 0.0f;
+    
+    bool get_playing_song = false;
 
 	wstring text;
 	wstring face;
@@ -652,6 +658,7 @@ inline void TextSource::Update(obs_data_t *s)
 	uint32_t new_o_opacity = obs_data_get_uint32(s, S_OUTLINE_OPACITY);
 	uint32_t new_o_size    = obs_data_get_uint32(s, S_OUTLINE_SIZE);
 	bool new_use_file      = obs_data_get_bool(s, S_USE_FILE);
+    bool new_use_song      = obs_data_get_bool(s, S_USE_SONG);
 	const char *new_file   = obs_data_get_string(s, S_FILE);
 	bool new_chat_mode     = obs_data_get_bool(s, S_CHATLOG_MODE);
 	int new_chat_lines     = (int)obs_data_get_int(s, S_CHATLOG_LINES);
@@ -719,6 +726,7 @@ inline void TextSource::Update(obs_data_t *s)
 	}
 
 	read_from_file = new_use_file;
+    get_playing_song = new_use_song;
 
 	chatlog_mode = new_chat_mode;
 	chatlog_lines = new_chat_lines;
@@ -727,7 +735,8 @@ inline void TextSource::Update(obs_data_t *s)
 		file = new_file;
 		file_timestamp = get_modified_timestamp(new_file);
 		LoadFileText();
-
+    } else if (get_playing_song){
+        EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
 	} else {
 		text = to_wide(GetMainString(new_text));
 
@@ -767,24 +776,32 @@ inline void TextSource::Update(obs_data_t *s)
 
 inline void TextSource::Tick(float seconds)
 {
-	if (!read_from_file)
+	if (!read_from_file && !get_playing_song)
 		return;
 
 	update_time_elapsed += seconds;
 
 	if (update_time_elapsed >= 1.0f) {
-		time_t t = get_modified_timestamp(file.c_str());
-		update_time_elapsed = 0.0f;
+        update_time_elapsed = 0.0f;
+		if (read_from_file)
+		{
+			time_t t = get_modified_timestamp(file.c_str());
 
-		if (update_file) {
-			LoadFileText();
-			RenderText();
-			update_file = false;
+			if (update_file) {
+				LoadFileText();
+				RenderText();
+				update_file = false;
+			}
+
+			if (file_timestamp != t) {
+				file_timestamp = t;
+				update_file = true;
+			}
 		}
-
-		if (file_timestamp != t) {
-			file_timestamp = t;
-			update_file = true;
+		else if (get_playing_song)
+		{
+			EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
+            RenderText();
 		}
 	}
 }
@@ -815,9 +832,23 @@ static bool use_file_changed(obs_properties_t *props, obs_property_t *p,
 		obs_data_t *s)
 {
 	bool use_file = obs_data_get_bool(s, S_USE_FILE);
+    if (use_file)
+        obs_data_set_bool(s, S_USE_SONG, false);
 
 	set_vis(use_file, S_TEXT, false);
 	set_vis(use_file, S_FILE, true);
+	return true;
+}
+
+static bool use_song_changed(obs_properties_t *props, obs_property_t *p,
+		obs_data_t *s)
+{
+	bool use_song = obs_data_get_bool(s, S_USE_SONG);
+    if (use_song)
+        obs_data_set_bool(s, S_USE_FILE, false);
+
+	set_vis(use_song, S_TEXT, false);
+	set_vis(use_song, S_FILE, false);
 	return true;
 }
 
@@ -877,6 +908,8 @@ static obs_properties_t *get_properties(void *data)
 
 	p = obs_properties_add_bool(props, S_USE_FILE, T_USE_FILE);
 	obs_property_set_modified_callback(p, use_file_changed);
+	p = obs_properties_add_bool(props, S_USE_SONG, T_USE_SONG);
+	obs_property_set_modified_callback(p, use_song_changed);
 
 	string filter;
 	filter += T_FILTER_TEXT_FILES;
@@ -1028,4 +1061,43 @@ bool obs_module_load(void)
 void obs_module_unload(void)
 {
 	GdiplusShutdown(gdip_token);
+}
+
+BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam)
+{
+	wchar_t *temp;
+	int len;
+    TextSource* _TextSource = (TextSource *) lParam;
+	
+	len = GetWindowTextLengthW(hwnd);
+	if (!len)
+		return TRUE;
+	temp = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
+	if (GetWindowTextW(hwnd, temp, len + 1))
+	{
+		wchar_t *strEnd;
+		if (wcsstr(temp, L"- Mozilla Firefox") != NULL
+			|| wcsstr(temp, L"-Google Chrome") != NULL )
+		{
+			strEnd = wcsstr(temp, L"- YouTube");
+		}
+		else
+		{
+			strEnd = wcsstr(temp, L"[foobar2000 v");
+		}
+		if (strEnd)
+		{
+			_expand(temp, sizeof(wchar_t)*(--strEnd - temp));
+			*strEnd = L'\0';
+            if (wcscmp(_TextSource->text.data(), temp) )
+            {
+                _TextSource->text = temp;
+		if (!_TextSource->text.empty())
+			_TextSource->text.push_back('\n');
+            }
+			return FALSE;
+		}
+	}
+	free(temp);
+	return TRUE;
 }
