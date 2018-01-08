@@ -5,7 +5,7 @@ init:
 #rdp debug
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 environment:
-  CURL_VERSION: 7.39.0
+  CURL_VERSION: 7.55.1
   APPVEYOR_RDP_PASSWORD:
     secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
 
