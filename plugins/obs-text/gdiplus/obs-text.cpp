@@ -205,6 +205,7 @@ struct TextSource {
 	float update_time_elapsed = 0.0f;
     
     bool get_playing_song = false;
+    HWND song_hwnd = NULL;
 
 	wstring text;
 	wstring face;
@@ -273,6 +274,7 @@ struct TextSource {
 	inline void Update(obs_data_t *settings);
 	inline void Tick(float seconds);
 	inline void Render(gs_effect_t *effect);
+    BOOL get_song_name(HWND hwnd);
 };
 
 static time_t get_modified_timestamp(const char *filename)
@@ -800,7 +802,8 @@ inline void TextSource::Tick(float seconds)
 		}
 		else if (get_playing_song)
 		{
-			EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
+            if (!IsWindow(song_hwnd) || !get_song_name(song_hwnd))
+                EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
             RenderText();
 		}
 	}
@@ -813,6 +816,43 @@ inline void TextSource::Render(gs_effect_t *effect)
 
 	gs_effect_set_texture(gs_effect_get_param_by_name(effect, "image"), tex);
 	gs_draw_sprite(tex, 0, cx, cy);
+}
+
+BOOL TextSource::get_song_name(HWND hwnd)
+{
+    wchar_t *temp;
+    int len;
+    len = GetWindowTextLengthW(hwnd);
+    if (!len)
+        return FALSE;
+    temp = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
+    if (GetWindowTextW(hwnd, temp, len + 1))
+    {
+        wchar_t *strEnd;
+        if (wcsstr(temp, L"- Mozilla Firefox") != NULL
+            || wcsstr(temp, L"-Google Chrome") != NULL )
+        {
+            strEnd = wcsstr(temp, L"- YouTube");
+        }
+        else
+        {
+            strEnd = wcsstr(temp, L"[foobar2000 v");
+        }
+        if (strEnd)
+        {
+            _expand(temp, sizeof(wchar_t)*(--strEnd - temp));
+            *strEnd = L'\0';
+            if (wcscmp(text.data(), temp) )
+            {
+                text = temp;
+                text.push_back('\n');
+            }
+            song_hwnd = hwnd;
+            return TRUE;
+        }
+    }
+    free(temp);
+    return FALSE;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1065,39 +1105,6 @@ void obs_module_unload(void)
 
 BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam)
 {
-	wchar_t *temp;
-	int len;
     TextSource* _TextSource = (TextSource *) lParam;
-	
-	len = GetWindowTextLengthW(hwnd);
-	if (!len)
-		return TRUE;
-	temp = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
-	if (GetWindowTextW(hwnd, temp, len + 1))
-	{
-		wchar_t *strEnd;
-		if (wcsstr(temp, L"- Mozilla Firefox") != NULL
-			|| wcsstr(temp, L"-Google Chrome") != NULL )
-		{
-			strEnd = wcsstr(temp, L"- YouTube");
-		}
-		else
-		{
-			strEnd = wcsstr(temp, L"[foobar2000 v");
-		}
-		if (strEnd)
-		{
-			_expand(temp, sizeof(wchar_t)*(--strEnd - temp));
-			*strEnd = L'\0';
-            if (wcscmp(_TextSource->text.data(), temp) )
-            {
-                _TextSource->text = temp;
-		if (!_TextSource->text.empty())
-			_TextSource->text.push_back('\n');
-            }
-			return FALSE;
-		}
-	}
-	free(temp);
-	return TRUE;
+    return !_TextSource->get_song_name(hwnd);
 }
