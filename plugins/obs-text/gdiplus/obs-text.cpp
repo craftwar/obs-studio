@@ -203,7 +203,7 @@ struct TextSource {
 	time_t file_timestamp = 0;
 	bool update_file = false;
 	float update_time_elapsed = 0.0f;
-    
+
     bool get_playing_song = false;
     HWND song_hwnd = NULL;
 
@@ -785,8 +785,7 @@ inline void TextSource::Tick(float seconds)
 
 	if (update_time_elapsed >= 1.0f) {
         update_time_elapsed = 0.0f;
-		if (read_from_file)
-		{
+		if (read_from_file) {
 			time_t t = get_modified_timestamp(file.c_str());
 
 			if (update_file) {
@@ -799,9 +798,7 @@ inline void TextSource::Tick(float seconds)
 				file_timestamp = t;
 				update_file = true;
 			}
-		}
-		else if (get_playing_song)
-		{
+		} else if (get_playing_song) {
             if (!IsWindow(song_hwnd) || !get_song_name(song_hwnd))
                 EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
             RenderText();
@@ -826,32 +823,35 @@ BOOL TextSource::get_song_name(HWND hwnd)
     if (!len)
         return FALSE;
     temp = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
-    if (GetWindowTextW(hwnd, temp, len + 1))
-    {
-        wchar_t *strEnd;
-        if (wcsstr(temp, L"- Mozilla Firefox") != NULL
-            || wcsstr(temp, L"-Google Chrome") != NULL )
-        {
-            strEnd = wcsstr(temp, L"- YouTube");
-        }
-        else
-        {
-            strEnd = wcsstr(temp, L"[foobar2000 v");
-        }
-        if (strEnd)
-        {
-            _expand(temp, sizeof(wchar_t)*(--strEnd - temp));
-            *strEnd = L'\0';
-            if (wcscmp(text.data(), temp) )
-            {
-                text = temp;
-                text.push_back('\n');
+    if (GetWindowTextW(hwnd, temp, len + 1)) {
+        wchar_t *strStart = temp;
+        wchar_t *strEnd = nullptr;
+        wchar_t *const browser[] = {L"- Mozilla Firefox", L"-Google Chrome"};
+        for (wchar_t *const i : browser)
+            if ((wcsstr(temp, i) != NULL) &&
+                (strEnd = wcsstr(temp, L"- YouTube")) != NULL ) {
+                goto SetText;
             }
-            song_hwnd = hwnd;
-            return TRUE;
+
+        if ((strEnd = wcsstr(temp, L"[foobar2000 v")) != NULL) {
+            goto SetText;
+        } else if ((strStart = wcsstr(temp, L"osu!  - ")) != NULL) {
+            strStart += 8;
+            goto SetText;
         }
+        free(temp);
+        return FALSE;
+
+SetText:
+        len = strEnd - strStart - 1; // don't need '\0' when copy
+        if (wcsncmp(text.data(), strStart, len) ) {
+            text = wstring(strStart, 0, len);
+            text.push_back('\n');
+        }
+        free(temp);
+        song_hwnd = hwnd;
+        return TRUE;
     }
-    free(temp);
     return FALSE;
 }
 
