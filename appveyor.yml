@@ -1,8 +1,12 @@
 version: '{build}'
 skip_tags: true
+skip_commits:
+  files:
+    - Change.txt
+    - '*.rst'
+    - .travis.yml
 image: Visual Studio 2017
 init:
-#rdp debug
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 environment:
   CURL_VERSION: 7.55.1
@@ -13,16 +17,12 @@ install:
   - git submodule update --init --recursive plugins\win-dshow
   - if exist dependencies2015.zip (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -z dependencies2015.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -C -)
   - if exist VCdeps.7z (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -z VCdeps.7z) else (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -C -)
-#  - curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/fix.7z -f --retry 5 -C -
-#  - if not exist fix.7z curl -kLO https://github.com/craftwar/obs-studio/releases/download/20.1.0/fix.7z -f --retry 5 -C -
+
 # need libcurl
   - 7z x dependencies2015.zip -oold_dep
-# delete x264 from dependencies or obs will copy old libx264 dll
-#  - del dependencies2015\win64\include\x264* dependencies2015\win64\bin\libx264* dependencies2015\win64\bin\x264.lib
   - 7z x VCdeps.7z -odependencies2017
   - set DepsPath32=%CD%\old_dep\win32
   - set DepsPath64=%CD%\dependencies2017\win64
-#  - set x264Path=%CD%\x264\include
   - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
   - set QTDIR32=C:\Qt\5.9\msvc2015
   - set QTDIR64=C:\Qt\5.9\msvc2017_64
@@ -30,23 +30,21 @@ install:
 
 build_script:
   - mkdir build build32 build64
-  - cd ./build32
+  - cd ./build64
+  - '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
+  - cmake -G "Visual Studio 15 2017 Win64" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true ..
+  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+  - cd ../build32
   - '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64_x86' #use cross build x86 to speed up
   - cmake -G "Visual Studio 15 2017" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true ..
 #  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 # build 32bit game capture plugin
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/get-graphics-offsets/get-graphics-offsets.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/graphics-hook/graphics-hook.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/inject-helper/inject-helper.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"  
-  
-  - cd ../build64
-  - '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
-  - cmake -G "Visual Studio 15 2017 Win64" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true ..
-  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/inject-helper/inject-helper.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 before_deploy:
-#  - 7z x C:\projects\obs-studio\fix.7z -oC:\projects\obs-studio\fix
-#  - copy /Y C:\projects\obs-studio\fix\* C:\projects\obs-studio\build64\rundir\Release\bin\64bit
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
 
 deploy_script:
@@ -57,4 +55,3 @@ test: off
 cache:
   - dependencies2015.zip
   - VCdeps.7z
-#  - fix.7z
