@@ -204,8 +204,8 @@ struct TextSource {
 	bool update_file = false;
 	float update_time_elapsed = 0.0f;
 
-    bool get_playing_song = false;
-    HWND song_hwnd = NULL;
+	bool get_playing_song = false;
+	HWND song_hwnd = NULL;
 
 	wstring text;
 	wstring face;
@@ -274,7 +274,7 @@ struct TextSource {
 	inline void Update(obs_data_t *settings);
 	inline void Tick(float seconds);
 	inline void Render(gs_effect_t *effect);
-    BOOL get_song_name(HWND hwnd);
+	BOOL get_song_name(HWND hwnd);
 };
 
 static time_t get_modified_timestamp(const char *filename)
@@ -660,7 +660,7 @@ inline void TextSource::Update(obs_data_t *s)
 	uint32_t new_o_opacity = obs_data_get_uint32(s, S_OUTLINE_OPACITY);
 	uint32_t new_o_size    = obs_data_get_uint32(s, S_OUTLINE_SIZE);
 	bool new_use_file      = obs_data_get_bool(s, S_USE_FILE);
-    bool new_use_song      = obs_data_get_bool(s, S_USE_SONG);
+	bool new_use_song      = obs_data_get_bool(s, S_USE_SONG);
 	const char *new_file   = obs_data_get_string(s, S_FILE);
 	bool new_chat_mode     = obs_data_get_bool(s, S_CHATLOG_MODE);
 	int new_chat_lines     = (int)obs_data_get_int(s, S_CHATLOG_LINES);
@@ -728,7 +728,7 @@ inline void TextSource::Update(obs_data_t *s)
 	}
 
 	read_from_file = new_use_file;
-    get_playing_song = new_use_song;
+	get_playing_song = new_use_song;
 
 	chatlog_mode = new_chat_mode;
 	chatlog_lines = new_chat_lines;
@@ -737,8 +737,8 @@ inline void TextSource::Update(obs_data_t *s)
 		file = new_file;
 		file_timestamp = get_modified_timestamp(new_file);
 		LoadFileText();
-    } else if (get_playing_song){
-        EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
+	} else if (get_playing_song){
+		EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
 	} else {
 		text = to_wide(GetMainString(new_text));
 
@@ -799,9 +799,8 @@ inline void TextSource::Tick(float seconds)
 				update_file = true;
 			}
 		} else if (get_playing_song) {
-            if (!IsWindow(song_hwnd) || !get_song_name(song_hwnd))
-                EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
-            RenderText();
+			if (!IsWindow(song_hwnd) || !get_song_name(song_hwnd))
+				EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
 		}
 	}
 }
@@ -850,6 +849,7 @@ SetText:
         }
         free(temp);
         song_hwnd = hwnd;
+	RenderText();
         return TRUE;
     }
     return FALSE;
