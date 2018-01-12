@@ -167,14 +167,16 @@ void mp_decode_free(struct mp_decode *d)
 	circlebuf_free(&d->packets);
 
 	if (d->decoder) {
-		avcodec_close(d->decoder);
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(57, 40, 101)
-		av_free(d->decoder);
+		avcodec_free_context(&d->decoder);
+#else
+		avcodec_close(d->decoder);
 #endif
 	}
-
-	if (d->frame)
+	if (d->frame) {
+		av_frame_unref(d->frame);
 		av_free(d->frame);
+	}
 
 	memset(d, 0, sizeof(*d));
 }
