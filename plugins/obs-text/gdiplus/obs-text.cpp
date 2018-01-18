@@ -737,8 +737,8 @@ inline void TextSource::Update(obs_data_t *s)
 		file = new_file;
 		file_timestamp = get_modified_timestamp(new_file);
 		LoadFileText();
-	} else if (get_playing_song){
-		EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
+	} else if (get_playing_song && IsWindow(song_hwnd) ) {
+		get_song_name(song_hwnd);
 	} else {
 		text = to_wide(GetMainString(new_text));
 
@@ -784,7 +784,7 @@ inline void TextSource::Tick(float seconds)
 	update_time_elapsed += seconds;
 
 	if (update_time_elapsed >= 1.0f) {
-        update_time_elapsed = 0.0f;
+		update_time_elapsed = 0.0f;
 		if (read_from_file) {
 			time_t t = get_modified_timestamp(file.c_str());
 
@@ -798,9 +798,9 @@ inline void TextSource::Tick(float seconds)
 				file_timestamp = t;
 				update_file = true;
 			}
-		} else if (get_playing_song) {
-			if (!IsWindow(song_hwnd) || !get_song_name(song_hwnd))
-				EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
+		} else if (get_playing_song &&
+			(!IsWindow(song_hwnd) || !get_song_name(song_hwnd)) ) {
+			EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
 		}
 	}
 }
@@ -816,43 +816,45 @@ inline void TextSource::Render(gs_effect_t *effect)
 
 BOOL TextSource::get_song_name(HWND hwnd)
 {
-    wchar_t *temp;
-    int len;
-    len = GetWindowTextLengthW(hwnd);
-    if (!len)
-        return FALSE;
-    temp = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
-    if (GetWindowTextW(hwnd, temp, len + 1)) {
-        wchar_t *strStart = temp;
-        wchar_t *strEnd = nullptr;
-        wchar_t *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
-        for (wchar_t *const i : browser)
-            if ((wcsstr(temp, i) != NULL) &&
-                (strEnd = wcsstr(temp, L"- YouTube")) != NULL ) {
-                goto SetText;
-            }
+	wchar_t *temp;
+	int len;
+	len = GetWindowTextLengthW(hwnd);
+	if (!len)
+		return FALSE;
+	temp = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
+	if (GetWindowTextW(hwnd, temp, len + 1)) {
+		wchar_t *strStart = temp;
+		wchar_t *strEnd = nullptr;
+		wchar_t *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
+		for (wchar_t *const i : browser)
+			if ((wcsstr(temp, i) != NULL) &&
+				(strEnd = wcsstr(temp, L"- YouTube")) != NULL ) {
+				goto SetText;
+			}
 
-        if ((strEnd = wcsstr(temp, L"[foobar2000 v")) != NULL) {
-            goto SetText;
-        } else if ((strStart = wcsstr(temp, L"osu!  - ")) != NULL) {
-            strStart += 8;
-            goto SetText;
-        }
-        free(temp);
-        return FALSE;
+		if ((strEnd = wcsstr(temp, L"[foobar2000 v")) != NULL) {
+			goto SetText;
+		} else if ((strStart = wcsstr(temp, L"osu!  - ")) != NULL) {
+			strStart += 8;
+			goto SetText;
+		}
+		free(temp);
+		return FALSE;
 
 SetText:
-        len = strEnd - strStart - 1; // don't need '\0' when copy
-        if (wcsncmp(text.data(), strStart, len) ) {
-            text = wstring(strStart, 0, len);
-            text.push_back('\n');
-        }
-        free(temp);
-        song_hwnd = hwnd;
-	RenderText();
-        return TRUE;
-    }
-    return FALSE;
+		len = strEnd - strStart - 1; // don't need '\0' when copy
+		if (wcsncmp(text.data(), strStart, len) ) {
+			text = wstring(strStart, 0, len);
+			text.push_back('\n');
+		}
+
+		free(temp);
+		song_hwnd = hwnd;
+		RenderText();
+		return TRUE;
+	}
+	free(temp);
+	return FALSE;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -872,9 +874,8 @@ static bool use_file_changed(obs_properties_t *props, obs_property_t *p,
 		obs_data_t *s)
 {
 	bool use_file = obs_data_get_bool(s, S_USE_FILE);
-    if (use_file)
-        obs_data_set_bool(s, S_USE_SONG, false);
-
+	if (use_file)
+		obs_data_set_bool(s, S_USE_SONG, false);
 	set_vis(use_file, S_TEXT, false);
 	set_vis(use_file, S_FILE, true);
 	return true;
@@ -884,11 +885,12 @@ static bool use_song_changed(obs_properties_t *props, obs_property_t *p,
 		obs_data_t *s)
 {
 	bool use_song = obs_data_get_bool(s, S_USE_SONG);
-    if (use_song)
-        obs_data_set_bool(s, S_USE_FILE, false);
+	if (use_song) {
+		obs_data_set_bool(s, S_USE_FILE, false);
+		set_vis(true, S_FILE, false);
+	}
 
 	set_vis(use_song, S_TEXT, false);
-	set_vis(use_song, S_FILE, false);
 	return true;
 }
 
@@ -1105,6 +1107,6 @@ void obs_module_unload(void)
 
 BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam)
 {
-    TextSource* _TextSource = (TextSource *) lParam;
-    return !_TextSource->get_song_name(hwnd);
+	TextSource* _TextSource = (TextSource *) lParam;
+	return !_TextSource->get_song_name(hwnd);
 }
