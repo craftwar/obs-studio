@@ -1761,8 +1761,11 @@ static bool ready_async_frame(obs_source_t *source, uint64_t sys_time);
 static inline void render_video(obs_source_t *source)
 {
 	if (source->info.type != OBS_SOURCE_TYPE_FILTER &&
-	    (source->info.output_flags & OBS_SOURCE_VIDEO) == 0)
+	    (source->info.output_flags & OBS_SOURCE_VIDEO) == 0) {
+		if (source->filter_parent)
+			obs_source_skip_video_filter(source);
 		return;
+	}
 
 	if (source->info.type == OBS_SOURCE_TYPE_INPUT &&
 	    (source->info.output_flags & OBS_SOURCE_ASYNC) != 0 &&
@@ -1806,7 +1809,7 @@ void obs_source_video_render(obs_source_t *source)
 
 static uint32_t get_base_width(const obs_source_t *source)
 {
-	bool is_filter = (source->info.type == OBS_SOURCE_TYPE_FILTER);
+	bool is_filter = !!source->filter_parent;
 
 	if (source->info.type == OBS_SOURCE_TYPE_TRANSITION) {
 		return source->enabled ? source->transition_actual_cx : 0;
@@ -1814,7 +1817,7 @@ static uint32_t get_base_width(const obs_source_t *source)
 	} else if (source->info.get_width && (!is_filter || source->enabled)) {
 		return source->info.get_width(source->context.data);
 
-	} else if (source->info.type == OBS_SOURCE_TYPE_FILTER) {
+	} else if (is_filter) {
 		return get_base_width(source->filter_target);
 	}
 
@@ -1823,7 +1826,7 @@ static uint32_t get_base_width(const obs_source_t *source)
 
 static uint32_t get_base_height(const obs_source_t *source)
 {
-	bool is_filter = (source->info.type == OBS_SOURCE_TYPE_FILTER);
+	bool is_filter = !!source->filter_parent;
 
 	if (source->info.type == OBS_SOURCE_TYPE_TRANSITION) {
 		return source->enabled ? source->transition_actual_cy : 0;
@@ -3887,13 +3890,17 @@ static void custom_audio_render(obs_source_t *source, uint32_t mixers,
 	uint64_t ts;
 
 	for (size_t mix = 0; mix < MAX_AUDIO_MIXES; mix++) {
-		for (size_t ch = 0; ch < channels; ch++)
+		for (size_t ch = 0; ch < channels; ch++) {
 			audio_data.output[mix].data[ch] =
 				source->audio_output_buf[mix][ch];
-	}
+		}
 
-	memset(audio_data.output[0].data[0], 0, AUDIO_OUTPUT_FRAMES *
-			MAX_AUDIO_MIXES * channels * sizeof(float));
+		if ((source->audio_mixers & mixers & (1 << mix)) != 0) {
+			memset(source->audio_output_buf[mix][0], 0,
+					sizeof(float) * AUDIO_OUTPUT_FRAMES *
+					channels);
+		}
+	}
 
 	success = source->info.audio_render(source->context.data, &ts,
 			&audio_data, mixers, channels, sample_rate);
@@ -3904,11 +3911,15 @@ static void custom_audio_render(obs_source_t *source, uint32_t mixers,
 		return;
 
 	for (size_t mix = 0; mix < MAX_AUDIO_MIXES; mix++) {
-		if ((source->audio_mixers & (1 << mix)) == 0) {
+		uint32_t mix_bit = 1 << mix;
+
+		if ((mixers & mix_bit) == 0)
+			continue;
+
+		if ((source->audio_mixers & mix_bit) == 0) {
 			memset(source->audio_output_buf[mix][0], 0,
 					sizeof(float) * AUDIO_OUTPUT_FRAMES *
 					channels);
-			continue;
 		}
 	}
 
