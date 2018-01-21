@@ -400,6 +400,16 @@ void OBSBasic::copyActionsDynamicProperties()
 	}
 }
 
+void OBSBasic::UpdateVolumeControlsDecayRate()
+{
+	double meterDecayRate = config_get_double(basicConfig, "Audio",
+			"MeterDecayRate");
+
+	for (size_t i = 0; i < volumes.size(); i++) {
+		volumes[i]->SetMeterDecayRate(meterDecayRate);
+	}
+}
+
 void OBSBasic::ClearVolumeControls()
 {
 	VolControl *control;
@@ -1235,6 +1245,8 @@ bool OBSBasic::InitBasicConfigDefaults()
 	config_set_default_uint  (basicConfig, "Audio", "SampleRate", 44100);
 	config_set_default_string(basicConfig, "Audio", "ChannelSetup",
 			"Stereo");
+	config_set_default_double(basicConfig, "Audio", "MeterDecayRate",
+			VOLUME_METER_DECAY_FAST);
 
 	return true;
 }
@@ -1466,6 +1478,8 @@ void OBSBasic::OBSInit()
 	obs_log_loaded_modules();
 	blog(LOG_INFO, "---------------------------------");
 	obs_post_load_modules();
+
+	CheckForSimpleModeX264Fallback();
 
 	blog(LOG_INFO, STARTUP_SEPARATOR);
 
@@ -2549,6 +2563,9 @@ void OBSBasic::ActivateAudioSource(OBSSource source)
 
 	VolControl *vol = new VolControl(source, true);
 
+	double meterDecayRate = config_get_double(basicConfig, "Audio",
+			"MeterDecayRate");
+	vol->SetMeterDecayRate(meterDecayRate);
 	vol->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	connect(vol, &QWidget::customContextMenuRequested,
