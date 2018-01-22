@@ -778,6 +778,8 @@ inline void TextSource::Update(obs_data_t *s)
 
 inline void TextSource::Tick(float seconds)
 {
+	if (!obs_source_showing(source))
+		return;	
 	if (!read_from_file && !get_playing_song)
 		return;
 
