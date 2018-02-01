@@ -823,36 +823,39 @@ BOOL TextSource::get_song_name(HWND hwnd)
 	len = GetWindowTextLengthW(hwnd);
 	if (!len)
 		return FALSE;
-	temp = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
-	if (GetWindowTextW(hwnd, temp, len + 1)) {
-		wchar_t *strStart = temp;
-		wchar_t *strEnd = nullptr;
-		wchar_t *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
-		for (wchar_t *const i : browser)
+	temp = reinterpret_cast<wchar_t *>( malloc(sizeof(wchar_t) * (len + 1)) );
+	if (temp != nullptr && GetWindowTextW(hwnd, temp, len + 1)) {
+		wchar_t *strStart;
+		wchar_t *strEnd;
+		wchar_t const *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
+		for (auto i : browser)
 			if ((wcsstr(temp, i) != NULL) &&
 				(strEnd = wcsstr(temp, L"- YouTube")) != NULL ) {
-				goto SetText;
+				goto SetText_suffix;
 			}
 
 		if ((strEnd = wcsstr(temp, L"[foobar2000 v")) != NULL) {
-			goto SetText;
-		} else if ((strStart = wcsstr(temp, L"osu!  - ")) != NULL) {
-			strStart += 8;
-			goto SetText;
+			goto SetText_suffix;
+		} else if ((strStart = wcsstr(temp, L"osu!  -")) != NULL) {
+			strStart += 8; // 1 space after
+			len = wcslen(strStart);
+			goto SetText_prefix;
 		}
 		free(temp);
 		return FALSE;
 
-SetText:
-		len = strEnd - strStart - 1; // don't need '\0' when copy
+SetText_suffix:
+		strStart = temp;
+		len = strEnd - 1 - strStart; // remove 1 space before strEnd
+SetText_prefix:
 		if (wcsncmp(text.data(), strStart, len) ) {
 			text = wstring(strStart, 0, len);
 			text.push_back('\n');
+			RenderText();
 		}
+		song_hwnd = hwnd;
 
 		free(temp);
-		song_hwnd = hwnd;
-		RenderText();
 		return TRUE;
 	}
 	free(temp);
@@ -1109,6 +1112,6 @@ void obs_module_unload(void)
 
 BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam)
 {
-	TextSource* _TextSource = (TextSource *) lParam;
+	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
 	return !_TextSource->get_song_name(hwnd);
 }
