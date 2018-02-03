@@ -274,7 +274,7 @@ struct TextSource {
 	inline void Update(obs_data_t *settings);
 	inline void Tick(float seconds);
 	inline void Render(gs_effect_t *effect);
-	BOOL get_song_name(HWND hwnd);
+	BOOL get_song_name(const HWND hwnd);
 };
 
 static time_t get_modified_timestamp(const char *filename)
@@ -816,7 +816,7 @@ inline void TextSource::Render(gs_effect_t *effect)
 	gs_draw_sprite(tex, 0, cx, cy);
 }
 
-BOOL TextSource::get_song_name(HWND hwnd)
+BOOL TextSource::get_song_name(const HWND hwnd)
 {
 	wchar_t *temp;
 	int len;
@@ -828,7 +828,7 @@ BOOL TextSource::get_song_name(HWND hwnd)
 		wchar_t *strStart;
 		wchar_t *strEnd;
 		wchar_t const *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
-		for (auto i : browser)
+		for (auto& i : browser)
 			if ((wcsstr(temp, i) != NULL) &&
 				(strEnd = wcsstr(temp, L"- YouTube")) != NULL ) {
 				goto SetText_suffix;
