@@ -824,7 +824,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!len)
 		return FALSE;
 	temp = reinterpret_cast<wchar_t *>( malloc(sizeof(wchar_t) * (len + 1)) );
-	if (temp != nullptr && GetWindowTextW(hwnd, temp, len + 1)) {
+	if (GetWindowTextW(hwnd, temp, len + 1)) {
 		wchar_t *strStart;
 		wchar_t *strEnd;
 		wchar_t const *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
@@ -837,8 +837,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		if ((strEnd = wcsstr(temp, L"[foobar2000 v")) != NULL) {
 			goto SetText_suffix;
 		} else if ((strStart = wcsstr(temp, L"osu!  -")) != NULL) {
-			strStart += 8; // 1 space after
-			len = wcslen(strStart);
+			strStart += 8; // remove 1 space after
 			goto SetText_prefix;
 		}
 		free(temp);
@@ -846,11 +845,13 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 SetText_suffix:
 		strStart = temp;
-		len = strEnd - 1 - strStart; // remove 1 space before strEnd
+		if (strEnd)
+			*(strEnd-1) = '\0'; // remove 1 space before strEnd
 SetText_prefix:
-		if (wcsncmp(text.data(), strStart, len) ) {
-			text = wstring(strStart, 0, len);
-			text.push_back('\n');
+		if (wcscmp(text.data(), strStart) ) {
+			text = strStart;
+			if (*strStart)
+				text.push_back('\n');
 			RenderText();
 		}
 		song_hwnd = hwnd;
