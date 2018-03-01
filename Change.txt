@@ -13,3 +13,7 @@ PSAPI_VERSION=1拿掉，用新版PSAPI要win7以後系統才能用 (改用kernel
 game-capture.c
 static const char *blacklisted_exes[]  拿掉firefox黑名單 (抓firefox會出事嗎?)
 chrome無法用game capture，放回黑名單
+
+obs-text plugin加入抓播放中歌曲
+
+CMakeLists.txt加入Windows target參數
