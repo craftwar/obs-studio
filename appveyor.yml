@@ -51,6 +51,9 @@ before_deploy:
 
 deploy_script:
   - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar.7z"
+  - cd ..
+  - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text.dll"
+#  - ps: Push-AppveyorArtifact "($env:APPVEYOR_BUILD_FOLDER)\build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text.dll"
 
 test: off
 
