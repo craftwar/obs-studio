@@ -848,7 +848,7 @@ SetText_suffix:
 		if (strEnd)
 			*(strEnd-1) = '\0'; // remove 1 space before strEnd
 SetText_prefix:
-		if (wcscmp(text.data(), strStart) ) {
+		if (text.compare(strStart)) {
 			text = strStart;
 			if (*strStart)
 				text.push_back('\n');
