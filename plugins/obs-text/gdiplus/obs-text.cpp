@@ -893,7 +893,8 @@ static bool use_song_changed(obs_properties_t *props, obs_property_t *p,
 	bool use_song = obs_data_get_bool(s, S_USE_SONG);
 	if (use_song) {
 		obs_data_set_bool(s, S_USE_FILE, false);
-		set_vis(true, S_FILE, false);
+		p = obs_properties_get(props, S_FILE);
+		obs_property_set_visible(p, false);
 	}
 
 	set_vis(use_song, S_TEXT, false);
