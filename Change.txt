@@ -17,3 +17,5 @@ chrome無法用game capture，放回黑名單
 obs-text plugin加入抓播放中歌曲
 
 CMakeLists.txt加入Windows target參數
+
+obs-studio\UI\obs-app.cpp 版本加入craftwar識別

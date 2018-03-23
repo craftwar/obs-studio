@@ -997,13 +997,9 @@ string OBSApp::GetVersionString() const
 		LIBOBS_API_PATCH_VER;
 
 #endif
-	ver << " (";
 
 #ifdef _WIN32
-	if (sizeof(void*) == 8)
-		ver << "64bit, ";
-
-	ver << "windows)";
+	ver << " (by craftwar)";
 #elif __APPLE__
 	ver << "mac)";
 #elif __FreeBSD__
