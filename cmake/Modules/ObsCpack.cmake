@@ -17,7 +17,8 @@ set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSIO
 
 if(NOT DEFINED OBS_VERSION_OVERRIDE)
 	if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-		execute_process(COMMAND git describe --always --tags --dirty=-modified
+		execute_process(COMMAND git describe --always --tags
+			COMMAND sed -e 's/-.*-/-/'
 			OUTPUT_VARIABLE OBS_VERSION
 			WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 			OUTPUT_STRIP_TRAILING_WHITESPACE)
