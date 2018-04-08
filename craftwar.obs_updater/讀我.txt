@@ -1,0 +1,26 @@
+﻿這是craftwar修改的OBS Studio，除了提高效能外，有增加和移除功能 ex: 顯示播放中的歌名
+如果你需要的功能沒有，請另外安裝或使用官方版本
+
+"update updater.cmd" 更新updater (包含說明文件)
+"update OBS.cmd" 更新OBS
+"update and run OBS.cmd" 更新並啟動 OBS
+"no gc.cmd" 更新OBS (除了game capture不更新以外都一樣)
+"extract OBS.cmd" 解壓縮OBS (不下載，忘記關OBS或其他錯誤時使用)
+
+只會更新craftwar做的OBS，不會更新你安裝的任何插件
+
+
+如果無法執行OBS，需要先安裝 Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64)
+如果有裝2015的，程式可以執行，但是可能會出現異常行為，請安裝2017的 (不用移除舊的2015/2017)
+https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
+
+如果你需要瀏覽器插件
+https://github.com/obsproject/obs-browser/releases
+(這個也不會自動更新到)
+
+Q:	如何知道我該更新其他插件?
+A:	當OBS版本號改變時，就有可能需要更新，否則有可能出現相容問題，你要等到出問題再處理也可以(?
+	更新方法為，把加裝的plugin覆蓋過去，或是下載updater執行更新覆蓋官方版本
+
+其他詳細訊息請看
+http://craftwarblog.blogspot.com/2017/09/chatty-obs-by-craftwar.html
