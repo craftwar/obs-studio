@@ -1,8 +1,8 @@
 @rem 7zip doesn't support extract some formats (7z...etc) from pipe yet
 @rem curl -skL https://zlib.net/zlib1211.zip -f --retry 5 -C - | "C:\Program Files\7-Zip\7z.exe" x -si
 @echo off
-set file_url=https://github.com/craftwar/obs-studio/releases/download/git/craftwar.obs_updater.7z
-set file=craftwar.obs_updater.7z
+set file_url=https://github.com/craftwar/obs-studio/releases/download/git/craftwar.obs_updater.zip
+set file=craftwar.obs_updater.zip
 set file-new=%file%-new
 set _7z=7za.exe
 ::set _7z_options=
