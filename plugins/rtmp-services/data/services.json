@@ -662,6 +662,10 @@
                     "url": "rtmp://eu-luxembourg.restream.io/live"
                 },
                 {
+                    "name": "EU-West (Paris, FR)",
+                    "url": "rtmp://eu-paris.restream.io/live"
+                },
+                {
                     "name": "EU-Central (Frankfurt, DE)",
                     "url": "rtmp://eu-central.restream.io/live"
                 },
@@ -797,7 +801,8 @@
             "recommended": {
                 "keyint": 2,
                 "max video bitrate": 25000,
-                "max audio bitrate": 192
+                "max audio bitrate": 192,
+                "x264opts": "scenecut=0"
             }
         },
         {

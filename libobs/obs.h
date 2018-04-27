@@ -276,6 +276,12 @@ EXPORT void obs_set_locale(const char *locale);
 /** @return the current locale */
 EXPORT const char *obs_get_locale(void);
 
+/** Initialize the Windows-specific crash handler */
+
+#ifdef _WIN32
+EXPORT void obs_init_win32_crash_handler(void);
+#endif
+
 /**
  * Returns the profiler name store (see util/profiler.h) used by OBS, which is
  * either a name store passed to obs_startup, an internal name store, or NULL
@@ -564,6 +570,10 @@ EXPORT void obs_render_main_view(void);
 /** Renders the last main output texture */
 EXPORT void obs_render_main_texture(void);
 
+/** Returns the last main output texture.  This can return NULL if the texture
+ * is unavailable. */
+EXPORT gs_texture_t *obs_get_main_texture(void);
+
 /** Sets the master user volume */
 EXPORT void obs_set_master_volume(float volume);
 
@@ -622,6 +632,14 @@ EXPORT void obs_add_main_render_callback(
 		void *param);
 EXPORT void obs_remove_main_render_callback(
 		void (*draw)(void *param, uint32_t cx, uint32_t cy),
+		void *param);
+
+EXPORT void obs_add_raw_video_callback(
+		const struct video_scale_info *conversion,
+		void (*callback)(void *param, struct video_data *frame),
+		void *param);
+EXPORT void obs_remove_raw_video_callback(
+		void (*callback)(void *param, struct video_data *frame),
 		void *param);
 
 
@@ -1439,6 +1457,12 @@ EXPORT void obs_output_force_stop(obs_output_t *output);
 
 /** Returns whether the output is active */
 EXPORT bool obs_output_active(const obs_output_t *output);
+
+/** Returns output capability flags */
+EXPORT uint32_t obs_output_get_flags(const obs_output_t *output);
+
+/** Returns output capability flags */
+EXPORT uint32_t obs_get_output_flags(const char *id);
 
 /** Gets the default settings for an output type */
 EXPORT obs_data_t *obs_output_defaults(const char *id);

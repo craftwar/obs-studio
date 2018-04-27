@@ -129,18 +129,11 @@ static void AddExtraModulePaths()
 #endif
 }
 
-static QList<QKeySequence> DeleteKeys;
-
 OBSBasic::OBSBasic(QWidget *parent)
 	: OBSMainWindow  (parent),
 	  ui             (new Ui::OBSBasic)
 {
 	setAttribute(Qt::WA_NativeWindow);
-
-	projectorArray.resize(10, "");
-	previewProjectorArray.resize(10, 0);
-	multiviewProjectorArray.resize(10, 0);
-	studioProgramProjectorArray.resize(10, 0);
 
 	setAcceptDrops(true);
 
@@ -217,15 +210,9 @@ OBSBasic::OBSBasic(QWidget *parent)
 			ui->statusbar, SLOT(UpdateCPUUsage()));
 	cpuUsageTimer->start(3000);
 
-	DeleteKeys =
 #ifdef __APPLE__
-		QList<QKeySequence>{{Qt::Key_Backspace}} <<
-#endif
-		QKeySequence::keyBindings(QKeySequence::Delete);
-
-#ifdef __APPLE__
-	ui->actionRemoveSource->setShortcuts(DeleteKeys);
-	ui->actionRemoveScene->setShortcuts(DeleteKeys);
+	ui->actionRemoveSource->setShortcuts({Qt::Key_Backspace});
+	ui->actionRemoveScene->setShortcuts({Qt::Key_Backspace});
 
 	ui->action_Settings->setMenuRole(QAction::PreferencesRole);
 	ui->actionE_xit->setMenuRole(QAction::QuitRole);
@@ -319,10 +306,7 @@ static obs_data_t *GenerateSaveData(obs_data_array_t *sceneOrder,
 		obs_data_array_t *quickTransitionData, int transitionDuration,
 		obs_data_array_t *transitions,
 		OBSScene &scene, OBSSource &curProgramScene,
-		obs_data_array_t *savedProjectorList,
-		obs_data_array_t *savedPreviewProjectorList,
-		obs_data_array_t *savedStudioProgramProjectorList,
-		obs_data_array_t *savedMultiviewProjectorList)
+		obs_data_array_t *savedProjectorList)
 {
 	obs_data_t *saveData = obs_data_create();
 
@@ -364,12 +348,6 @@ static obs_data_t *GenerateSaveData(obs_data_array_t *sceneOrder,
 	obs_data_set_array(saveData, "quick_transitions", quickTransitionData);
 	obs_data_set_array(saveData, "transitions", transitions);
 	obs_data_set_array(saveData, "saved_projectors", savedProjectorList);
-	obs_data_set_array(saveData, "saved_preview_projectors",
-			savedPreviewProjectorList);
-	obs_data_set_array(saveData, "saved_studio_preview_projectors",
-			savedStudioProgramProjectorList);
-	obs_data_set_array(saveData, "saved_multiview_projectors",
-			savedMultiviewProjectorList);
 	obs_data_array_release(sourcesArray);
 
 	obs_data_set_string(saveData, "current_transition",
@@ -439,62 +417,41 @@ obs_data_array_t *OBSBasic::SaveSceneListOrder()
 
 obs_data_array_t *OBSBasic::SaveProjectors()
 {
-	obs_data_array_t *saveProjector = obs_data_array_create();
+	obs_data_array_t *savedProjectors = obs_data_array_create();
 
-	for (size_t i = 0; i < projectorArray.size(); i++) {
+	auto saveProjector = [savedProjectors](OBSProjector *projector) {
+		if (!projector)
+			return;
+
 		obs_data_t *data = obs_data_create();
-		obs_data_set_string(data, "saved_projectors",
-			projectorArray.at(i).c_str());
-		obs_data_array_push_back(saveProjector, data);
+		ProjectorType type = projector->GetProjectorType();
+		switch (type) {
+		case ProjectorType::Scene:
+		case ProjectorType::Source: {
+			obs_source_t *source = projector->GetSource();
+			const char *name = obs_source_get_name(source);
+			obs_data_set_string(data, "name", name);
+			break;
+		}
+		default:
+			break;
+		}
+		obs_data_set_int(data, "monitor", projector->GetMonitor());
+		obs_data_set_int(data, "type", static_cast<int>(type));
+		obs_data_set_string(data, "geometry",
+				projector->saveGeometry().toBase64()
+						.constData());
+		obs_data_array_push_back(savedProjectors, data);
 		obs_data_release(data);
-	}
+	};
 
-	return saveProjector;
-}
+	for (QPointer<QWidget> &proj : projectors)
+		saveProjector(static_cast<OBSProjector *>(proj.data()));
 
-obs_data_array_t *OBSBasic::SavePreviewProjectors()
-{
-	obs_data_array_t *saveProjector = obs_data_array_create();
+	for (QPointer<QWidget> &proj : windowProjectors)
+		saveProjector(static_cast<OBSProjector *>(proj.data()));
 
-	for (size_t i = 0; i < previewProjectorArray.size(); i++) {
-		obs_data_t *data = obs_data_create();
-		obs_data_set_int(data, "saved_preview_projectors",
-			previewProjectorArray.at(i));
-		obs_data_array_push_back(saveProjector, data);
-		obs_data_release(data);
-	}
-
-	return saveProjector;
-}
-
-obs_data_array_t *OBSBasic::SaveStudioProgramProjectors()
-{
-	obs_data_array_t *saveProjector = obs_data_array_create();
-
-	for (size_t i = 0; i < studioProgramProjectorArray.size(); i++) {
-		obs_data_t *data = obs_data_create();
-		obs_data_set_int(data, "saved_studio_preview_projectors",
-			studioProgramProjectorArray.at(i));
-		obs_data_array_push_back(saveProjector, data);
-		obs_data_release(data);
-	}
-
-	return saveProjector;
-}
-
-obs_data_array_t *OBSBasic::SaveMultiviewProjectors()
-{
-	obs_data_array_t *saveProjector = obs_data_array_create();
-
-	for (size_t i = 0; i < multiviewProjectorArray.size(); i++) {
-		obs_data_t *data = obs_data_create();
-		obs_data_set_int(data, "saved_multiview_projectors",
-			multiviewProjectorArray.at(i));
-		obs_data_array_push_back(saveProjector, data);
-		obs_data_release(data);
-	}
-
-	return saveProjector;
+	return savedProjectors;
 }
 
 void OBSBasic::Save(const char *file)
@@ -508,17 +465,9 @@ void OBSBasic::Save(const char *file)
 	obs_data_array_t *transitions = SaveTransitions();
 	obs_data_array_t *quickTrData = SaveQuickTransitions();
 	obs_data_array_t *savedProjectorList = SaveProjectors();
-	obs_data_array_t *savedPreviewProjectorList = SavePreviewProjectors();
-	obs_data_array_t *savedStudioProgramProjectorList =
-			SaveStudioProgramProjectors();
-	obs_data_array_t *savedMultiviewProjectorList =
-			SaveMultiviewProjectors();
 	obs_data_t *saveData = GenerateSaveData(sceneOrder, quickTrData,
 			ui->transitionDuration->value(), transitions,
-			scene, curProgramScene, savedProjectorList,
-			savedPreviewProjectorList,
-			savedStudioProgramProjectorList,
-			savedMultiviewProjectorList);
+			scene, curProgramScene, savedProjectorList);
 
 	obs_data_set_bool(saveData, "preview_locked", ui->preview->Locked());
 	obs_data_set_bool(saveData, "scaling_enabled",
@@ -545,9 +494,19 @@ void OBSBasic::Save(const char *file)
 	obs_data_array_release(quickTrData);
 	obs_data_array_release(transitions);
 	obs_data_array_release(savedProjectorList);
-	obs_data_array_release(savedPreviewProjectorList);
-	obs_data_array_release(savedStudioProgramProjectorList);
-	obs_data_array_release(savedMultiviewProjectorList);
+}
+
+void OBSBasic::DeferSaveBegin()
+{
+	os_atomic_inc_long(&disableSaving);
+}
+
+void OBSBasic::DeferSaveEnd()
+{
+	long result = os_atomic_dec_long(&disableSaving);
+	if (result == 0) {
+		SaveProject();
+	}
 }
 
 static void LoadAudioDevice(const char *name, int channel, obs_data_t *parent)
@@ -653,47 +612,15 @@ void OBSBasic::LoadSavedProjectors(obs_data_array_t *array)
 
 	for (size_t i = 0; i < num; i++) {
 		obs_data_t *data = obs_data_array_item(array, i);
-		projectorArray.at(i) = obs_data_get_string(data,
-				"saved_projectors");
 
-		obs_data_release(data);
-	}
-}
-
-void OBSBasic::LoadSavedPreviewProjectors(obs_data_array_t *array)
-{
-	size_t num = obs_data_array_count(array);
-
-	for (size_t i = 0; i < num; i++) {
-		obs_data_t *data = obs_data_array_item(array, i);
-		previewProjectorArray.at(i) = obs_data_get_int(data,
-				"saved_preview_projectors");
-
-		obs_data_release(data);
-	}
-}
-
-void OBSBasic::LoadSavedStudioProgramProjectors(obs_data_array_t *array)
-{
-	size_t num = obs_data_array_count(array);
-
-	for (size_t i = 0; i < num; i++) {
-		obs_data_t *data = obs_data_array_item(array, i);
-		studioProgramProjectorArray.at(i) = obs_data_get_int(data,
-				"saved_studio_preview_projectors");
-
-		obs_data_release(data);
-	}
-}
-
-void OBSBasic::LoadSavedMultiviewProjectors(obs_data_array_t *array)
-{
-	size_t num = obs_data_array_count(array);
-
-	for (size_t i = 0; i < num; i++) {
-		obs_data_t *data = obs_data_array_item(array, i);
-		multiviewProjectorArray.at(i) = obs_data_get_int(data,
-				"saved_multiview_projectors");
+		SavedProjectorInfo *info = new SavedProjectorInfo();
+		info->monitor = obs_data_get_int(data, "monitor");
+		info->type = static_cast<ProjectorType>(obs_data_get_int(data,
+				"type"));
+		info->geometry = std::string(
+				obs_data_get_string(data, "geometry"));
+		info->name = std::string(obs_data_get_string(data, "name"));
+		savedProjectorsArray.emplace_back(info);
 
 		obs_data_release(data);
 	}
@@ -834,47 +761,6 @@ void OBSBasic::Load(const char *file)
 	ui->transitionDuration->setValue(newDuration);
 	SetTransition(curTransition);
 
-	/* ------------------- */
-
-	obs_data_array_t *savedProjectors = obs_data_get_array(data,
-			"saved_projectors");
-
-	if (savedProjectors)
-		LoadSavedProjectors(savedProjectors);
-
-	obs_data_array_release(savedProjectors);
-
-	/* ------------------- */
-
-	obs_data_array_t *savedPreviewProjectors = obs_data_get_array(data,
-			"saved_preview_projectors");
-
-	if (savedPreviewProjectors)
-		LoadSavedPreviewProjectors(savedPreviewProjectors);
-
-	obs_data_array_release(savedPreviewProjectors);
-
-	/* ------------------- */
-
-	obs_data_array_t *savedStudioProgramProjectors = obs_data_get_array(data,
-			"saved_studio_preview_projectors");
-
-	if (savedStudioProgramProjectors)
-		LoadSavedStudioProgramProjectors(savedStudioProgramProjectors);
-
-	obs_data_array_release(savedStudioProgramProjectors);
-
-	/* ------------------- */
-
-	obs_data_array_t *savedMultiviewProjectors = obs_data_get_array(data,
-			"saved_multiview_projectors");
-
-	if (savedMultiviewProjectors)
-		LoadSavedMultiviewProjectors(savedMultiviewProjectors);
-
-	obs_data_array_release(savedMultiviewProjectors);
-
-
 retryScene:
 	curScene = obs_get_source_by_name(sceneName);
 	curProgramScene = obs_get_source_by_name(programSceneName);
@@ -904,6 +790,26 @@ retryScene:
 
 	obs_data_array_release(sources);
 	obs_data_array_release(sceneOrder);
+
+	/* ------------------- */
+
+	bool projectorSave = config_get_bool(GetGlobalConfig(), "BasicWindow",
+			"SaveProjectors");
+
+	if (projectorSave) {
+		obs_data_array_t *savedProjectors = obs_data_get_array(data,
+				"saved_projectors");
+
+		if (savedProjectors) {
+			LoadSavedProjectors(savedProjectors);
+			OpenSavedProjectors();
+			activateWindow();
+		}
+
+		obs_data_array_release(savedProjectors);
+	}
+
+	/* ------------------- */
 
 	std::string file_base = strrchr(file, '/') + 1;
 	file_base.erase(file_base.size() - 5, 5);
@@ -1520,13 +1426,6 @@ void OBSBasic::OBSInit()
 	SET_VISIBILITY("ShowStatusBar", toggleStatusBar);
 #undef SET_VISIBILITY
 
-	{
-		ProfileScope("OBSBasic::Load");
-		disableSaving--;
-		Load(savePath);
-		disableSaving++;
-	}
-
 	TimedCheckForUpdates();
 	loaded = true;
 
@@ -1602,8 +1501,6 @@ void OBSBasic::OBSInit()
 
 	SystemTray(true);
 
-	OpenSavedProjectors();
-
 	if (windowState().testFlag(Qt::WindowFullScreen))
 		fullscreenInterface = true;
 
@@ -1664,6 +1561,39 @@ void OBSBasic::OBSInit()
 	ui->menuCrashLogs = nullptr;
 	ui->actionCheckForUpdates = nullptr;
 #endif
+
+	/* This is an incredibly unpleasant hack for macOS to isolate CEF
+	 * initialization until after all tasks related to Qt startup and main
+	 * window initialization have completed.  There is a macOS-specific bug
+	 * within either CEF and/or Qt that can cause a crash if both Qt and
+	 * CEF are loading at the same time.
+	 *
+	 * CEF will typically load fine after about two iterations from this
+	 * point, and all Qt tasks are typically fully completed after about
+	 * four or five iterations, but to be "ultra" safe, an arbitrarily
+	 * large number such as 10 is used.  This hack is extremely unpleasant,
+	 * but is worth doing instead of being forced to isolate the entire
+	 * browser plugin in to a separate process as before.
+	 *
+	 * Again, this hack is specific to macOS only.  Fortunately, on other
+	 * operating systems, such issues do not occur. */
+	QMetaObject::invokeMethod(this, "DeferredLoad",
+			Qt::QueuedConnection,
+			Q_ARG(QString, QT_UTF8(savePath)),
+			Q_ARG(int, 10));
+}
+
+void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
+{
+	if (--requeueCount > 0) {
+		QMetaObject::invokeMethod(this, "DeferredLoad",
+				Qt::QueuedConnection,
+				Q_ARG(QString, file),
+				Q_ARG(int, requeueCount));
+		return;
+	}
+
+	Load(QT_TO_UTF8(file));
 }
 
 void OBSBasic::UpdateMultiviewProjectorMenu()
@@ -2326,13 +2256,7 @@ void OBSBasic::RenameSources(OBSSource source, QString newName,
 			volumes[i]->SetName(newName);
 	}
 
-	std::string newText = newName.toUtf8().constData();
-	std::string prevText = prevName.toUtf8().constData();
-
-	for (size_t j = 0; j < projectorArray.size(); j++) {
-		if (projectorArray.at(j) == prevText)
-			projectorArray.at(j) = newText;
-	}
+	OBSProjector::RenameProjector(prevName, newName);
 
 	SaveProject();
 
@@ -2590,8 +2514,11 @@ void OBSBasic::ActivateAudioSource(OBSSource source)
 	connect(vol, &VolControl::ConfigClicked,
 			this, &OBSBasic::VolControlContextMenu);
 
-	volumes.push_back(vol);
-	ui->volumeWidgets->layout()->addWidget(vol);
+	InsertQObjectByName(volumes, vol);
+
+	for (auto volume : volumes) {
+		ui->volumeWidgets->layout()->addWidget(volume);
+	}
 }
 
 void OBSBasic::DeactivateAudioSource(OBSSource source)
@@ -3318,6 +3245,7 @@ void OBSBasic::CloseDialogs()
 	}
 
 	if (!stats.isNull()) stats->close(); //call close to save Stats geometry
+	if (!remux.isNull()) remux->close();
 }
 
 void OBSBasic::EnumDialogs()
@@ -3457,12 +3385,21 @@ void OBSBasic::on_actionShow_Recordings_triggered()
 
 void OBSBasic::on_actionRemux_triggered()
 {
+	if (!remux.isNull()) {
+		remux->show();
+		remux->raise();
+		return;
+	}
+
 	const char *mode = config_get_string(basicConfig, "Output", "Mode");
 	const char *path = strcmp(mode, "Advanced") ?
 		config_get_string(basicConfig, "SimpleOutput", "FilePath") :
 		config_get_string(basicConfig, "AdvOut", "RecFilePath");
-	OBSRemux remux(path, this);
-	remux.exec();
+
+	OBSRemux *remuxDlg;
+	remuxDlg = new OBSRemux(path, this);
+	remuxDlg->show();
+	remux = remuxDlg;
 }
 
 void OBSBasic::on_action_Settings_triggered()
@@ -3564,8 +3501,7 @@ void OBSBasic::on_scenes_customContextMenuRequested(const QPoint &pos)
 		popup.addAction(QTStr("Rename"),
 				this, SLOT(EditSceneName()));
 		popup.addAction(QTStr("Remove"),
-				this, SLOT(RemoveSelectedScene()),
-				DeleteKeys.front());
+				this, SLOT(RemoveSelectedScene()));
 		popup.addSeparator();
 
 		order.addAction(QTStr("Basic.MainMenu.Edit.Order.MoveUp"),
@@ -3934,8 +3870,7 @@ void OBSBasic::CreateSourcePopupMenu(QListWidgetItem *item, bool preview)
 		popup.addAction(QTStr("Rename"), this,
 				SLOT(EditSceneItemName()));
 		popup.addAction(QTStr("Remove"), this,
-				SLOT(on_actionRemoveSource_triggered()),
-				DeleteKeys.front());
+				SLOT(on_actionRemoveSource_triggered()));
 		popup.addSeparator();
 		popup.addMenu(ui->orderMenu);
 		popup.addMenu(ui->transformMenu);
@@ -3985,6 +3920,8 @@ void OBSBasic::CreateSourcePopupMenu(QListWidgetItem *item, bool preview)
 
 		ui->actionCopyFilters->setEnabled(true);
 		ui->actionCopySource->setEnabled(true);
+	} else {
+		ui->actionPasteFilters->setEnabled(false);
 	}
 
 	popup.exec(QCursor::pos());
@@ -5145,12 +5082,14 @@ void OBSBasic::on_previewDisabledLabel_customContextMenuRequested(
 
 void OBSBasic::on_actionAlwaysOnTop_triggered()
 {
-	CloseDialogs();
-
+#ifndef _WIN32
 	/* Make sure all dialogs are safely and successfully closed before
 	 * switching the always on top mode due to the fact that windows all
 	 * have to be recreated, so queue the actual toggle to happen after
 	 * all events related to closing the dialogs have finished */
+	CloseDialogs();
+#endif
+
 	QMetaObject::invokeMethod(this, "ToggleAlwaysOnTop",
 			Qt::QueuedConnection);
 }
@@ -5576,40 +5515,17 @@ void OBSBasic::NudgeDown()     {Nudge(1,  MoveDir::Down);}
 void OBSBasic::NudgeLeft()     {Nudge(1,  MoveDir::Left);}
 void OBSBasic::NudgeRight()    {Nudge(1,  MoveDir::Right);}
 
-void OBSBasic::OpenProjector(obs_source_t *source, int monitor, bool window,
+OBSProjector *OBSBasic::OpenProjector(obs_source_t *source, int monitor,
 		QString title, ProjectorType type)
 {
 	/* seriously?  10 monitors? */
 	if (monitor > 9 || monitor > QGuiApplication::screens().size() - 1)
-		return;
+		return nullptr;
 
-	if (!window) {
-		delete projectors[monitor];
-		projectors[monitor].clear();
-		RemoveSavedProjectors(monitor);
-	}
+	OBSProjector *projector = new OBSProjector(nullptr, source, monitor,
+			title, type);
 
-	OBSProjector *projector = new OBSProjector(nullptr, source, !!window);
-	const char *name = obs_source_get_name(source);
-
-	if (!window) {
-		if (type == ProjectorType::StudioProgram) {
-			studioProgramProjectorArray.at((size_t)monitor) = 1;
-		} else if (type == ProjectorType::Preview) {
-			previewProjectorArray.at((size_t)monitor) = 1;
-		} else if (type == ProjectorType::Multiview) {
-			multiviewProjectorArray.at((size_t)monitor) = 1;
-		} else {
-			projectorArray.at((size_t)monitor) = name;
-		}
-	}
-
-	if (!window) {
-		projector->Init(monitor, false, nullptr, type);
-		projectors[monitor] = projector;
-	} else {
-		projector->Init(monitor, true, title, type);
-
+	if (monitor < 0) {
 		for (auto &projPtr : windowProjectors) {
 			if (!projPtr) {
 				projPtr = projector;
@@ -5619,20 +5535,27 @@ void OBSBasic::OpenProjector(obs_source_t *source, int monitor, bool window,
 
 		if (projector)
 			windowProjectors.push_back(projector);
+	} else {
+		delete projectors[monitor];
+		projectors[monitor].clear();
+
+		projectors[monitor] = projector;
 	}
+
+	projector->Init();
+	return projector;
 }
 
 void OBSBasic::OpenStudioProgramProjector()
 {
 	int monitor = sender()->property("monitor").toInt();
-	OpenProjector(nullptr, monitor, false, nullptr,
-			ProjectorType::StudioProgram);
+	OpenProjector(nullptr, monitor, nullptr, ProjectorType::StudioProgram);
 }
 
 void OBSBasic::OpenPreviewProjector()
 {
 	int monitor = sender()->property("monitor").toInt();
-	OpenProjector(nullptr, monitor, false, nullptr, ProjectorType::Preview);
+	OpenProjector(nullptr, monitor, nullptr, ProjectorType::Preview);
 }
 
 void OBSBasic::OpenSourceProjector()
@@ -5642,14 +5565,14 @@ void OBSBasic::OpenSourceProjector()
 	if (!item)
 		return;
 
-	OpenProjector(obs_sceneitem_get_source(item), monitor, false);
+	OpenProjector(obs_sceneitem_get_source(item), monitor, nullptr,
+			ProjectorType::Source);
 }
 
 void OBSBasic::OpenMultiviewProjector()
 {
 	int monitor = sender()->property("monitor").toInt();
-	OpenProjector(nullptr, monitor, false, nullptr,
-			ProjectorType::Multiview);
+	OpenProjector(nullptr, monitor, nullptr, ProjectorType::Multiview);
 }
 
 void OBSBasic::OpenSceneProjector()
@@ -5659,112 +5582,110 @@ void OBSBasic::OpenSceneProjector()
 	if (!scene)
 		return;
 
-	OpenProjector(obs_scene_get_source(scene), monitor, false);
+	OpenProjector(obs_scene_get_source(scene), monitor, nullptr,
+			ProjectorType::Scene);
 }
 
 void OBSBasic::OpenStudioProgramWindow()
 {
-	int monitor = sender()->property("monitor").toInt();
-	QString title = QTStr("StudioProgramWindow");
-	OpenProjector(nullptr, monitor, true, title,
+	OpenProjector(nullptr, -1, QTStr("StudioProgramWindow"),
 			ProjectorType::StudioProgram);
 }
 
 void OBSBasic::OpenPreviewWindow()
 {
-	int monitor = sender()->property("monitor").toInt();
-	QString title = QTStr("PreviewWindow");
-	OpenProjector(nullptr, monitor, true, nullptr, ProjectorType::Preview);
+	OpenProjector(nullptr, -1, QTStr("PreviewWindow"),
+			ProjectorType::Preview);
 }
 
 void OBSBasic::OpenSourceWindow()
 {
-	int monitor = sender()->property("monitor").toInt();
 	OBSSceneItem item = GetCurrentSceneItem();
-	OBSSource source = obs_sceneitem_get_source(item);
-	QString text = QString::fromUtf8(obs_source_get_name(source));
-
-	QString title = QTStr("SourceWindow") + " - " + text;
-
 	if (!item)
 		return;
 
-	OpenProjector(obs_sceneitem_get_source(item), monitor, true, title);
+	OBSSource source = obs_sceneitem_get_source(item);
+	QString title = QString::fromUtf8(obs_source_get_name(source));
+
+	OpenProjector(obs_sceneitem_get_source(item), -1, title,
+			ProjectorType::Source);
 }
 
 void OBSBasic::OpenMultiviewWindow()
 {
-	int monitor = sender()->property("monitor").toInt();
-	OpenProjector(nullptr, monitor, true, "Multiview",
+	OpenProjector(nullptr, -1, QTStr("MultiviewWindowed"),
 			ProjectorType::Multiview);
 }
 
 void OBSBasic::OpenSceneWindow()
 {
-	int monitor = sender()->property("monitor").toInt();
 	OBSScene scene = GetCurrentScene();
-	OBSSource source = obs_scene_get_source(scene);
-	QString text = QString::fromUtf8(obs_source_get_name(source));
-
-	QString title = QTStr("SceneWindow") + " - " + text;
-
 	if (!scene)
 		return;
 
-	OpenProjector(obs_scene_get_source(scene), monitor, true, title);
+	OBSSource source = obs_scene_get_source(scene);
+	QString title = QString::fromUtf8(obs_source_get_name(source));
+
+	OpenProjector(obs_scene_get_source(scene), -1, title,
+			ProjectorType::Scene);
 }
 
 void OBSBasic::OpenSavedProjectors()
 {
-	bool projectorSave = config_get_bool(GetGlobalConfig(),
-			"BasicWindow", "SaveProjectors");
+	for (SavedProjectorInfo *info : savedProjectorsArray) {
+		OBSProjector *projector = nullptr;
+		switch (info->type) {
+		case ProjectorType::Source:
+		case ProjectorType::Scene: {
+			OBSSource source = obs_get_source_by_name(
+					info->name.c_str());
+			if (!source)
+				continue;
 
-	if (projectorSave) {
-		for (size_t i = 0; i < projectorArray.size(); i++) {
-			if (projectorArray.at(i).empty() == false) {
-				OBSSource source = obs_get_source_by_name(
-					projectorArray.at(i).c_str());
+			QString title = nullptr;
+			if (info->monitor < 0)
+				title = QString::fromUtf8(
+						obs_source_get_name(source));
 
-				if (!source) {
-					RemoveSavedProjectors((int)i);
-					obs_source_release(source);
-					continue;
-				}
+			projector = OpenProjector(source, info->monitor, title,
+					info->type);
 
-				OpenProjector(source, (int)i, false);
-				obs_source_release(source);
-			}
+			obs_source_release(source);
+			break;
+		}
+		case ProjectorType::Preview: {
+			projector = OpenProjector(nullptr, info->monitor,
+					QTStr("PreviewWindow"),
+					ProjectorType::Preview);
+			break;
+		}
+		case ProjectorType::StudioProgram: {
+			projector = OpenProjector(nullptr, info->monitor,
+					QTStr("StudioProgramWindow"),
+					ProjectorType::StudioProgram);
+			break;
+		}
+		case ProjectorType::Multiview: {
+			projector = OpenProjector(nullptr, info->monitor,
+					QTStr("MultiviewWindowed"),
+					ProjectorType::Multiview);
+			break;
+		}
 		}
 
-		for (size_t i = 0; i < studioProgramProjectorArray.size(); i++) {
-			if (studioProgramProjectorArray.at(i) == 1) {
-				OpenProjector(nullptr, (int)i, false, nullptr,
-						ProjectorType::StudioProgram);
-			}
-		}
+		if (!info->geometry.empty()) {
+			QByteArray byteArray = QByteArray::fromBase64(
+					QByteArray(info->geometry.c_str()));
+			projector->restoreGeometry(byteArray);
 
-		for (size_t i = 0; i < previewProjectorArray.size(); i++) {
-			if (previewProjectorArray.at(i) == 1) {
-				OpenProjector(nullptr, (int)i, false, nullptr,
-						ProjectorType::Preview);
-			}
-		}
-
-		for (size_t i = 0; i < multiviewProjectorArray.size(); i++) {
-			if (multiviewProjectorArray.at(i) == 1) {
-				OpenProjector(nullptr, (int)i, false, nullptr,
-						ProjectorType::Multiview);
+			if (!WindowPositionValid(projector->normalGeometry())) {
+				QRect rect = App()->desktop()->geometry();
+				projector->setGeometry(QStyle::alignedRect(
+						Qt::LeftToRight,
+						Qt::AlignCenter, size(), rect));
 			}
 		}
 	}
-}
-
-void OBSBasic::RemoveSavedProjectors(int monitor)
-{
-	studioProgramProjectorArray.at((size_t)monitor) = 0;
-	multiviewProjectorArray.at((size_t)monitor) = 0;
-	previewProjectorArray.at((size_t)monitor) = 0;
-	projectorArray.at((size_t)monitor) = "";
 }
 
 void OBSBasic::on_actionFullscreenInterface_triggered()

@@ -136,6 +136,7 @@ VolControl::VolControl(OBSSource source_, bool showConfig)
 	font.setPointSize(font.pointSize()-1);
 
 	QString sourceName = obs_source_get_name(source);
+	setObjectName(sourceName);
 
 	nameLabel->setText(sourceName);
 	nameLabel->setFont(font);
@@ -653,6 +654,13 @@ void VolumeMeter::paintTicks(QPainter &painter, int x, int y,
 	}
 }
 
+#define CLIP_FLASH_DURATION_MS 1000
+
+void VolumeMeter::ClipEnding()
+{
+	clipping = false;
+}
+
 void VolumeMeter::paintMeter(QPainter &painter, int x, int y,
 	int width, int height, float magnitude, float peak, float peakHold)
 {
@@ -671,6 +679,10 @@ void VolumeMeter::paintMeter(QPainter &painter, int x, int y,
 	int warningLength       = errorPosition - warningPosition;
 	int errorLength         = maximumPosition - errorPosition;
 	locker.unlock();
+
+	if (clipping) {
+		peakPosition = maximumPosition;
+	}
 
 	if (peakPosition < minimumPosition) {
 		painter.fillRect(
@@ -740,6 +752,12 @@ void VolumeMeter::paintMeter(QPainter &painter, int x, int y,
 			backgroundErrorColor);
 
 	} else {
+		if (!clipping) {
+			QTimer::singleShot(CLIP_FLASH_DURATION_MS, this,
+					SLOT(ClipEnding()));
+			clipping = true;
+		}
+
 		qreal end = errorLength + warningLength + nominalLength;
 		painter.fillRect(
 			minimumPosition, y,

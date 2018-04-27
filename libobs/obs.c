@@ -776,7 +776,6 @@ static bool obs_init(const char *locale, const char *module_config_path,
 }
 
 #ifdef _WIN32
-extern void initialize_crash_handler(void);
 extern void initialize_com(void);
 extern void uninitialize_com(void);
 #endif
@@ -795,7 +794,6 @@ bool obs_startup(const char *locale, const char *module_config_path,
 	}
 
 #ifdef _WIN32
-	initialize_crash_handler();
 	initialize_com();
 #endif
 
@@ -1468,6 +1466,23 @@ void obs_render_main_texture(void)
 		gs_draw_sprite(tex, 0, 0, 0);
 }
 
+gs_texture_t *obs_get_main_texture(void)
+{
+	struct obs_core_video *video = &obs->video;
+	int last_tex;
+
+	if (!obs) return NULL;
+
+	last_tex = video->cur_texture == 0
+		? NUM_TEXTURES - 1
+		: video->cur_texture - 1;
+
+	if (!video->textures_rendered[last_tex])
+		return NULL;
+
+	return video->render_textures[last_tex];
+}
+
 void obs_set_master_volume(float volume)
 {
 	struct calldata data = {0};
@@ -2053,4 +2068,43 @@ uint32_t obs_get_total_frames(void)
 uint32_t obs_get_lagged_frames(void)
 {
 	return obs ? obs->video.lagged_frames : 0;
+}
+
+void start_raw_video(video_t *v, const struct video_scale_info *conversion,
+		void (*callback)(void *param, struct video_data *frame),
+		void *param)
+{
+	struct obs_core_video *video = &obs->video;
+	os_atomic_inc_long(&video->raw_active);
+	video_output_connect(v, conversion, callback, param);
+}
+
+void stop_raw_video(video_t *v,
+		void (*callback)(void *param, struct video_data *frame),
+		void *param)
+{
+	struct obs_core_video *video = &obs->video;
+	os_atomic_dec_long(&video->raw_active);
+	video_output_disconnect(v, callback, param);
+}
+
+void obs_add_raw_video_callback(
+		const struct video_scale_info *conversion,
+		void (*callback)(void *param, struct video_data *frame),
+		void *param)
+{
+	struct obs_core_video *video = &obs->video;
+	if (!obs)
+		return;
+	start_raw_video(video->video, conversion, callback, param);
+}
+
+void obs_remove_raw_video_callback(
+		void (*callback)(void *param, struct video_data *frame),
+		void *param)
+{
+	struct obs_core_video *video = &obs->video;
+	if (!obs)
+		return;
+	stop_raw_video(video->video, callback, param);
 }
