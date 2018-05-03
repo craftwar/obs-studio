@@ -388,6 +388,29 @@ void OBSBasic::UpdateVolumeControlsDecayRate()
 	}
 }
 
+void OBSBasic::UpdateVolumeControlsPeakMeterType()
+{
+	uint32_t peakMeterTypeIdx = config_get_uint(basicConfig, "Audio",
+			"PeakMeterType");
+
+	enum obs_peak_meter_type peakMeterType;
+	switch (peakMeterTypeIdx) {
+	case 0:
+		peakMeterType = SAMPLE_PEAK_METER;
+		break;
+	case 1:
+		peakMeterType = TRUE_PEAK_METER;
+		break;
+	default:
+		peakMeterType = SAMPLE_PEAK_METER;
+		break;
+	}
+
+	for (size_t i = 0; i < volumes.size(); i++) {
+		volumes[i]->setPeakMeterType(peakMeterType);
+	}
+}
+
 void OBSBasic::ClearVolumeControls()
 {
 	VolControl *control;
@@ -1153,6 +1176,7 @@ bool OBSBasic::InitBasicConfigDefaults()
 			"Stereo");
 	config_set_default_double(basicConfig, "Audio", "MeterDecayRate",
 			VOLUME_METER_DECAY_FAST);
+	config_set_default_uint  (basicConfig, "Audio", "PeakMeterType", 0);
 
 	return true;
 }
@@ -1426,6 +1450,15 @@ void OBSBasic::OBSInit()
 	SET_VISIBILITY("ShowStatusBar", toggleStatusBar);
 #undef SET_VISIBILITY
 
+#ifndef __APPLE__
+	{
+		ProfileScope("OBSBasic::Load");
+		disableSaving--;
+		Load(savePath);
+		disableSaving++;
+	}
+#endif
+
 	TimedCheckForUpdates();
 	loaded = true;
 
@@ -1446,7 +1479,9 @@ void OBSBasic::OBSInit()
 	}
 #endif
 
+#ifndef __APPLE__
 	RefreshSceneCollections();
+#endif
 	RefreshProfiles();
 	disableSaving--;
 
@@ -1562,6 +1597,7 @@ void OBSBasic::OBSInit()
 	ui->actionCheckForUpdates = nullptr;
 #endif
 
+#ifdef __APPLE__
 	/* This is an incredibly unpleasant hack for macOS to isolate CEF
 	 * initialization until after all tasks related to Qt startup and main
 	 * window initialization have completed.  There is a macOS-specific bug
@@ -1581,6 +1617,7 @@ void OBSBasic::OBSInit()
 			Qt::QueuedConnection,
 			Q_ARG(QString, QT_UTF8(savePath)),
 			Q_ARG(int, 10));
+#endif
 }
 
 void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
@@ -1594,6 +1631,7 @@ void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
 	}
 
 	Load(QT_TO_UTF8(file));
+	RefreshSceneCollections();
 }
 
 void OBSBasic::UpdateMultiviewProjectorMenu()
@@ -2507,6 +2545,25 @@ void OBSBasic::ActivateAudioSource(OBSSource source)
 	double meterDecayRate = config_get_double(basicConfig, "Audio",
 			"MeterDecayRate");
 	vol->SetMeterDecayRate(meterDecayRate);
+
+	uint32_t peakMeterTypeIdx = config_get_uint(basicConfig, "Audio",
+			"PeakMeterType");
+
+	enum obs_peak_meter_type peakMeterType;
+	switch (peakMeterTypeIdx) {
+	case 0:
+		peakMeterType = SAMPLE_PEAK_METER;
+		break;
+	case 1:
+		peakMeterType = TRUE_PEAK_METER;
+		break;
+	default:
+		peakMeterType = SAMPLE_PEAK_METER;
+		break;
+	}
+
+	vol->setPeakMeterType(peakMeterType);
+
 	vol->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	connect(vol, &QWidget::customContextMenuRequested,
