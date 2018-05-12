@@ -11,6 +11,7 @@
 #define TEXT_MATCH_EXE      obs_module_text("WindowCapture.Priority.Exe")
 #define TEXT_CAPTURE_CURSOR obs_module_text("CaptureCursor")
 #define TEXT_COMPATIBILITY  obs_module_text("Compatibility")
+#define TEXT_CAPTURE_LAYERED  obs_module_text("CaptureLayered")
 
 struct window_capture {
 	obs_source_t         *source;
@@ -21,6 +22,7 @@ struct window_capture {
 	enum window_priority priority;
 	bool                 cursor;
 	bool                 compatibility;
+	bool                 layered;
 	bool                 use_wildcards; /* TODO */
 
 	struct dc_capture    capture;
@@ -55,6 +57,7 @@ static void update_settings(struct window_capture *wc, obs_data_t *s)
 	wc->cursor        = obs_data_get_bool(s, "cursor");
 	wc->use_wildcards = obs_data_get_bool(s, "use_wildcards");
 	wc->compatibility = obs_data_get_bool(s, "compatibility");
+	wc->layered = obs_data_get_bool(s, "layered");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -136,8 +139,8 @@ static obs_properties_t *wc_properties(void *unused)
 	obs_property_list_add_int(p, TEXT_MATCH_EXE,   WINDOW_PRIORITY_EXE);
 
 	obs_properties_add_bool(ppts, "cursor", TEXT_CAPTURE_CURSOR);
-
 	obs_properties_add_bool(ppts, "compatibility", TEXT_COMPATIBILITY);
+	obs_properties_add_bool(ppts, "layered", TEXT_CAPTURE_LAYERED);
 
 	return ppts;
 }
@@ -212,7 +215,7 @@ static void wc_tick(void *data, float seconds)
 		wc->last_rect = rect;
 		dc_capture_free(&wc->capture);
 		dc_capture_init(&wc->capture, 0, 0, rect.right, rect.bottom,
-				wc->cursor, wc->compatibility);
+				wc->cursor, wc->compatibility, wc->layered);
 	}
 
 	dc_capture_capture(&wc->capture, wc->window);

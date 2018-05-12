@@ -827,7 +827,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (GetWindowTextW(hwnd, temp, len + 1)) {
 		wchar_t *strStart;
 		wchar_t *strEnd;
-		wchar_t const *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
+		static wchar_t const *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
 		for (auto& i : browser)
 			if ((wcsstr(temp, i) != NULL) &&
 				(strEnd = wcsstr(temp, L"- YouTube")) != NULL ) {

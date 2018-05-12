@@ -24,7 +24,7 @@ static inline void init_textures(struct dc_capture *capture)
 
 void dc_capture_init(struct dc_capture *capture, int x, int y,
 		uint32_t width, uint32_t height, bool cursor,
-		bool compatibility)
+		bool compatibility, bool layered)
 {
 	memset(capture, 0, sizeof(struct dc_capture));
 
@@ -137,6 +137,9 @@ void dc_capture_capture(struct dc_capture *capture, HWND window)
 {
 	HDC hdc_target;
 	HDC hdc;
+	DWORD capture_option;
+	BOOL result;
+	int cap, test;
 
 	if (capture->capture_cursor) {
 		memset(&capture->ci, 0, sizeof(CURSORINFO));
@@ -152,9 +155,20 @@ void dc_capture_capture(struct dc_capture *capture, HWND window)
 	}
 
 	hdc_target = GetDC(window);
+	cap = GetDeviceCaps(hdc_target, RASTERCAPS);
+	test = cap & RC_BITBLT;
+	test = cap & RC_BITMAP64;
 
-	BitBlt(hdc, 0, 0, capture->width, capture->height,
-			hdc_target, capture->x, capture->y, SRCCOPY);
+
+	if (capture->capture_layered)
+		capture_option = CAPTUREBLT | SRCCOPY;
+	else
+		capture_option = SRCCOPY;
+	capture_option = CAPTUREBLT | SRCCOPY;
+	result = BitBlt(hdc, 0, 0, capture->width, capture->height,
+			hdc_target, capture->x, capture->y, capture_option);
+	if (result -= 0)
+		result = GetLastError();
 
 	ReleaseDC(NULL, hdc_target);
 

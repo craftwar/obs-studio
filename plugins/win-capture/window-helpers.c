@@ -1,4 +1,3 @@
-//#define PSAPI_VERSION 1
 #include <obs.h>
 #include <util/dstr.h>
 
@@ -130,28 +129,21 @@ void get_window_class(struct dstr *class, HWND hwnd)
 
 /* not capturable or internal windows */
 static const char *internal_microsoft_exes[] = {
-	"applicationframehost",
-	"shellexperiencehost",
-	"winstore.app",
-	"searchui",
+	"applicationframehost.exe",
+	"shellexperiencehost.exe",
+	"winstore.app.exe",
+	"searchui.exe",
 	NULL
 };
 
 static bool is_microsoft_internal_window_exe(const char *exe)
 {
-	char cur_exe[MAX_PATH];
-
 	if (!exe)
 		return false;
-
-	for (const char **vals = internal_microsoft_exes; *vals; vals++) {
-		strcpy(cur_exe, *vals);
-		strcat(cur_exe, ".exe");
-
-		if (strcmpi(cur_exe, exe) == 0)
+	for (const char **vals = internal_microsoft_exes; *vals; ++vals) {
+		if (strcmpi(*vals, exe) == 0)
 			return true;
 	}
-
 	return false;
 }
 
@@ -213,8 +205,9 @@ static bool check_window_valid(HWND window, enum window_search_mode mode)
 	styles    = (DWORD)GetWindowLongPtr(window, GWL_STYLE);
 	ex_styles = (DWORD)GetWindowLongPtr(window, GWL_EXSTYLE);
 
-	if (ex_styles & WS_EX_TOOLWINDOW)
-		return false;
+	// enable tool window to get vnr かがみ
+	//if (ex_styles & WS_EX_TOOLWINDOW)
+	//	return false;
 	if (styles & WS_CHILD)
 		return false;
 	if (mode == EXCLUDE_MINIMIZED && (rect.bottom == 0 || rect.right == 0))
@@ -327,7 +320,7 @@ void fill_window_list(obs_property_t *p, enum window_search_mode mode,
 		add_window_cb callback)
 {
 	HWND parent;
-	bool use_findwindowex = false;
+	bool use_findwindowex = true;
 
 	HWND window = first_window(mode, &parent, &use_findwindowex);
 
