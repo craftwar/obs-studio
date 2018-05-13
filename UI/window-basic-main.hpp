@@ -259,7 +259,6 @@ private:
 	void GetAudioSourceProperties();
 	void VolControlContextMenu();
 
-	void AddSceneCollection(bool create_new);
 	void RefreshSceneCollections();
 	void ChangeSceneCollection();
 	void LogScenes();
@@ -407,6 +406,10 @@ public slots:
 	void SetCurrentScene(OBSSource scene, bool force = false,
 			bool direct = false);
 
+	bool AddSceneCollection(
+			bool create_new,
+			const QString &name = QString());
+
 private slots:
 	void AddSceneItem(OBSSceneItem item);
 	void RemoveSceneItem(OBSSceneItem item);
@@ -468,7 +471,7 @@ private:
 	static void SceneItemRemoved(void *data, calldata_t *params);
 	static void SceneItemSelected(void *data, calldata_t *params);
 	static void SceneItemDeselected(void *data, calldata_t *params);
-	static void SourceLoaded(void *data, obs_source_t *source);
+	static void SourceCreated(void *data, calldata_t *params);
 	static void SourceRemoved(void *data, calldata_t *params);
 	static void SourceActivated(void *data, calldata_t *params);
 	static void SourceDeactivated(void *data, calldata_t *params);
