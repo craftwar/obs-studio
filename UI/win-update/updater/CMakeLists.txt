@@ -1,3 +1,7 @@
+if(NOT ENABLE_WIN_UPDATER)
+	return()
+endif()
+
 if(DISABLE_UPDATE_MODULE)
 	return()
 endif()
