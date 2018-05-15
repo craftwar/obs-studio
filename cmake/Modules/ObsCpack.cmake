@@ -17,11 +17,19 @@ set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSIO
 
 if(NOT DEFINED OBS_VERSION_OVERRIDE)
 	if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-		execute_process(COMMAND git describe --always --tags
-			COMMAND sed -e 's/-.*-/-/'
-			OUTPUT_VARIABLE OBS_VERSION
+#		execute_process(COMMAND git tag -l '*.*'	may be slower?
+		execute_process(COMMAND git tag
+			COMMAND tail -2
+			COMMAND head -1
+			OUTPUT_VARIABLE OBS_VERSION_MAJOR
 			WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 			OUTPUT_STRIP_TRAILING_WHITESPACE)
+		execute_process(COMMAND git describe --always --tags
+			COMMAND sed -e 's/.*-.*-/-/'
+			OUTPUT_VARIABLE OBS_VERSION_SHA
+			WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+			OUTPUT_STRIP_TRAILING_WHITESPACE)
+		set(OBS_VERSION "${OBS_VERSION_MAJOR}${OBS_VERSION_SHA}")
 	else()
 		set(OBS_VERSION "${CPACK_PACKAGE_VERSION}")
 	endif()
