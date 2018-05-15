@@ -1,10 +1,14 @@
 Changes on OBS made by caftwar
+Remove parts I don't use and try to make OBS faster
+Not all changes I make is accepted by official OBS build
+
 
 cmake
 -DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true
 -DBUILDER_CA_ENCODER=false會被無視，只能直接改
 \plugins
 \UI 拿掉frontend-plugins
+
 
 \obs-studio\plugins\win-capture\
 window-helpers.c
@@ -19,3 +23,4 @@ obs-text plugin加入抓播放中歌曲
 CMakeLists.txt加入Windows target參數
 
 obs-studio\UI\obs-app.cpp 版本加入craftwar識別
+
