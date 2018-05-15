@@ -140,7 +140,6 @@ static inline uint32_t rgb_to_bgr(uint32_t rgb)
 	return ((rgb & 0xFF) << 16) | (rgb & 0xFF00) | ((rgb & 0xFF0000) >> 16);
 }
 
-BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam);
 
 /* ------------------------------------------------------------------------- */
 
@@ -274,6 +273,7 @@ struct TextSource {
 	inline void Update(obs_data_t *settings);
 	inline void Tick(float seconds);
 	inline void Render(gs_effect_t *effect);
+	static BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam);
 	BOOL get_song_name(const HWND hwnd);
 };
 
@@ -802,7 +802,14 @@ inline void TextSource::Tick(float seconds)
 			}
 		} else if (get_playing_song &&
 			(!IsWindow(song_hwnd) || !get_song_name(song_hwnd)) ) {
-			EnumWindows(&find_target, reinterpret_cast<LPARAM>(this));
+				::EnumWindows(&TextSource::find_target, reinterpret_cast<LPARAM>(this));
+			// compiler bug? no BOOL = error, will lambda object be created every run?
+			//::EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL
+			//{
+			//	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
+			//	return !_TextSource->get_song_name(hwnd);
+			//}
+			//, reinterpret_cast<LPARAM>(this));
 		}
 	}
 }
@@ -1112,7 +1119,7 @@ void obs_module_unload(void)
 	GdiplusShutdown(gdip_token);
 }
 
-BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam)
+BOOL CALLBACK TextSource::find_target(HWND hwnd, LPARAM lParam)
 {
 	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
 	return !_TextSource->get_song_name(hwnd);
