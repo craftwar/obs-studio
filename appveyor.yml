@@ -34,8 +34,8 @@ install:
   - set build_config=Release
 #vcpkg
   - vcpkg remove --outdated
-  - set CFLAGS=-MP -Oi -arch:AVX2
-  - set CXXFLAGS=-MP -Oi -arch:AVX2
+  - set VCPKG_C_FLAGS=/arch:AVX2 # /MP /Oi is default in vcpkg
+  - set VCPKG_CXX_FLAGS=/arch:AVX2
   - vcpkg install jansson:x64-windows-static
 
 build_script:
