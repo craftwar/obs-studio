@@ -1,5 +1,7 @@
 @echo off
-set file_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-studio/artifacts/OBS-git-craftwar.7z?branch=master
+if NOT DEFINED file_url (
+	set file_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-studio/artifacts/OBS-git-craftwar.7z?branch=master
+)
 set file=OBS-git-craftwar.7z
 set file-new=%file%-new
 set _7z=7za.exe

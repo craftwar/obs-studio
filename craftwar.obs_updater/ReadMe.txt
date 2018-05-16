@@ -1,11 +1,16 @@
 This is craftwar's customized OBS Studio. (improve performance, add/remove features ex: display playing song)
 If You need more features, you need install yourself or use official OBS Studio version.
 
+Don't delete downloaded .7z files, it's used for update check.
 "update updater.cmd" to update updater
 "update OBS.cmd" to update OBS
 "update and run OBS.cmd" to update and start OBS
+
+These three files should not bed used in most cases
+"extract OBS.cmd" extract OBS (no download, extract only. use when extract error happens)
 "no gc.cmd" update OBS except game capture
-"extract OBS.cmd" extract OBS (no download)
+"update OBS -Dev.cmd" update OBS Dev (don't use if you are not pro. test only, not always lastest/stable)
+
 
 This updates craftwar's OBS studio only. (not including plugins you install)
 
