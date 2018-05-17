@@ -5,6 +5,7 @@ Don't delete downloaded .7z files, it's used for update check.
 "update updater.cmd" to update updater
 "update OBS.cmd" to update OBS
 "update and run OBS.cmd" to update and start OBS
+"get obs-text.cmd"	download obs-text.dll only，(run in OBS run directory)
 
 These three files should not bed used in most cases
 "extract OBS.cmd" extract OBS (no download, extract only. use when extract error happens)

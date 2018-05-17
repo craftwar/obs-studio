@@ -5,6 +5,7 @@
 "update updater.cmd" 更新updater (包含說明文件)
 "update OBS.cmd" 更新OBS
 "update and run OBS.cmd" 更新並啟動 OBS
+"get obs-text.cmd"	只下載我改寫的obs-text.dll，需放在OBS根目錄
 
 下面三個通常不會用到
 "extract OBS.cmd" 解壓縮OBS (不下載，只解壓縮，忘記關OBS或其他原因解壓縮錯誤時使用)
