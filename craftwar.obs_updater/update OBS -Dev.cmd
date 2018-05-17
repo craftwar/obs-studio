@@ -1,3 +1,3 @@
 @echo off
-call "set dev.cmd"
-call "update OBS.cmd"
+"set dev.cmd"
+"update OBS.cmd"
