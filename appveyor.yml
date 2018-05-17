@@ -33,7 +33,7 @@ install:
   - set QTDIR64=C:\Qt\5.9\msvc2017_64
   - set build_config=Release
 #vcpkg
-  - vcpkg remove --outdated
+  - vcpkg remove --outdated --recurse
   - set VCPKG_C_FLAGS=/arch:AVX2 # /MP /Oi is default in vcpkg
   - set VCPKG_CXX_FLAGS=/arch:AVX2
   - vcpkg install jansson:x64-windows-static
