@@ -35,11 +35,17 @@ using namespace Gdiplus;
 
 #define MAX_AREA (4096LL * 4096LL)
 
+#define BUF_SIZE 4096
+#define VNR_SHM  TEXT("Local\\VNR_PlotText")
+#define VNR_SHM_MUTEX TEXT("Local\\VNR_SHM_MUTEX")
+
 /* ------------------------------------------------------------------------- */
 
 #define S_FONT                          "font"
 #define S_USE_FILE                      "read_from_file"
 #define S_USE_SONG                      "get_playing_song"
+#define S_USE_VNR                       "read_from_vnr"
+#define S_VNR_MODE                      "vnr_mode"
 #define S_FILE                          "file"
 #define S_TEXT                          "text"
 #define S_COLOR                         "color"
@@ -76,7 +82,9 @@ using namespace Gdiplus;
 #define T_FONT                          T_("Font")
 #define T_USE_FILE                      T_("ReadFromFile")
 #define T_FILE                          T_("TextFile")
-#define T_USE_SONG                      T_("GetPlayingSong")
+#define T_USE_SONG                      "GetPlayingSong"
+#define T_USE_VNR                       "ReadFromVNR"
+#define T_VNR_MODE                      "VNR text mode"
 #define T_TEXT                          T_("Text")
 #define T_COLOR                         T_("Color")
 #define T_GRADIENT                      T_("Gradient")
@@ -203,7 +211,19 @@ struct TextSource {
 	float update_time_elapsed = 0.0f;
 
 	HWND song_hwnd = NULL;
-	enum class Mode : unsigned char { text, file, song } mode = Mode::text;
+	enum class Mode : unsigned char
+		{ text, file, song, vnr } mode = Mode::text;
+
+	bool last_use_vnr = false;
+	const char *vnr_mode = nullptr;
+	unsigned char vnr_id = 0;
+	static unsigned char vnr_count;
+	static HANDLE hMapFile;
+	static HANDLE hMutex;
+	static struct SHM {
+		unsigned char *id;
+		wchar_t *data;
+	} shm;
 
 	wstring text;
 	wstring face;
@@ -254,6 +274,10 @@ struct TextSource {
 			gs_texture_destroy(tex);
 			obs_leave_graphics();
 		}
+		if (mode == Mode::vnr) {
+			--TextSource::vnr_count;
+			TextSource::CloseSHM();
+		}
 	}
 
 	void UpdateFont();
@@ -274,7 +298,16 @@ struct TextSource {
 	inline void Render(gs_effect_t *effect);
 	static BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam);
 	BOOL get_song_name(const HWND hwnd);
+	void VNR_initial(obs_data_t *s);
+	void FallBackToText(obs_data_t *s);
+	static void CloseSHM();
+	void ReadFromVNR();
 };
+unsigned char TextSource::vnr_count = 0;
+HANDLE TextSource::hMapFile = NULL;
+HANDLE TextSource::hMutex = NULL;
+struct TextSource::SHM TextSource::shm = { 0 };
+
 
 static time_t get_modified_timestamp(const char *filename)
 {
@@ -660,6 +693,8 @@ inline void TextSource::Update(obs_data_t *s)
 	uint32_t new_o_size    = obs_data_get_uint32(s, S_OUTLINE_SIZE);
 	bool new_use_file      = obs_data_get_bool(s, S_USE_FILE);
 	bool new_use_song      = obs_data_get_bool(s, S_USE_SONG);
+	bool new_use_vnr       = obs_data_get_bool(s, S_USE_VNR);
+	vnr_mode               = obs_data_get_string(s, S_VNR_MODE);
 	const char *new_file   = obs_data_get_string(s, S_FILE);
 	bool new_chat_mode     = obs_data_get_bool(s, S_CHATLOG_MODE);
 	int new_chat_lines     = (int)obs_data_get_int(s, S_CHATLOG_LINES);
@@ -726,25 +761,25 @@ inline void TextSource::Update(obs_data_t *s)
 		opacity2 = opacity;
 	}
 
-	if (new_use_file)
-		mode = Mode::file;
-	if (new_use_song)
-		mode = Mode::song;
-
 	chatlog_mode = new_chat_mode;
 	chatlog_lines = new_chat_lines;
 
-	switch (mode) {
-	case Mode::file :
+	if (new_use_file) {
+		mode = Mode::file;
 		file = new_file;
 		file_timestamp = get_modified_timestamp(new_file);
 		LoadFileText();
-		break;
-	case Mode::song :
+	} else if (new_use_song) {
+		mode = Mode::song;
 		if (IsWindow(song_hwnd))
 			get_song_name(song_hwnd);
-		break;
-	default: // Mode::text
+	} else if (new_use_vnr) {
+		mode = Mode::vnr;
+		VNR_initial(s);
+		if (mode == Mode::vnr)
+			ReadFromVNR();
+	} else {
+		mode = Mode::text;
 		text = to_wide(GetMainString(new_text));
 
 		/* all text should end with newlines due to the fact that GDI+
@@ -752,7 +787,11 @@ inline void TextSource::Update(obs_data_t *s)
 		* render size */
 		if (!text.empty())
 			text.push_back('\n');
-		break;
+	}
+	if (!new_use_vnr && last_use_vnr) {
+		--TextSource::vnr_count;
+		last_use_vnr = false;
+		TextSource::CloseSHM();
 	}
 
 	use_outline = new_outline;
@@ -823,6 +862,9 @@ inline void TextSource::Tick(float seconds)
 			//, reinterpret_cast<LPARAM>(this));
 		}
 		break;
+	case Mode::vnr :
+		ReadFromVNR();
+		break;
 	default:
 		return;
 	}
@@ -884,6 +926,101 @@ SetText_prefix:
 	return FALSE;
 }
 
+inline void TextSource::VNR_initial(obs_data* s) {
+	if (TextSource::shm.id == nullptr) {
+		hMapFile = OpenFileMapping(
+			FILE_MAP_ALL_ACCESS,   // read/write access
+			FALSE,                 // do not inherit the name
+			VNR_SHM);               // name of mapping object
+		if (hMapFile == NULL)
+			FallBackToText(s);
+		else {
+			unsigned char *bytes = static_cast<unsigned char *>(
+				MapViewOfFile(hMapFile,   // handle to map object
+					FILE_MAP_ALL_ACCESS, // read/write permission
+					0,
+					0,
+					BUF_SIZE));
+			if (bytes == nullptr) {
+				FallBackToText(s);
+				TextSource::CloseSHM();
+			} else {
+				TextSource::hMutex = OpenMutex(
+					SYNCHRONIZE,
+					FALSE,
+					VNR_SHM_MUTEX);
+				if (hMutex == NULL) {
+					FallBackToText(s);
+					TextSource::CloseSHM();
+				} else {
+					TextSource::shm.id = bytes;
+					TextSource::shm.data = reinterpret_cast
+						<wchar_t *>(bytes + 1);
+				}
+			}
+		}
+	}
+	if (obs_data_get_bool(s, S_USE_VNR)) {
+		if (!last_use_vnr)
+			++TextSource::vnr_count;
+		last_use_vnr = true;
+	}
+}
+
+void TextSource::FallBackToText(obs_data* s) {
+	obs_data_set_bool(s, S_USE_VNR, false);
+	last_use_vnr = false;
+	mode = Mode::text;
+}
+
+BOOL CALLBACK TextSource::find_target(HWND hwnd, LPARAM lParam)
+{
+	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
+	return !_TextSource->get_song_name(hwnd);
+}
+
+void TextSource::CloseSHM()
+{
+	if (TextSource::vnr_count != 0)
+		return;
+	if (TextSource::hMutex) {
+		CloseHandle(TextSource::hMutex);
+		TextSource::hMutex = NULL;
+	}
+	if (TextSource::shm.id) {
+		UnmapViewOfFile(TextSource::shm.id);
+		TextSource::shm.id = nullptr;
+	}
+	if (TextSource::hMapFile) {
+		CloseHandle(TextSource::hMapFile);
+		TextSource::hMapFile = NULL;
+	}
+}
+
+void TextSource::ReadFromVNR()
+{
+	wchar_t *data = TextSource::shm.data;
+
+	switch (*vnr_mode) {
+	case 'o':
+		break;
+	case 't':
+		break;
+	case 'b':
+	default:
+		break;
+	}
+	WaitForSingleObject(TextSource::hMutex, 5000);
+	unsigned char id = *TextSource::shm.id;
+	if (id != vnr_id) {
+		vnr_id = id;
+		text = data;
+		RenderText();
+	}
+	ReleaseMutex(TextSource::hMutex);
+}
+
+
 /* ------------------------------------------------------------------------- */
 
 static ULONG_PTR gdip_token = 0;
@@ -901,8 +1038,12 @@ static bool use_file_changed(obs_properties_t *props, obs_property_t *p,
 		obs_data_t *s)
 {
 	bool use_file = obs_data_get_bool(s, S_USE_FILE);
-	if (use_file)
+	if (use_file) {
 		obs_data_set_bool(s, S_USE_SONG, false);
+		obs_data_set_bool(s, S_USE_VNR, false);
+		p = obs_properties_get(props, S_VNR_MODE);
+		obs_property_set_visible(p, false);
+	}
 	set_vis(use_file, S_TEXT, false);
 	set_vis(use_file, S_FILE, true);
 	return true;
@@ -914,11 +1055,30 @@ static bool use_song_changed(obs_properties_t *props, obs_property_t *p,
 	bool use_song = obs_data_get_bool(s, S_USE_SONG);
 	if (use_song) {
 		obs_data_set_bool(s, S_USE_FILE, false);
+		obs_data_set_bool(s, S_USE_VNR, false);
 		p = obs_properties_get(props, S_FILE);
+		obs_property_set_visible(p, false);
+		p = obs_properties_get(props, S_VNR_MODE);
 		obs_property_set_visible(p, false);
 	}
 
 	set_vis(use_song, S_TEXT, false);
+	return true;
+}
+
+static bool use_vnr_changed(obs_properties_t *props, obs_property_t *p,
+	obs_data_t *s)
+{
+	bool use_vnr = obs_data_get_bool(s, S_USE_VNR);
+	if (use_vnr) {
+		obs_data_set_bool(s, S_USE_FILE, false);
+		obs_data_set_bool(s, S_USE_SONG, false);
+		p = obs_properties_get(props, S_FILE);
+		obs_property_set_visible(p, false);
+	}
+
+	set_vis(use_vnr, S_TEXT, false);
+	set_vis(use_vnr, S_VNR_MODE, true);
 	return true;
 }
 
@@ -980,6 +1140,13 @@ static obs_properties_t *get_properties(void *data)
 	obs_property_set_modified_callback(p, use_file_changed);
 	p = obs_properties_add_bool(props, S_USE_SONG, T_USE_SONG);
 	obs_property_set_modified_callback(p, use_song_changed);
+	p = obs_properties_add_bool(props, S_USE_VNR, T_USE_VNR);
+	obs_property_set_modified_callback(p, use_vnr_changed);
+	p = obs_properties_add_list(props, S_VNR_MODE, T_VNR_MODE,
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+	obs_property_list_add_string(p, "original", "o");
+	obs_property_list_add_string(p, "translation", "t");
+	obs_property_list_add_string(p, "original + translation", "b");
 
 	string filter;
 	filter += T_FILTER_TEXT_FILES;
@@ -1089,6 +1256,7 @@ bool obs_module_load(void)
 		obs_data_set_default_int(font_obj, "size", 36);
 
 		obs_data_set_default_obj(settings, S_FONT, font_obj);
+		obs_data_set_default_string(settings, S_VNR_MODE, "t");
 		obs_data_set_default_string(settings, S_ALIGN, S_ALIGN_LEFT);
 		obs_data_set_default_string(settings, S_VALIGN, S_VALIGN_TOP);
 		obs_data_set_default_int(settings, S_COLOR, 0xFFFFFF);
@@ -1131,10 +1299,4 @@ bool obs_module_load(void)
 void obs_module_unload(void)
 {
 	GdiplusShutdown(gdip_token);
-}
-
-BOOL CALLBACK TextSource::find_target(HWND hwnd, LPARAM lParam)
-{
-	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
-	return !_TextSource->get_song_name(hwnd);
 }
