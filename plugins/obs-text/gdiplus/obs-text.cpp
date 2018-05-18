@@ -197,14 +197,13 @@ struct TextSource {
 	HFONTObj hfont;
 	unique_ptr<Font> font;
 
-	bool read_from_file = false;
 	string file;
 	time_t file_timestamp = 0;
 	bool update_file = false;
 	float update_time_elapsed = 0.0f;
 
-	bool get_playing_song = false;
 	HWND song_hwnd = NULL;
+	enum class Mode : unsigned char { text, file, song } mode = Mode::text;
 
 	wstring text;
 	wstring face;
@@ -727,26 +726,33 @@ inline void TextSource::Update(obs_data_t *s)
 		opacity2 = opacity;
 	}
 
-	read_from_file = new_use_file;
-	get_playing_song = new_use_song;
+	if (new_use_file)
+		mode = Mode::file;
+	if (new_use_song)
+		mode = Mode::song;
 
 	chatlog_mode = new_chat_mode;
 	chatlog_lines = new_chat_lines;
 
-	if (read_from_file) {
+	switch (mode) {
+	case Mode::file :
 		file = new_file;
 		file_timestamp = get_modified_timestamp(new_file);
 		LoadFileText();
-	} else if (get_playing_song && IsWindow(song_hwnd) ) {
-		get_song_name(song_hwnd);
-	} else {
+		break;
+	case Mode::song :
+		if (IsWindow(song_hwnd))
+			get_song_name(song_hwnd);
+		break;
+	default: // Mode::text
 		text = to_wide(GetMainString(new_text));
 
 		/* all text should end with newlines due to the fact that GDI+
-		 * treats strings without newlines differently in terms of
-		 * render size */
+		* treats strings without newlines differently in terms of
+		* render size */
 		if (!text.empty())
 			text.push_back('\n');
+		break;
 	}
 
 	use_outline = new_outline;
@@ -779,15 +785,13 @@ inline void TextSource::Update(obs_data_t *s)
 inline void TextSource::Tick(float seconds)
 {
 	if (!obs_source_showing(source))
-		return;	
-	if (!read_from_file && !get_playing_song)
 		return;
-
-	update_time_elapsed += seconds;
-
-	if (update_time_elapsed >= 1.0f) {
-		update_time_elapsed = 0.0f;
-		if (read_from_file) {
+	
+	switch (mode) {
+	case Mode::file :
+		update_time_elapsed += seconds;
+		if (update_time_elapsed >= 1.0f) {
+			update_time_elapsed = 0.0f;
 			time_t t = get_modified_timestamp(file.c_str());
 
 			if (update_file) {
@@ -800,9 +804,16 @@ inline void TextSource::Tick(float seconds)
 				file_timestamp = t;
 				update_file = true;
 			}
-		} else if (get_playing_song &&
-			(!IsWindow(song_hwnd) || !get_song_name(song_hwnd)) ) {
-				::EnumWindows(&TextSource::find_target, reinterpret_cast<LPARAM>(this));
+		}
+		break;
+	case Mode::song :
+		update_time_elapsed += seconds;
+		if (update_time_elapsed >= 1.0f) {
+			update_time_elapsed = 0.0f;
+			if (!IsWindow(song_hwnd) || !get_song_name(song_hwnd)) {
+				::EnumWindows(&TextSource::find_target
+					, reinterpret_cast<LPARAM>(this));
+			}
 			// compiler bug? no BOOL = error, will lambda object be created every run?
 			//::EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL
 			//{
@@ -811,6 +822,9 @@ inline void TextSource::Tick(float seconds)
 			//}
 			//, reinterpret_cast<LPARAM>(this));
 		}
+		break;
+	default:
+		return;
 	}
 }
 
