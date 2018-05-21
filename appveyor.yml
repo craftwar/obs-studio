@@ -20,11 +20,11 @@ environment:
 install:
   - git submodule update --init --recursive plugins\win-dshow
   - git fetch --tags --prune https://github.com/obsproject/obs-studio.git # get tags from official obs
-  - if exist dependencies2015.zip (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -z dependencies2015.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2015.zip -f --retry 5 -C -)
+  - if exist dependencies2017.zip (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
   - if exist VCdeps.7z (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -z VCdeps.7z) else (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -C -)
 
 # need libcurl
-  - 7z x dependencies2015.zip -oold_dep
+  - 7z x dependencies2017.zip -oold_dep
   - 7z x VCdeps.7z -odependencies2017
   - set DepsPath32=%CD%\old_dep\win32
   - set DepsPath64=%CD%\dependencies2017\win64
@@ -68,5 +68,5 @@ test: off
 
 cache:
   - C:\tools\vcpkg\installed\
-  - dependencies2015.zip
+  - dependencies2017.zip
   - VCdeps.7z
