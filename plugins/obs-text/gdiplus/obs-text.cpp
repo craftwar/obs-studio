@@ -35,9 +35,10 @@ using namespace Gdiplus;
 
 #define MAX_AREA (4096LL * 4096LL)
 
-#define BUF_SIZE 4096
+#define BUF_SIZE 1024
 #define VNR_SHM  TEXT("Local\\VNR_PlotText")
 #define VNR_SHM_MUTEX TEXT("Local\\VNR_SHM_MUTEX")
+#define VNR_kyob1010_MultipleStream 0
 
 /* ------------------------------------------------------------------------- */
 
@@ -45,7 +46,9 @@ using namespace Gdiplus;
 #define S_USE_FILE                      "read_from_file"
 #define S_USE_SONG                      "get_playing_song"
 #define S_USE_VNR                       "read_from_vnr"
+#if VNR_kyob1010_MultipleStream
 #define S_VNR_MODE                      "vnr_mode"
+#endif
 #define S_FILE                          "file"
 #define S_TEXT                          "text"
 #define S_COLOR                         "color"
@@ -694,7 +697,9 @@ inline void TextSource::Update(obs_data_t *s)
 	bool new_use_file      = obs_data_get_bool(s, S_USE_FILE);
 	bool new_use_song      = obs_data_get_bool(s, S_USE_SONG);
 	bool new_use_vnr       = obs_data_get_bool(s, S_USE_VNR);
+#if VNR_kyob1010_MultipleStream
 	vnr_mode               = obs_data_get_string(s, S_VNR_MODE);
+#endif
 	const char *new_file   = obs_data_get_string(s, S_FILE);
 	bool new_chat_mode     = obs_data_get_bool(s, S_CHATLOG_MODE);
 	int new_chat_lines     = (int)obs_data_get_int(s, S_CHATLOG_LINES);
@@ -1000,7 +1005,7 @@ void TextSource::CloseSHM()
 void TextSource::ReadFromVNR()
 {
 	wchar_t *data = TextSource::shm.data;
-
+#if VNR_kyob1010_MultipleStream
 	switch (*vnr_mode) {
 	case 'o':
 		break;
@@ -1010,6 +1015,7 @@ void TextSource::ReadFromVNR()
 	default:
 		break;
 	}
+#endif
 	WaitForSingleObject(TextSource::hMutex, 5000);
 	unsigned char id = *TextSource::shm.id;
 	if (id != vnr_id) {
@@ -1041,8 +1047,10 @@ static bool use_file_changed(obs_properties_t *props, obs_property_t *p,
 	if (use_file) {
 		obs_data_set_bool(s, S_USE_SONG, false);
 		obs_data_set_bool(s, S_USE_VNR, false);
+#if VNR_kyob1010_MultipleStream
 		p = obs_properties_get(props, S_VNR_MODE);
 		obs_property_set_visible(p, false);
+#endif
 	}
 	set_vis(use_file, S_TEXT, false);
 	set_vis(use_file, S_FILE, true);
@@ -1058,8 +1066,10 @@ static bool use_song_changed(obs_properties_t *props, obs_property_t *p,
 		obs_data_set_bool(s, S_USE_VNR, false);
 		p = obs_properties_get(props, S_FILE);
 		obs_property_set_visible(p, false);
+#if VNR_kyob1010_MultipleStream
 		p = obs_properties_get(props, S_VNR_MODE);
 		obs_property_set_visible(p, false);
+#endif
 	}
 
 	set_vis(use_song, S_TEXT, false);
@@ -1078,7 +1088,9 @@ static bool use_vnr_changed(obs_properties_t *props, obs_property_t *p,
 	}
 
 	set_vis(use_vnr, S_TEXT, false);
+#if VNR_kyob1010_MultipleStream
 	set_vis(use_vnr, S_VNR_MODE, true);
+#endif
 	return true;
 }
 
@@ -1142,11 +1154,13 @@ static obs_properties_t *get_properties(void *data)
 	obs_property_set_modified_callback(p, use_song_changed);
 	p = obs_properties_add_bool(props, S_USE_VNR, T_USE_VNR);
 	obs_property_set_modified_callback(p, use_vnr_changed);
+#if VNR_kyob1010_MultipleStream
 	p = obs_properties_add_list(props, S_VNR_MODE, T_VNR_MODE,
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
 	obs_property_list_add_string(p, "original", "o");
 	obs_property_list_add_string(p, "translation", "t");
 	obs_property_list_add_string(p, "original + translation", "b");
+#endif
 
 	string filter;
 	filter += T_FILTER_TEXT_FILES;
@@ -1256,7 +1270,9 @@ bool obs_module_load(void)
 		obs_data_set_default_int(font_obj, "size", 36);
 
 		obs_data_set_default_obj(settings, S_FONT, font_obj);
+#if VNR_kyob1010_MultipleStream
 		obs_data_set_default_string(settings, S_VNR_MODE, "t");
+#endif
 		obs_data_set_default_string(settings, S_ALIGN, S_ALIGN_LEFT);
 		obs_data_set_default_string(settings, S_VALIGN, S_VALIGN_TOP);
 		obs_data_set_default_int(settings, S_COLOR, 0xFFFFFF);
