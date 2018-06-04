@@ -1,5 +1,7 @@
 Changes on OBS made by caftwar
-Remove parts I don't use and try to make OBS faster
+Remove parts I don't use and try to make OBS faster, add some feature I use
+Minor code improvements make OBS faster (OBS reject in compatibility reason, but less than 1% affected)
+Add compiler CPU optimization option to make OBS faster (no one use old computer to stream now)
 Not all changes I make is accepted by official OBS build
 
 
@@ -16,11 +18,11 @@ PSAPI_VERSION=1拿掉，用新版PSAPI要win7以後系統才能用 (改用kernel
 
 game-capture.c
 static const char *blacklisted_exes[]  拿掉firefox黑名單 (抓firefox會出事嗎?)
-chrome無法用game capture，放回黑名單
+chrome無法用game capture，放回黑名單 (win7 ok, win10 fail)
 
-obs-text plugin加入抓播放中歌曲
+obs-text plugin加入抓播放中歌曲/VNR翻譯擷取
 
-CMakeLists.txt加入Windows target參數
+CMakeLists.txt加入Windows target參數 (已移除官方沒用，我也不用了，應該會自動抓build system用latest?)
 
 obs-studio\UI\obs-app.cpp 版本加入craftwar識別
 

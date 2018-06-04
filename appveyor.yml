@@ -29,8 +29,8 @@ install:
   - set DepsPath32=%CD%\old_dep\win32
   - set DepsPath64=%CD%\dependencies2017\win64
   - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
-  - set QTDIR32=C:\Qt\5.9\msvc2015
-  - set QTDIR64=C:\Qt\5.9\msvc2017_64
+  - set QTDIR32=C:\Qt\latest\msvc2015
+  - set QTDIR64=C:\Qt\latest\msvc2017_64
   - set build_config=Release
 #vcpkg
   - vcpkg remove --outdated --recurse
