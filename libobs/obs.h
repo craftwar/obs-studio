@@ -243,6 +243,32 @@ struct obs_source_frame {
 /* OBS context */
 
 /**
+ * Find a core libobs data file
+ * @param path name of the base file
+ * @return A string containing the full path to the file.
+ *          Use bfree after use.
+ */
+EXPORT char *obs_find_data_file(const char *file);
+
+/**
+ * Add a path to search libobs data files in.
+ * @param path Full path to directory to look in.
+ *             The string is copied.
+ */
+EXPORT void obs_add_data_path(const char *path);
+
+/**
+ * Remove a path from libobs core data paths.
+ * @param path The path to compare to currently set paths.
+ *             It does not need to be the same pointer, but
+ *             the path string must match an entry fully.
+ * @return Whether or not the path was successfully removed.
+ *         If false, the path could not be found.
+ */
+EXPORT bool obs_remove_data_path(const char *path);
+
+
+/**
  * Initializes OBS
  *
  * @param  locale              The locale to use for modules
@@ -1299,6 +1325,15 @@ EXPORT void obs_scene_enum_items(obs_scene_t *scene,
 EXPORT bool obs_scene_reorder_items(obs_scene_t *scene,
 		obs_sceneitem_t * const *item_order, size_t item_order_size);
 
+struct obs_sceneitem_order_info {
+	obs_sceneitem_t *group;
+	obs_sceneitem_t *item;
+};
+
+EXPORT bool obs_scene_reorder_items2(obs_scene_t *scene,
+		struct obs_sceneitem_order_info *item_order,
+		size_t item_order_size);
+
 /** Adds/creates a new scene item for a source */
 EXPORT obs_sceneitem_t *obs_scene_add(obs_scene_t *scene, obs_source_t *source);
 
@@ -1394,6 +1429,37 @@ EXPORT void obs_sceneitem_defer_update_end(obs_sceneitem_t *item);
 /** Gets private front-end settings data.  This data is saved/loaded
  * automatically.  Returns an incremented reference. */
 EXPORT obs_data_t *obs_sceneitem_get_private_settings(obs_sceneitem_t *item);
+
+EXPORT obs_sceneitem_t *obs_scene_add_group(obs_scene_t *scene,
+		const char *name);
+EXPORT obs_sceneitem_t *obs_scene_insert_group(obs_scene_t *scene,
+		const char *name, obs_sceneitem_t **items, size_t count);
+
+EXPORT obs_sceneitem_t *obs_scene_get_group(obs_scene_t *scene,
+		const char *name);
+
+EXPORT bool obs_sceneitem_is_group(obs_sceneitem_t *item);
+
+EXPORT obs_scene_t *obs_sceneitem_group_get_scene(
+		const obs_sceneitem_t *group);
+
+EXPORT void obs_sceneitem_group_ungroup(obs_sceneitem_t *group);
+
+EXPORT void obs_sceneitem_group_add_item(obs_sceneitem_t *group,
+		obs_sceneitem_t *item);
+EXPORT void obs_sceneitem_group_remove_item(obs_sceneitem_t *item);
+
+EXPORT obs_sceneitem_t *obs_sceneitem_get_group(obs_sceneitem_t *item);
+
+EXPORT obs_sceneitem_t *obs_sceneitem_group_from_scene(obs_scene_t *scene);
+EXPORT obs_sceneitem_t *obs_sceneitem_group_from_source(obs_source_t *source);
+
+EXPORT void obs_sceneitem_group_enum_items(obs_sceneitem_t *group,
+		bool (*callback)(obs_scene_t*, obs_sceneitem_t*, void*),
+		void *param);
+
+EXPORT void obs_sceneitem_defer_group_resize_begin(obs_sceneitem_t *item);
+EXPORT void obs_sceneitem_defer_group_resize_end(obs_sceneitem_t *item);
 
 
 /* ------------------------------------------------------------------------- */
