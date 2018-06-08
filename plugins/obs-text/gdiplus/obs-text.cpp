@@ -35,7 +35,7 @@ using namespace Gdiplus;
 
 #define MAX_AREA (4096LL * 4096LL)
 
-#define BUF_SIZE 1024
+#define VNR_SHM_SIZE 1024
 #define VNR_SHM  TEXT("Local\\VNR_PlotText")
 #define VNR_SHM_MUTEX TEXT("Local\\VNR_SHM_MUTEX")
 #define VNR_kyob1010_MultipleStream 0
@@ -933,19 +933,26 @@ SetText_prefix:
 
 inline void TextSource::VNR_initial(obs_data* s) {
 	if (TextSource::shm.id == nullptr) {
+		bool createSHM = false;
 		hMapFile = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS,   // read/write access
 			FALSE,                 // do not inherit the name
 			VNR_SHM);               // name of mapping object
-		if (hMapFile == NULL)
+		if (hMapFile == NULL) {
+			hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
+				NULL, PAGE_READWRITE, 0, VNR_SHM_SIZE, VNR_SHM);
+			createSHM = true;
+		}
+
+		if (hMapFile == NULL) {
 			FallBackToText(s);
-		else {
+		} else {
 			unsigned char *bytes = static_cast<unsigned char *>(
 				MapViewOfFile(hMapFile,   // handle to map object
 					FILE_MAP_ALL_ACCESS, // read/write permission
 					0,
 					0,
-					BUF_SIZE));
+					VNR_SHM_SIZE));
 			if (bytes == nullptr) {
 				FallBackToText(s);
 				TextSource::CloseSHM();
@@ -954,6 +961,9 @@ inline void TextSource::VNR_initial(obs_data* s) {
 					SYNCHRONIZE,
 					FALSE,
 					VNR_SHM_MUTEX);
+				if (hMutex == NULL)
+					hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
+
 				if (hMutex == NULL) {
 					FallBackToText(s);
 					TextSource::CloseSHM();
@@ -961,6 +971,10 @@ inline void TextSource::VNR_initial(obs_data* s) {
 					TextSource::shm.id = bytes;
 					TextSource::shm.data = reinterpret_cast
 						<wchar_t *>(bytes + 1);
+					if (createSHM)
+						// set 3 bytes to 0 (actual 4)
+						*reinterpret_cast<int *>
+						(bytes) = 0;
 				}
 			}
 		}
