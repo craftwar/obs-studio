@@ -58,11 +58,21 @@ build_script:
 #/t:Clean;Build #if I wana to make AVX2 as seperate build
 before_deploy:
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
-
-deploy_script:
   - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar.7z"
   - cd ..
   - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text.dll"
+  - set release=%APPVEYOR_REPO_COMMIT:~0,7%
+
+deploy:
+  - provider: GitHub
+    tag: git
+    release: $(release)
+#    description: $(APPVEYOR_REPO_COMMIT)
+    auth_token:
+      secure: KxeGOEgx0+XWdjLWDsyhC+B/w3m8zpvtVY/e+90lCLZgd/2VSuraPZDxdIPB5rfY
+    force_update: true
+    on:
+      branch: master
 
 test: off
 
