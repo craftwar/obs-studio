@@ -620,7 +620,7 @@
         <property name="minimumSize">
          <size>
           <width>175</width>
-          <height>220</height>
+          <height>0</height>
          </size>
         </property>
         <property name="contextMenuPolicy">
