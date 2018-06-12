@@ -1,5 +1,5 @@
 @echo off
-set file_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-studio/artifacts/obs-text.dll?branch=master
+set file_url=https://github.com/craftwar/obs-studio/releases/download/git/obs-text.dll
 set file=obs-plugins\64bit\obs-text.dll
 if exist obs-plugins (
 	curl -kLo %file% %file_url% -f --retry 5

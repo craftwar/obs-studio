@@ -1,6 +1,6 @@
 @echo off
 if NOT DEFINED file_url (
-	set file_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-studio/artifacts/OBS-git-craftwar.7z?branch=master
+	set file_url=https://github.com/craftwar/obs-studio/releases/download/git/OBS-git-craftwar.7z
 )
 set file=OBS-git-craftwar.7z
 set file-new=%file%-new
