@@ -1,15 +1,15 @@
 ﻿這是craftwar修改的OBS Studio，除了提高效能外，有增加和移除功能 ex: 顯示播放中的歌名
 如果你需要的功能沒有，請另外安裝或使用官方版本
 
-請勿刪除下載的壓縮案7z，會用來檢查有無更新
-"update updater.cmd" 更新updater (包含說明文件)
+請勿刪除下載的壓縮案7z/zip，會用來檢查有無更新
 "update OBS.cmd" 更新OBS
 "update and run OBS.cmd" 更新並啟動 OBS
 "get obs-text.cmd"	只下載我改寫的obs-text.dll，需放在OBS根目錄
 
-下面三個通常不會用到
+下面個檔通常不會用到
 "extract OBS.cmd" 解壓縮OBS (不下載，只解壓縮，忘記關OBS或其他原因解壓縮錯誤時使用)
 "no gc.cmd" 更新OBS (除了game capture不更新以外都一樣)
+"update updater.cmd" 更新updater (包含說明文件, 已改成會自動更新)
 "update OBS -Dev.cmd" 更新OBS Dev版 (一般人不推薦，除非你知道我都改了什麼，否則不推薦用，測試用，不一定是最新/穩定的)
 
 

@@ -6,6 +6,7 @@ set file=OBS-git-craftwar.7z
 set file-new=%file%-new
 set _7z=7za.exe
 ::set _7z_options=
+cd /d %~dp0
 
 taskkill /F /FI "WINDOWTITLE eq OBS *" /IM obs64.exe
 if exist %file% (
