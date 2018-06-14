@@ -1,0 +1,1 @@
+"C:\Program Files\WinRAR\WinRAR.exe" a craftwar.obs_updater.zip . -m5 -xupdate -xcreateZip.cmd -x*.zip

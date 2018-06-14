@@ -17,8 +17,8 @@ if "%1" EQU "move" (
 	exit /B 0
 	pause
 	:completeMove
-	del /Q need_update
 	copy /Y *.* .. >NUL
+	del /Q need_update
 	del /Q *.*
 	exit /B 0
 	pause
