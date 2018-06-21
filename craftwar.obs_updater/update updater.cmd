@@ -18,14 +18,13 @@ if "%1" EQU "move" (
 	pause
 	:completeMove
 	copy /Y *.* .. >NUL
-	del /Q need_update
 	del /Q *.*
 	exit /B 0
 	pause
 ) else (
 :: run in obs root
 	title craftwar_obs_updater_get
-	if exist update\need_update (
+	if exist "update\update updater.cmd" (
 		"update\update updater.cmd" move
 		exit /B 0
 	)
@@ -44,7 +43,6 @@ if exist %file% (
 		if exist %file%-new (
 			move /y %file-new% %file%
 			%_7z% x %file% -y -oupdate
-			copy /y NUL update\need_update >NUL
 			"update\update updater.cmd" move
 			exit /B 0
 		)
@@ -53,7 +51,6 @@ if exist %file% (
 	curl -kLo %file% %file_url% -f --retry 5 -C -
 	if %ERRORLEVEL% EQU 0 (
 		%_7z% x %file% -y -oupdate
-		copy /y NUL update\need_update >NUL
 		"update\update updater.cmd" move
 		exit /B 0
 	)

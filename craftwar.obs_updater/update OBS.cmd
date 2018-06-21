@@ -24,4 +24,4 @@ if exist %file% (
 	)
 )
 if %ERRORLEVEL% NEQ 0 (echo error!)
-pause
+if "%1" NEQ "noPause" (pause)
