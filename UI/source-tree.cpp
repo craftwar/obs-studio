@@ -54,6 +54,11 @@ SourceTreeItem::SourceTreeItem(SourceTree *tree_, OBSSceneItem sceneitem_)
 	label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 	label->setAttribute(Qt::WA_TranslucentBackground);
 
+#ifdef __APPLE__
+	vis->setAttribute(Qt::WA_LayoutUsesWidgetRect);
+	lock->setAttribute(Qt::WA_LayoutUsesWidgetRect);
+#endif
+
 	boxLayout = new QHBoxLayout();
 	boxLayout->setContentsMargins(1, 1, 2, 1);
 	boxLayout->setSpacing(1);
@@ -353,6 +358,9 @@ void SourceTreeItem::Update(bool force)
 				QSizePolicy::Maximum);
 		expand->setMaximumSize(10, 16);
 		expand->setMinimumSize(10, 0);
+#ifdef __APPLE__
+		expand->setAttribute(Qt::WA_LayoutUsesWidgetRect);
+#endif
 		boxLayout->insertWidget(0, expand);
 
 		obs_data_t *data = obs_sceneitem_get_private_settings(sceneitem);
@@ -640,15 +648,15 @@ Qt::DropActions SourceTreeModel::supportedDropActions() const
 QString SourceTreeModel::GetNewGroupName()
 {
 	OBSScene scene = GetCurrentScene();
-	QString name;
+	QString name = QTStr("Group");
 
-	int i = 1;
+	int i = 2;
 	for (;;) {
-		name = QTStr("Basic.Main.Group").arg(QString::number(i++));
 		obs_sceneitem_t *group = obs_scene_get_group(scene,
 				QT_TO_UTF8(name));
 		if (!group)
 			break;
+		name = QTStr("Basic.Main.Group").arg(QString::number(i++));
 	}
 
 	return name;
