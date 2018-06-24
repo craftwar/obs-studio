@@ -905,38 +905,34 @@ cleanup:
 	return success;
 }
 
-static const char *blacklisted_exes[] = {
-	"explorer",
-	"steam",
-	"battle.net",
-	"galaxyclient",
-	"skype",
-	"uplay",
-	"origin",
-	"devenv",
-	"taskmgr",
-	"chrome",
-	"systemsettings",
-	"applicationframehost",
-	"cmd",
-	"shellexperiencehost",
-	"winstore.app",
-	"searchui",
-	NULL
+static const char const *blacklisted_exes[] = {
+	"explorer.exe",
+	"steam.exe",
+	"battle.net.exe",
+	"galaxyclient.exe",
+	"skype.exe",
+	"uplay.exe",
+	"origin.exe",
+	"devenv.exe",
+	"taskmgr.exe",
+	"chrome.exe",
+	"systemsettings.exe",
+	"applicationframehost.exe",
+	"cmd.exe",
+	"shellexperiencehost.exe",
+	"winstore.app.exe",
+	"searchui.exe",
 };
 
 static bool is_blacklisted_exe(const char *exe)
 {
-	char cur_exe[MAX_PATH];
-
 	if (!exe)
 		return false;
 
-	for (const char **vals = blacklisted_exes; *vals; vals++) {
-		strcpy(cur_exe, *vals);
-		strcat(cur_exe, ".exe");
-
-		if (strcmpi(cur_exe, exe) == 0)
+	const char *end = blacklisted_exes +
+		sizeof(blacklisted_exes) / sizeof(blacklisted_exes[0]);
+	for (const char **vals = blacklisted_exes; vals < end; ++vals) {
+		if (strcmpi(vals, exe) == 0)
 			return true;
 	}
 

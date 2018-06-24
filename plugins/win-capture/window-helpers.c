@@ -134,7 +134,6 @@ static const char *internal_microsoft_exes[] = {
 	"shellexperiencehost.exe",
 	"winstore.app.exe",
 	"searchui.exe",
-	NULL
 };
 
 static bool is_microsoft_internal_window_exe(const char *exe)
@@ -142,7 +141,9 @@ static bool is_microsoft_internal_window_exe(const char *exe)
 	if (!exe)
 		return false;
 
-	for (const char **vals = internal_microsoft_exes; *vals; ++vals) {
+	const char *end = internal_microsoft_exes + sizeof
+		(internal_microsoft_exes) / sizeof(internal_microsoft_exes[0]);
+	for (const char **vals = internal_microsoft_exes; vals < end; ++vals) {
 		if (strcmpi(*vals, exe) == 0)
 			return true;
 	}
