@@ -36,7 +36,7 @@ using namespace Gdiplus;
 #define MAX_AREA (4096LL * 4096LL)
 
 #define VNR_SHM_SIZE 1024
-#define VNR_SHM  TEXT("Local\\VNR_PlotText")
+#define VNR_SHM TEXT("Local\\VNR_PlotText")
 #define VNR_SHM_MUTEX TEXT("Local\\VNR_SHM_MUTEX")
 #define VNR_kyob1010_MultipleStream 0
 
@@ -215,7 +215,7 @@ struct TextSource {
 
 	HWND song_hwnd = NULL;
 	enum class Mode : unsigned char
-		{ text, file, song, vnr } mode = Mode::text;
+		{ text, file, song, vnr } mode;
 
 	bool last_use_vnr = false;
 	const char *vnr_mode = nullptr;
@@ -871,7 +871,7 @@ inline void TextSource::Tick(float seconds)
 		ReadFromVNR();
 		break;
 	default:
-		return;
+		__assume(0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
 	}
 }
 
@@ -892,11 +892,12 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!len)
 		return FALSE;
 	temp = reinterpret_cast<wchar_t *>( malloc(sizeof(wchar_t) * (len + 1)) );
+	// use function pointer to cache result when I want better performance
 	if (GetWindowTextW(hwnd, temp, len + 1)) {
 		wchar_t *strStart;
 		wchar_t *strEnd;
-		static wchar_t const *const browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
-		for (auto& i : browser)
+		static const wchar_t const *browser[] = {L"- Mozilla Firefox", L"- Google Chrome"};
+		for (auto &i : browser)
 			if ((wcsstr(temp, i) != NULL) &&
 				(strEnd = wcsstr(temp, L"- YouTube")) != NULL ) {
 				goto SetText_suffix;
@@ -937,51 +938,56 @@ inline void TextSource::VNR_initial(obs_data* s) {
 		hMapFile = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS,   // read/write access
 			FALSE,                 // do not inherit the name
-			VNR_SHM);               // name of mapping object
+			VNR_SHM);              // name of mapping object
 		if (hMapFile == NULL) {
 			hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
 				NULL, PAGE_READWRITE, 0, VNR_SHM_SIZE, VNR_SHM);
+			if (hMapFile == NULL) {
+				FallBackToText(s);
+				return;
+			}
 			createSHM = true;
 		}
 
-		if (hMapFile == NULL) {
+		unsigned char *bytes = static_cast<unsigned char *>(
+			MapViewOfFile(hMapFile,   // handle to map object
+				FILE_MAP_ALL_ACCESS, // read/write permission
+				0,
+				0,
+				VNR_SHM_SIZE));
+		if (bytes == nullptr) {
 			FallBackToText(s);
-		} else {
-			unsigned char *bytes = static_cast<unsigned char *>(
-				MapViewOfFile(hMapFile,   // handle to map object
-					FILE_MAP_ALL_ACCESS, // read/write permission
-					0,
-					0,
-					VNR_SHM_SIZE));
-			if (bytes == nullptr) {
+			TextSource::CloseSHM();
+			return;
+		}
+
+		TextSource::hMutex = OpenMutex(
+			SYNCHRONIZE,
+			FALSE,
+			VNR_SHM_MUTEX);
+		if (hMutex == NULL) {
+			hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
+			if (hMutex == NULL) {
 				FallBackToText(s);
 				TextSource::CloseSHM();
-			} else {
-				TextSource::hMutex = OpenMutex(
-					SYNCHRONIZE,
-					FALSE,
-					VNR_SHM_MUTEX);
-				if (hMutex == NULL)
-					hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
-
-				if (hMutex == NULL) {
-					FallBackToText(s);
-					TextSource::CloseSHM();
-				} else {
-					TextSource::shm.id = bytes;
-					TextSource::shm.data = reinterpret_cast
-						<wchar_t *>(bytes + 1);
-					if (createSHM)
-						// set 3 bytes to 0 (actual 4)
-						*reinterpret_cast<int *>
-						(bytes) = 0;
-				}
+				return;
 			}
 		}
+
+		TextSource::shm.id = bytes;
+		TextSource::shm.data = reinterpret_cast<wchar_t *>(bytes + 1);
+		if (createSHM) {
+			// This happens rarely, no crash no need to lock
+			// start game and OBS at the same time is prone to error
+			//WaitForSingleObject(TextSource::hMutex, 5000);
+
+			// set 3 bytes to 0 (actual 4)
+			*reinterpret_cast<int *>(bytes) = 0;
+			//ReleaseMutex(TextSource::hMutex);
+		}
 	}
-	if (obs_data_get_bool(s, S_USE_VNR)) {
-		if (!last_use_vnr)
-			++TextSource::vnr_count;
+	if (!last_use_vnr) {
+		++TextSource::vnr_count;
 		last_use_vnr = true;
 	}
 }
