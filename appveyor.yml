@@ -36,8 +36,8 @@ install:
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
   - set VCPKG_LINKER_FLAGS=/LTCG
-  - set VCPKG_C_FLAGS=/arch:AVX2 /GL
-  - set VCPKG_CXX_FLAGS=/arch:AVX2 /GL
+  - set VCPKG_C_FLAGS=/arch:AVX2 /Gw /Gy /GL
+  - set VCPKG_CXX_FLAGS=/arch:AVX2 /Gw /Gy /GL
   - vcpkg install jansson:x64-windows-static
 
 build_script:
@@ -47,12 +47,12 @@ build_script:
 #  - cmd
 #  - set CL=/MP /arch:AVX2 /Oi # this may not be useful (vc project doesn't respect this)
  # LDFLAGS="-LTCG" is implied with /GL
-  - cmake -E env CFLAGS="-MP -Oi -arch:AVX2 -GL"  CXXFLAGS="-MP -Oi -arch:AVX2 -GL" LDFLAGS="-LTCG" cmake -G "Visual Studio 15 2017 Win64" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:\Tools\vcpkg\scripts\buildsystems\vcpkg.cmake -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DENABLE_SCRIPTING=false ..
+  - cmake -E env CFLAGS="-MP -Oi -arch:AVX2 -Gw -Gy -GL"  CXXFLAGS="-MP -Oi -arch:AVX2 -Gw -Gy -GL" LDFLAGS="-LTCG" cmake -G "Visual Studio 15 2017 Win64" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:\Tools\vcpkg\scripts\buildsystems\vcpkg.cmake -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DENABLE_SCRIPTING=false ..
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
   - cd ../build32
   - '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64_x86' #use cross build x86 to speed up
-  - cmake -E env CFLAGS="-MP -Oi -arch:AVX2 -GL"  CXXFLAGS="-MP -Oi -arch:AVX2 -GL" LDFLAGS="-LTCG" cmake -G "Visual Studio 15 2017" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DENABLE_SCRIPTING=false ..
+  - cmake -E env CFLAGS="-MP -Oi -arch:AVX2 -Gw -Gy -GL"  CXXFLAGS="-MP -Oi -arch:AVX2 -Gw -Gy -GL" LDFLAGS="-LTCG" cmake -G "Visual Studio 15 2017" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DENABLE_SCRIPTING=false ..
 #  - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 # build 32bit game capture plugin
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/get-graphics-offsets/get-graphics-offsets.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
