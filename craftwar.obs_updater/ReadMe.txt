@@ -1,5 +1,6 @@
-This is craftwar's customized OBS Studio. (improve performance, add/remove features ex: display playing song)
+﻿This is craftwar's customized OBS Studio. (improve performance, add/remove features ex: display playing song, translation)
 If You need more features, you need install yourself or use official OBS Studio version.
+Don't install under system folder (ex: C:\Program Files (x86)\), updater can't write.
 
 Don't delete downloaded .7z/zip files, it's used for update check.
 "update OBS.cmd" to update OBS

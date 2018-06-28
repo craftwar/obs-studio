@@ -1,5 +1,7 @@
-﻿這是craftwar修改的OBS Studio，除了提高效能外，有增加和移除功能 ex: 顯示播放中的歌名
+﻿這是craftwar修改的OBS Studio，提高x264效能外
+有增加和移除功能 ex: 顯示播放中的歌名及翻譯
 如果你需要的功能沒有，請另外安裝或使用官方版本
+不可放在系統目錄下 (ex: C:\Program Files (x86)\) ，會沒權限寫入更新
 
 請勿刪除下載的壓縮案7z/zip，會用來檢查有無更新
 "update OBS.cmd" 更新OBS
