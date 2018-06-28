@@ -884,7 +884,8 @@ inline void TextSource::Tick(float seconds)
 		ReadFromVNR();
 		break;
 	default:
-		__assume(0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
+		break;
+	//	__assume(0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
 	}
 }
 
@@ -1089,8 +1090,7 @@ void TextSource::ReadFromVNR()
 	}
 #endif
 	WaitForSingleObject(TextSource::hMutex, 5000);
-	unsigned char id = *TextSource::shm.id;
-	if (id != vnr_id) {
+	if (unsigned char id = *TextSource::shm.id; id != vnr_id) {
 		vnr_id = id;
 		text = data;
 		// text always not empty? better let vnr add '\n'
