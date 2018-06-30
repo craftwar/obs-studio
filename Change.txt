@@ -1,9 +1,16 @@
 Changes on OBS made by caftwar
-Remove parts I don't use and try to make OBS faster, add some feature I use
-Minor code improvements make OBS faster (OBS reject in compatibility reason, but less than 1% affected)
-Add compiler CPU optimization option to make OBS faster (no one use old computer to stream now)
+1. Remove parts I don't use
+2. Add some features I want but not in official build
+3. Try to make OBS faster and use less memory
+	3.1 more compiler/link optimization options (old cpu is not supported)
+	3.2 simplfy some code (may make less than 1% incompatible)
+
 Not all changes I make is accepted by official OBS build
 
+
+This file is not always updated.
+Below is note what I change, you can ignore it.
+If you wana know detail about what I change, read commit log.
 
 cmake
 -DCOMPILE_D3D12_HOOK=false -DDISABLE_DECKLINK=true
