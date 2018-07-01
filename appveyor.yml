@@ -14,30 +14,40 @@ init:
 environment:
   CURL_VERSION: 7.55.1
   cl_options: -MP -Oi -arch:AVX2 -Gw -Gy -GL
+
+  matrix:
+    - favor_arch: AMD64
+    - favor_arch: blend
 # setting rdp passoword never works
 #  APPVEYOR_RDP_PASSWORD:
 #    secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
+
+matrix:
+  fast_finish: true
 
 install:
   - git submodule update --init --recursive plugins\win-dshow
   - git fetch --tags --prune https://github.com/obsproject/obs-studio.git # get tags from official obs
   - if exist dependencies2017.zip (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
-  - if exist VCdeps.7z (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -z VCdeps.7z) else (curl -kLo VCdeps.7z https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps.7z -f --retry 5 -C -)
+  #- set VCdeps_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps-blend.7z?job=Environment%3A%20favor_arch%3D%favor_arch%
+  - set VCdeps_url=https://github.com/craftwar/obs-deps/releases/download/git/VCdeps-%favor_arch%.7z
+  - if exist VCdeps-%favor_arch%.7z (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -z VCdeps-%favor_arch%.7z) else (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -C -)
 
 # need libcurl
   - 7z x dependencies2017.zip -oold_dep
-  - 7z x VCdeps.7z -odependencies2017
+  - 7z x VCdeps-%favor_arch%.7z -odependencies2017
   - set DepsPath32=%CD%\old_dep\win32
   - set DepsPath64=%CD%\dependencies2017\win64
   - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
   - set QTDIR32=C:\Qt\latest\msvc2015
   - set QTDIR64=C:\Qt\latest\msvc2017_64
   - set build_config=Release
+  - set cl_options=%cl_options% -favor:%favor_arch%
 #vcpkg
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
   - set VCPKG_LINKER_FLAGS=/LTCG
-  - set VCPKG_C_FLAGS=/arch:AVX2 /Gw /Gy /GL
+  - set VCPKG_C_FLAGS=/arch:AVX2 /Gw /Gy /GL /favor:%favor_arch%
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
   - vcpkg install jansson:x64-windows-static
 
@@ -62,9 +72,9 @@ build_script:
 #/t:Clean;Build #if I wana to make AVX2 as seperate build
 before_deploy:
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
-  - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar.7z"
+  - ps: if ($env:favor_arch -eq "blend") { Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar.7z" } else { Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-AMD.7z" }
   - cd ..
-  - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text.dll"
+  - ps: if ($env:favor_arch -eq "blend") { Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text.dll" }
   - set release=%APPVEYOR_REPO_COMMIT:~0,7%
 
 deploy:
@@ -83,4 +93,4 @@ test: off
 cache:
   - C:\tools\vcpkg\installed\
   - dependencies2017.zip
-  - VCdeps.7z
+  - 'VCdeps-%favor_arch%.7z'

@@ -6,6 +6,7 @@
 請勿刪除下載的壓縮案7z/zip，會用來檢查有無更新
 "update OBS.cmd" 更新OBS
 "update and run OBS.cmd" 更新並啟動 OBS
+"update and run OBS-AMD.cmd" 如果你用AMD的CPU，可以使用這個獲得更高效能 (Intel CPU效能會下降，用上面的就好)
 "get obs-text.cmd"	只下載我改寫的obs-text.dll，需放在OBS根目錄
 
 下面個檔通常不會用到

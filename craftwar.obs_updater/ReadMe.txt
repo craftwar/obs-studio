@@ -5,6 +5,7 @@ Don't install under system folder (ex: C:\Program Files (x86)\), updater can't w
 Don't delete downloaded .7z/zip files, it's used for update check.
 "update OBS.cmd" to update OBS
 "update and run OBS.cmd" to update and start OBS
+"update and run OBS-AMD.cmd" for AMD CPU, higher performance (lower performance to Intel CPU)
 "get obs-text.cmd"	download obs-text.dll only，(run in OBS run directory)
 
 These files should not be used in most cases
