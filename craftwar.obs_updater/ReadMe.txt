@@ -3,7 +3,7 @@ If You need more features, you need install yourself or use official OBS Studio 
 Don't install under system folder (ex: C:\Program Files (x86)\), updater can't write.
 
 Don't delete downloaded .7z/zip files, it's used for update check.
-"update OBS.cmd" to update OBS
+"update OBS.cmd" to update OBS (auto check AMD/CPU. Pick it manually if it can't detect)
 "update and run OBS.cmd" to update and start OBS
 "update and run OBS-AMD.cmd" for AMD CPU, higher performance (lower performance to Intel CPU)
 "get obs-text.cmd"	download obs-text.dll only，(run in OBS run directory)
@@ -12,6 +12,7 @@ These files should not be used in most cases
 "extract OBS.cmd" extract OBS (no download, extract only. use when extract error happens)
 "no gc.cmd" update OBS except game capture
 "update updater.cmd" to update updater (including doc, change to auto update updater now)
+"update and run OBS-AMD.cmd" for AMD CPU, higher performance (lower performance to Intel CPU, use "update and run OBS-INTEL.cmd")
 "update OBS -Dev.cmd" update OBS Dev (don't use if you are not pro. test only, not always lastest/stable)
 
 

@@ -1,7 +1,12 @@
 @echo off
+call check_cpu.cmd
+
 if NOT DEFINED file_url (
-	set file_url=https://github.com/craftwar/obs-studio/releases/download/git/OBS-git-craftwar.7z
+	if DEFINED favor_arch (
+		set file_url=https://github.com/craftwar/obs-studio/releases/download/git/OBS-git-craftwar-%favor_arch%.7z
+	) 
 )
+
 set file=OBS-git-craftwar.7z
 set file-new=%file%-new
 set _7z=7za.exe

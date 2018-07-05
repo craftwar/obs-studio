@@ -4,15 +4,15 @@
 不可放在系統目錄下 (ex: C:\Program Files (x86)\) ，會沒權限寫入更新
 
 請勿刪除下載的壓縮案7z/zip，會用來檢查有無更新
-"update OBS.cmd" 更新OBS
+"update OBS.cmd" 更新OBS (會自動檢查是AMD或INTEL CPU，無法判定時請自己選)
 "update and run OBS.cmd" 更新並啟動 OBS
-"update and run OBS-AMD.cmd" 如果你用AMD的CPU，可以使用這個獲得更高效能 (Intel CPU效能會下降，用上面的就好)
 "get obs-text.cmd"	只下載我改寫的obs-text.dll，需放在OBS根目錄
 
 下面個檔通常不會用到
 "extract OBS.cmd" 解壓縮OBS (不下載，只解壓縮，忘記關OBS或其他原因解壓縮錯誤時使用)
 "no gc.cmd" 更新OBS (除了game capture不更新以外都一樣)
 "update updater.cmd" 更新updater (包含說明文件, 已改成會自動更新)
+"update and run OBS-AMD.cmd" 如果你用AMD的CPU，可以使用這個獲得更高效能 (Intel CPU效能會下降，用"update and run OBS-INTEL.cmd")
 "update OBS -Dev.cmd" 更新OBS Dev版 (一般人不推薦，除非你知道我都改了什麼，否則不推薦用，測試用，不一定是最新/穩定的)
 
 
