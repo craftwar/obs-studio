@@ -17,7 +17,7 @@ environment:
 
   matrix:
     - favor_arch: AMD64
-    - favor_arch: blend
+    - favor_arch: INTEL64
 # setting rdp passoword never works
 #  APPVEYOR_RDP_PASSWORD:
 #    secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
@@ -72,9 +72,9 @@ build_script:
 #/t:Clean;Build #if I wana to make AVX2 as seperate build
 before_deploy:
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
-  - ps: if ($env:favor_arch -eq "blend") { Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar.7z" } else { Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-AMD.7z" }
+  - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-${env:favor_arch}.7z"
   - cd ..
-  - ps: if ($env:favor_arch -eq "blend") { Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text.dll" }
+  - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text-${env:favor_arch}.dll"
   - set release=%APPVEYOR_REPO_COMMIT:~0,7%
 
 deploy:
