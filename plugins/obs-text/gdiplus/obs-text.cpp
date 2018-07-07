@@ -306,7 +306,7 @@ struct TextSource {
 	static BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam);
 	BOOL get_song_name(const HWND hwnd);
 	// song players
-	static constexpr const wchar_t *const browsers[] =
+	static constexpr const wchar_t *browsers[] =
 		{ L"- Mozilla Firefox", L"- Google Chrome" };
 	bool get_song_browser_player(wchar_t * const title, song_pfn pfn);
 	bool get_song_browser_youtube(wchar_t * const title);
@@ -1077,7 +1077,6 @@ void TextSource::CloseSHM()
 
 void TextSource::ReadFromVNR()
 {
-	wchar_t *data = TextSource::shm.data;
 #if VNR_kyob1010_MultipleStream
 	switch (*vnr_mode) {
 	case 'o':
@@ -1092,7 +1091,7 @@ void TextSource::ReadFromVNR()
 	WaitForSingleObject(TextSource::hMutex, 5000);
 	if (unsigned char id = *TextSource::shm.id; id != vnr_id) {
 		vnr_id = id;
-		text = data;
+		text = TextSource::shm.data;
 		// text always not empty? better let vnr add '\n'
 		//text.push_back('\n');
 		RenderText();
