@@ -141,7 +141,7 @@ static bool is_microsoft_internal_window_exe(const char *exe)
 	if (!exe)
 		return false;
 
-	const char *end = internal_microsoft_exes + sizeof
+	static const char * const *end = internal_microsoft_exes + sizeof
 		(internal_microsoft_exes) / sizeof(internal_microsoft_exes[0]);
 	for (const char **vals = internal_microsoft_exes; vals < end; ++vals) {
 		if (strcmpi(*vals, exe) == 0)

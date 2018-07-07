@@ -905,7 +905,7 @@ cleanup:
 	return success;
 }
 
-static const char const *blacklisted_exes[] = {
+static const char *blacklisted_exes[] = {
 	"explorer.exe",
 	"steam.exe",
 	"battle.net.exe",
@@ -929,10 +929,10 @@ static bool is_blacklisted_exe(const char *exe)
 	if (!exe)
 		return false;
 
-	const char *end = blacklisted_exes +
+	static const char * const *end = blacklisted_exes +
 		sizeof(blacklisted_exes) / sizeof(blacklisted_exes[0]);
 	for (const char **vals = blacklisted_exes; vals < end; ++vals) {
-		if (strcmpi(vals, exe) == 0)
+		if (strcmpi(*vals, exe) == 0)
 			return true;
 	}
 
