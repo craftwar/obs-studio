@@ -420,7 +420,7 @@ void OBSBasicPreview::GetStretchHandleData(const vec2 &pos)
 		cropSize.y = float(obs_source_get_height(source) -
 				startCrop.top - startCrop.bottom);
 
-		stretchGroup = obs_sceneitem_get_group(stretchItem);
+		stretchGroup = obs_sceneitem_get_group(scene, stretchItem);
 		if (stretchGroup) {
 			obs_sceneitem_get_draw_transform(stretchGroup,
 					&invGroupTransform);
@@ -928,9 +928,6 @@ void OBSBasicPreview::CropItem(const vec2 &pos)
 	uint32_t align = obs_sceneitem_get_alignment(stretchItem);
 	vec3 tl, br, pos3;
 
-	if (boundsType != OBS_BOUNDS_NONE) /* TODO */
-		return;
-
 	vec3_zero(&tl);
 	vec3_set(&br, stretchItemSize.x, stretchItemSize.y, 0.0f);
 
@@ -1035,7 +1032,8 @@ void OBSBasicPreview::CropItem(const vec2 &pos)
 
 	obs_sceneitem_defer_update_begin(stretchItem);
 	obs_sceneitem_set_crop(stretchItem, &crop);
-	obs_sceneitem_set_pos(stretchItem, (vec2*)&newPos);
+	if (boundsType == OBS_BOUNDS_NONE)
+		obs_sceneitem_set_pos(stretchItem, (vec2*)&newPos);
 	obs_sceneitem_defer_update_end(stretchItem);
 }
 
@@ -1135,8 +1133,11 @@ void OBSBasicPreview::mouseMoveEvent(QMouseEvent *event)
 		pos.y = std::round(pos.y);
 
 		if (stretchHandle != ItemHandle::None) {
+			OBSBasic *main = reinterpret_cast<OBSBasic*>(
+					App()->GetMainWindow());
+			OBSScene scene = main->GetCurrentScene();
 			obs_sceneitem_t *group = obs_sceneitem_get_group(
-					stretchItem);
+					scene, stretchItem);
 			if (group) {
 				vec3 group_pos;
 				vec3_set(&group_pos, pos.x, pos.y, 0.0f);

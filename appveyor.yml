@@ -94,3 +94,11 @@ cache:
   - C:\tools\vcpkg\installed\
   - dependencies2017.zip
   - 'VCdeps-%favor_arch%.7z'
+
+#notifications:
+#  - provider: Webhook
+#    url:
+#      secure: k1kpaz4CB5Rg5a3MTb4XKnd76fJ+9ozz5RACVnNjdgmAjA1OSssZ6LZ3g0NGfzc/
+#    headers:
+#      Authorization:
+#        secure: A0PBwpHtsYzBOuye1EeS0fl562T0NZEInwZp0ZVER1wLQSeE6gzWGrRo2a0E7hii

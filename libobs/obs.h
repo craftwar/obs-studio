@@ -1447,12 +1447,14 @@ EXPORT void obs_sceneitem_group_ungroup(obs_sceneitem_t *group);
 
 EXPORT void obs_sceneitem_group_add_item(obs_sceneitem_t *group,
 		obs_sceneitem_t *item);
-EXPORT void obs_sceneitem_group_remove_item(obs_sceneitem_t *item);
+EXPORT void obs_sceneitem_group_remove_item(obs_sceneitem_t *group,
+		obs_sceneitem_t *item);
 
-EXPORT obs_sceneitem_t *obs_sceneitem_get_group(obs_sceneitem_t *item);
+EXPORT obs_sceneitem_t *obs_sceneitem_get_group(obs_scene_t *scene,
+		obs_sceneitem_t *item);
 
-EXPORT obs_sceneitem_t *obs_sceneitem_group_from_scene(obs_scene_t *scene);
-EXPORT obs_sceneitem_t *obs_sceneitem_group_from_source(obs_source_t *source);
+EXPORT bool obs_source_is_group(const obs_source_t *source);
+EXPORT bool obs_scene_is_group(const obs_scene_t *scene);
 
 EXPORT void obs_sceneitem_group_enum_items(obs_sceneitem_t *group,
 		bool (*callback)(obs_scene_t*, obs_sceneitem_t*, void*),
@@ -1813,6 +1815,7 @@ EXPORT enum video_format obs_encoder_get_preferred_video_format(
 
 /** Gets the default settings for an encoder type */
 EXPORT obs_data_t *obs_encoder_defaults(const char *id);
+EXPORT obs_data_t *obs_encoder_get_defaults(const obs_encoder_t *encoder);
 
 /** Returns the property list, if any.  Free with obs_properties_destroy */
 EXPORT obs_properties_t *obs_get_encoder_properties(const char *id);
