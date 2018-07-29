@@ -4,18 +4,19 @@ Don't install under system folder (ex: C:\Program Files (x86)\), updater can't w
 Don't delete downloaded .7z/zip files, it's used for update check. (delete it only when you encounter download problem)
 
 "update and run OBS.cmd"
-	to update and start OBS (use this to start obs in most cases,  detect INTEL/AMD CPU automatically)
+	to update and start OBS (use this to start obs, it detects INTEL/AMD CPU automatically and downloads CPU specific version)
 "get obs-text.cmd"
-	download obs-text.dll only (run in OBS root directory)
+	download obs-text.dll only (put updater in OBS root directory)
 
-It updates craftwar's OBS studio only. (not including plugins you install)
+Updater updates craftwar's OBS studio only. (not including plugins you install)
+Share updater only, not OBS you get from updating. (CPU specific version is slower in incorrect CPU)
 
 
-If you can't run OBS, you should install Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86)
-If 2015 Redistributable is installed, you can run program. (may work abnormally) Install 2017 please. (no uninstall 2015/2017 is needed)
+Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86) is required.
+2015 Redistributable is installed and 2017 is not installed, OBS may work abnormally. Install 2017 please. (don't uninstall old 2015/2017)
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
-If you need browser plugin, you should download from (no auto update to this plugin)
+If you need browser plugin, you should download from (no auto update to this plugin) and extract it into OBS.
 https://github.com/obsproject/obs-browser/releases
 
 
