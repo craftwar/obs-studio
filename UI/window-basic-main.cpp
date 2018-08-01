@@ -68,7 +68,18 @@
 #include <QScreen>
 #include <QWindow>
 
+#ifdef _WIN32
+#include <browser-panel.hpp>
+#endif
+
+#include <json11.hpp>
+
+using namespace json11;
 using namespace std;
+
+#ifdef _WIN32
+static CREATE_BROWSER_WIDGET_PROC create_browser_widget = nullptr;
+#endif
 
 namespace {
 
@@ -131,6 +142,26 @@ static void AddExtraModulePaths()
 }
 
 extern obs_frontend_callbacks *InitializeAPIInterface(OBSBasic *main);
+
+static int CountVideoSources()
+{
+	int count = 0;
+
+	auto countSources = [] (void *param, obs_source_t *source)
+	{
+		if (!source)
+			return true;
+
+		uint32_t flags = obs_source_get_output_flags(source);
+		if ((flags & OBS_SOURCE_VIDEO) != 0)
+			(*reinterpret_cast<int*>(param))++;
+
+		return true;
+	};
+
+	obs_enum_sources(countSources, &count);
+	return count;
+}
 
 OBSBasic::OBSBasic(QWidget *parent)
 	: OBSMainWindow  (parent),
@@ -202,7 +233,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	cpuUsageInfo = os_cpu_usage_info_start();
 	cpuUsageTimer = new QTimer(this);
-	connect(cpuUsageTimer, SIGNAL(timeout()),
+	connect(cpuUsageTimer.data(), SIGNAL(timeout()),
 			ui->statusbar, SLOT(UpdateCPUUsage()));
 	cpuUsageTimer->start(3000);
 
@@ -1429,6 +1460,10 @@ void OBSBasic::OBSInit()
 	blog(LOG_INFO, "---------------------------------");
 	obs_post_load_modules();
 
+#ifdef _WIN32
+	create_browser_widget = obs_browser_init_panel();
+#endif
+
 	CheckForSimpleModeX264Fallback();
 
 	blog(LOG_INFO, STARTUP_SEPARATOR);
@@ -1649,6 +1684,21 @@ void OBSBasic::OnFirstLoad()
 {
 	if (api)
 		api->on_event(OBS_FRONTEND_EVENT_FINISHED_LOADING);
+
+#ifdef _WIN32
+	/* Attempt to load init screen if available */
+	if (create_browser_widget) {
+		WhatsNewInfoThread *wnit = new WhatsNewInfoThread();
+		if (wnit) {
+			connect(wnit, &WhatsNewInfoThread::Result,
+					this, &OBSBasic::ReceivedIntroJson);
+		}
+		if (wnit) {
+			introCheckThread.reset(wnit);
+			introCheckThread->start();
+		}
+	}
+#endif
 }
 
 void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
@@ -1664,6 +1714,93 @@ void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
 	Load(QT_TO_UTF8(file));
 	RefreshSceneCollections();
 	OnFirstLoad();
+}
+
+/* shows a "what's new" page on startup of new versions using CEF */
+void OBSBasic::ReceivedIntroJson(const QString &text)
+{
+#ifdef _WIN32
+	std::string err;
+	Json json = Json::parse(QT_TO_UTF8(text), err);
+	if (!err.empty())
+		return;
+
+	std::string info_url;
+	int info_increment = -1;
+
+	/* check to see if there's an info page for this version */
+	const Json::array &items = json.array_items();
+	for (const Json &item : items) {
+		const std::string &version = item["version"].string_value();
+		const std::string &url = item["url"].string_value();
+		int increment = item["increment"].int_value();
+
+		int major = 0;
+		int minor = 0;
+
+		sscanf(version.c_str(), "%d.%d", &major, &minor);
+		if (major == LIBOBS_API_MAJOR_VER &&
+		    minor == LIBOBS_API_MINOR_VER) {
+			info_url = url;
+			info_increment = increment;
+		}
+	}
+
+	/* this version was not found, or no info for this version */
+	if (info_increment == -1) {
+		return;
+	}
+
+	uint32_t lastVersion = config_get_int(App()->GlobalConfig(), "General",
+			"LastVersion");
+
+	int current_version_increment = -1;
+
+	if (lastVersion < LIBOBS_API_VER) {
+		config_set_int(App()->GlobalConfig(), "General",
+				"InfoIncrement", -1);
+	} else {
+		current_version_increment = config_get_int(
+				App()->GlobalConfig(), "General",
+				"InfoIncrement");
+	}
+
+	if (info_increment <= current_version_increment) {
+		return;
+	}
+
+	config_set_int(App()->GlobalConfig(), "General",
+			"InfoIncrement", info_increment);
+
+	QDialog dlg(this);
+	dlg.setWindowTitle("What's New");
+	dlg.resize(600, 600);
+
+	QCefWidget *cefWidget = create_browser_widget(nullptr, info_url);
+	if (!cefWidget) {
+		return;
+	}
+
+	connect(cefWidget, SIGNAL(titleChanged(const QString &)),
+			&dlg, SLOT(setWindowTitle(const QString &)));
+
+	QPushButton *close = new QPushButton(QTStr("Close"));
+	connect(close, &QAbstractButton::clicked,
+			&dlg, &QDialog::accept);
+
+	QHBoxLayout *bottomLayout = new QHBoxLayout();
+	bottomLayout->addStretch();
+	bottomLayout->addWidget(close);
+	bottomLayout->addStretch();
+
+	QVBoxLayout *topLayout = new QVBoxLayout(&dlg);
+	topLayout->addWidget(cefWidget);
+	topLayout->addLayout(bottomLayout);
+
+	dlg.exec();
+#else
+	UNUSED_PARAMETER(text);
+#endif
 }
 
 void OBSBasic::UpdateMultiviewProjectorMenu()
@@ -1786,7 +1923,7 @@ void OBSBasic::CreateHotkeys()
 	[](void *data, obs_hotkey_pair_id, obs_hotkey_t*, bool pressed) \
 	{ \
 		OBSBasic &basic = *static_cast<OBSBasic*>(data); \
-		if (pred && pressed) { \
+		if ((pred) && pressed) { \
 			blog(LOG_INFO, log_action " due to hotkey"); \
 			method(); \
 			return true; \
@@ -1799,9 +1936,11 @@ void OBSBasic::CreateHotkeys()
 			Str("Basic.Main.StartStreaming"),
 			"OBSBasic.StopStreaming",
 			Str("Basic.Main.StopStreaming"),
-			MAKE_CALLBACK(!basic.outputHandler->StreamingActive(),
+			MAKE_CALLBACK(!basic.outputHandler->StreamingActive() &&
+				basic.ui->streamButton->isEnabled(),
 				basic.StartStreaming, "Starting stream"),
-			MAKE_CALLBACK(basic.outputHandler->StreamingActive(),
+			MAKE_CALLBACK(basic.outputHandler->StreamingActive() &&
+				basic.ui->streamButton->isEnabled(),
 				basic.StopStreaming, "Stopping stream"),
 			this, this);
 	LoadHotkeyPair(streamingHotkeys,
@@ -1827,9 +1966,11 @@ void OBSBasic::CreateHotkeys()
 			Str("Basic.Main.StartRecording"),
 			"OBSBasic.StopRecording",
 			Str("Basic.Main.StopRecording"),
-			MAKE_CALLBACK(!basic.outputHandler->RecordingActive(),
+			MAKE_CALLBACK(!basic.outputHandler->RecordingActive() &&
+				!basic.ui->recordButton->isChecked(),
 				basic.StartRecording, "Starting recording"),
-			MAKE_CALLBACK(basic.outputHandler->RecordingActive(),
+			MAKE_CALLBACK(basic.outputHandler->RecordingActive() &&
+				basic.ui->recordButton->isChecked(),
 				basic.StopRecording, "Stopping recording"),
 			this, this);
 	LoadHotkeyPair(recordingHotkeys,
@@ -2711,7 +2852,7 @@ void OBSBasic::CheckForUpdates(bool manualUpdate)
 	if (updateCheckThread && updateCheckThread->isRunning())
 		return;
 
-	updateCheckThread = new AutoUpdateThread(manualUpdate);
+	updateCheckThread.reset(new AutoUpdateThread(manualUpdate));
 	updateCheckThread->start();
 #endif
 
@@ -3385,6 +3526,8 @@ void OBSBasic::closeEvent(QCloseEvent *event)
 
 	blog(LOG_INFO, SHUTDOWN_SEPARATOR);
 
+	if (introCheckThread)
+		introCheckThread->wait();
 	if (updateCheckThread)
 		updateCheckThread->wait();
 	if (logUploadThread)
@@ -4084,7 +4227,7 @@ void OBSBasic::AddSourcePopupMenu(const QPoint &pos)
 		return;
 	}
 
-	QPointer<QMenu> popup = CreateAddSourcePopupMenu();
+	QScopedPointer<QMenu> popup(CreateAddSourcePopupMenu());
 	if (popup)
 		popup->exec(pos);
 }
@@ -4238,14 +4381,13 @@ void OBSBasic::UploadLog(const char *subdir, const char *file)
 
 	if (logUploadThread) {
 		logUploadThread->wait();
-		delete logUploadThread;
 	}
 
 	RemoteTextThread *thread = new RemoteTextThread(
 			"https://obsproject.com/logs/upload",
 			"text/plain", ss.str().c_str());
 
-	logUploadThread = thread;
+	logUploadThread.reset(thread);
 	connect(thread, &RemoteTextThread::Result,
 			this, &OBSBasic::logUploadFinished);
 	logUploadThread->start();
@@ -4713,7 +4855,9 @@ void OBSBasic::StartRecording()
 		api->on_event(OBS_FRONTEND_EVENT_RECORDING_STARTING);
 
 	SaveProject();
-	outputHandler->StartRecording();
+
+	if (!outputHandler->StartRecording())
+		ui->recordButton->setChecked(false);
 }
 
 void OBSBasic::RecordStopping()
@@ -4813,6 +4957,11 @@ void OBSBasic::StartReplayBuffer()
 	if (disableOutputsRef)
 		return;
 
+	if (!NoSourcesConfirmation()) {
+		replayBufferButton->setChecked(false);
+		return;
+	}
+
 	obs_output_t *output = outputHandler->replayBuffer;
 	obs_data_t *hotkeys = obs_hotkeys_save_output(output);
 	obs_data_array_t *bindings = obs_data_get_array(hotkeys,
@@ -4832,7 +4981,8 @@ void OBSBasic::StartReplayBuffer()
 		api->on_event(OBS_FRONTEND_EVENT_REPLAY_BUFFER_STARTING);
 
 	SaveProject();
-	outputHandler->StartReplayBuffer();
+	if (!outputHandler->StartReplayBuffer())
+		replayBufferButton->setChecked(false);
 }
 
 void OBSBasic::ReplayBufferStopping()
@@ -4942,6 +5092,28 @@ void OBSBasic::ReplayBufferStop(int code)
 	OnDeactivate();
 }
 
+bool OBSBasic::NoSourcesConfirmation()
+{
+	if (CountVideoSources() == 0 && isVisible()) {
+		QString msg;
+		msg = QTStr("NoSources.Text");
+		msg += "\n\n";
+		msg += QTStr("NoSources.Text.AddSource");
+
+		QMessageBox messageBox(QMessageBox::Question,
+				QTStr("NoSources.title"),
+				msg,
+				QMessageBox::Yes | QMessageBox::No,
+				this);
+		messageBox.setDefaultButton(QMessageBox::No);
+
+		if (QMessageBox::No == messageBox.exec())
+			return false;
+	}
+
+	return true;
+}
+
 void OBSBasic::on_streamButton_clicked()
 {
 	if (outputHandler->StreamingActive()) {
@@ -4962,6 +5134,11 @@ void OBSBasic::on_streamButton_clicked()
 
 		StopStreaming();
 	} else {
+		if (!NoSourcesConfirmation()) {
+			ui->streamButton->setChecked(false);
+			return;
+		}
+
 		bool confirm = config_get_bool(GetGlobalConfig(), "BasicWindow",
 				"WarnBeforeStartingStream");
 
@@ -4983,10 +5160,16 @@ void OBSBasic::on_streamButton_clicked()
 
 void OBSBasic::on_recordButton_clicked()
 {
-	if (outputHandler->RecordingActive())
+	if (outputHandler->RecordingActive()) {
 		StopRecording();
-	else
+	} else {
+		if (!NoSourcesConfirmation()) {
+			ui->recordButton->setChecked(false);
+			return;
+		}
+
 		StartRecording();
+	}
 }
 
 void OBSBasic::on_settingsButton_clicked()
@@ -5692,7 +5875,7 @@ void OBSBasic::OpenSavedProjectors()
 		}
 		}
 
-		if (!info->geometry.empty()) {
+		if (projector && !info->geometry.empty()) {
 			QByteArray byteArray = QByteArray::fromBase64(
 					QByteArray(info->geometry.c_str()));
 			projector->restoreGeometry(byteArray);
@@ -5962,25 +6145,26 @@ void OBSBasic::ToggleShowHide()
 
 void OBSBasic::SystemTrayInit()
 {
-	trayIcon = new QSystemTrayIcon(QIcon(":/res/images/obs.png"),
-			this);
+	trayIcon.reset(new QSystemTrayIcon(QIcon(":/res/images/obs.png"),
+			this));
 	trayIcon->setToolTip("OBS Studio");
 
 	showHide = new QAction(QTStr("Basic.SystemTray.Show"),
-			trayIcon);
+			trayIcon.data());
 	sysTrayStream = new QAction(QTStr("Basic.Main.StartStreaming"),
-			trayIcon);
+			trayIcon.data());
 	sysTrayRecord = new QAction(QTStr("Basic.Main.StartRecording"),
-			trayIcon);
+			trayIcon.data());
 	sysTrayReplayBuffer = new QAction(QTStr("Basic.Main.StartReplayBuffer"),
-			trayIcon);
+			trayIcon.data());
 	exit = new QAction(QTStr("Exit"),
-			trayIcon);
+			trayIcon.data());
 
 	if (outputHandler && !outputHandler->replayBuffer)
 		sysTrayReplayBuffer->setEnabled(false);
 
-	connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+	connect(trayIcon.data(),
+			SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
 			this,
 			SLOT(IconActivated(QSystemTrayIcon::ActivationReason)));
 	connect(showHide, SIGNAL(triggered()),

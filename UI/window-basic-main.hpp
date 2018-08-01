@@ -138,8 +138,9 @@ private:
 	const char *copyFiltersString;
 	bool copyVisible = true;
 
-	QPointer<QThread> updateCheckThread;
-	QPointer<QThread> logUploadThread;
+	QScopedPointer<QThread> updateCheckThread;
+	QScopedPointer<QThread> introCheckThread;
+	QScopedPointer<QThread> logUploadThread;
 
 	QPointer<OBSBasicInteraction> interaction;
 	QPointer<OBSBasicProperties> properties;
@@ -183,7 +184,7 @@ private:
 
 	QPointer<QPushButton> replayBufferButton;
 
-	QPointer<QSystemTrayIcon> trayIcon;
+	QScopedPointer<QSystemTrayIcon> trayIcon;
 	QPointer<QAction>         sysTrayStream;
 	QPointer<QAction>         sysTrayRecord;
 	QPointer<QAction>         sysTrayReplayBuffer;
@@ -368,6 +369,10 @@ private:
 
 	obs_data_array_t *SaveProjectors();
 	void LoadSavedProjectors(obs_data_array_t *savedProjectors);
+
+	void ReceivedIntroJson(const QString &text);
+
+	bool NoSourcesConfirmation();
 
 public slots:
 	void DeferSaveBegin();
