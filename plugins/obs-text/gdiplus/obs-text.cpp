@@ -906,7 +906,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!len)
 		return FALSE;
 	title = reinterpret_cast<wchar_t *>( malloc(sizeof(wchar_t) * (len + 1)) );
-	if (!GetWindowTextW(hwnd, title, len + 1)) {
+	if (!title || !GetWindowTextW(hwnd, title, len + 1)) {
 		free(title);
 		return FALSE;
 	}
@@ -941,7 +941,6 @@ inline bool TextSource::get_song_browser_player(wchar_t * const title, song_pfn 
 bool TextSource::get_song_browser_youtube(wchar_t * const title)
 {
 	wchar_t *strEnd;
-
 	if ( (strEnd = wcsstr(title, L"- YouTube")) != NULL ) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
 		set_song_name(title);
@@ -965,10 +964,10 @@ bool TextSource::get_song_foobar2000(wchar_t * const title)
 
 bool TextSource::get_song_osu(wchar_t * const title)
 {
-	wchar_t *strStart;
-	const wchar_t *const app = L"osu!  -";
-	if ((strStart = wcsstr(title, app)) != NULL) {
-		strStart += sizeof(app) / sizeof(*app) + 1; // remove 1 space after
+	static const wchar_t app[] = L"osu!  -";
+	if (wchar_t *strStart = wcsstr(title, app); strStart != NULL) {
+		// don't + 1 (including '\0'), 1 space after strStart is removed
+		strStart += sizeof(app) / sizeof(*app);
 		set_song_name(strStart);
 		song_pfunc = &TextSource::get_song_osu;
 		return true;
@@ -1089,8 +1088,8 @@ void TextSource::ReadFromVNR()
 	}
 #endif
 	WaitForSingleObject(TextSource::hMutex, 5000);
-	if (unsigned char id = *TextSource::shm.id; id != vnr_id) {
-		vnr_id = id;
+	if (vnr_id != *TextSource::shm.id) {
+		vnr_id = *TextSource::shm.id;
 		text = TextSource::shm.data;
 		// text always not empty? better let vnr add '\n'
 		//text.push_back('\n');
