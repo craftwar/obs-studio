@@ -8,6 +8,8 @@
 	更新並啟動 OBS (一般情況下用這個啟動，會自動判斷CPU為INTEL或AMD下載對應版本)
 "get obs-text.cmd"
 	只下載我改寫的obs-text.dll (updater需放在OBS根目錄)
+"get obs-text -CPU.cmd"
+	更多優化的obs-text.dll (無法在舊電腦上執行)
 
 updater只會更新craftwar做的OBS，不會更新你另外安裝的任何插件
 分享時請給updater就好，不要給更新完的OBS (CPU特化版本用在不對的CPU會變慢)

@@ -7,6 +7,8 @@ Don't delete downloaded .7z/zip files, it's used for update check. (delete it on
 	to update and start OBS (use this to start obs, it detects INTEL/AMD CPU automatically and downloads CPU specific version)
 "get obs-text.cmd"
 	download obs-text.dll only (put updater in OBS root directory)
+"get obs-text -CPU.cmd"
+	more optimized obs-text.dll (may not run on old computers)
 
 Updater updates craftwar's OBS studio only. (not including plugins you install)
 Share updater only, not OBS you get from updating. (CPU specific version is slower in incorrect CPU)
