@@ -33,3 +33,6 @@ CMakeLists.txt加入Windows target參數 (已移除官方沒用，我也不用�
 
 obs-studio\UI\obs-app.cpp 版本加入craftwar識別
 
+disable intro startup page(要把updater加回去，太麻煩，custom build應該也不需要)
+https://github.com/obsproject/obs-studio/commit/a032bcc798272f65dd01acb2235685346dc18628
+
