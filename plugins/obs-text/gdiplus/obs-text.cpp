@@ -315,7 +315,7 @@ struct TextSource {
 	void set_song_name(const wchar_t *name);
 
 	void VNR_initial(obs_data_t *s);
-	void FallBackToText(obs_data_t *s);
+	void VNR_FallBackToText(obs_data_t *s);
 	static void CloseSHM();
 	void ReadFromVNR();
 };
@@ -995,20 +995,20 @@ inline void TextSource::VNR_initial(obs_data* s) {
 			hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
 				NULL, PAGE_READWRITE, 0, VNR_SHM_SIZE, VNR_SHM);
 			if (hMapFile == NULL) {
-				FallBackToText(s);
+				VNR_FallBackToText(s);
 				return;
 			}
 			createSHM = true;
 		}
 
-		unsigned char *bytes = static_cast<unsigned char *>(
+		TextSource::shm.id = static_cast<unsigned char *>(
 			MapViewOfFile(hMapFile,   // handle to map object
 				FILE_MAP_ALL_ACCESS, // read/write permission
 				0,
 				0,
 				VNR_SHM_SIZE));
-		if (bytes == nullptr) {
-			FallBackToText(s);
+		if (TextSource::shm.id == nullptr) {
+			VNR_FallBackToText(s);
 			TextSource::CloseSHM();
 			return;
 		}
@@ -1020,21 +1020,21 @@ inline void TextSource::VNR_initial(obs_data* s) {
 		if (hMutex == NULL) {
 			hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
 			if (hMutex == NULL) {
-				FallBackToText(s);
+				VNR_FallBackToText(s);
 				TextSource::CloseSHM();
 				return;
 			}
 		}
 
-		TextSource::shm.id = bytes;
-		TextSource::shm.data = reinterpret_cast<wchar_t *>(bytes + 1);
+		TextSource::shm.data = reinterpret_cast<wchar_t *>
+			(TextSource::shm.id + 1);
 		if (createSHM) {
 			// This happens rarely, no crash no need to lock
 			// start game and OBS at the same time is prone to error
 			//WaitForSingleObject(TextSource::hMutex, 5000);
 
 			// set 3 bytes to 0 (actual 4)
-			*reinterpret_cast<int *>(bytes) = 0;
+			*reinterpret_cast<int *>(TextSource::shm.id) = 0;
 			//ReleaseMutex(TextSource::hMutex);
 		}
 	}
@@ -1044,7 +1044,7 @@ inline void TextSource::VNR_initial(obs_data* s) {
 	}
 }
 
-void TextSource::FallBackToText(obs_data* s) {
+void TextSource::VNR_FallBackToText(obs_data* s) {
 	obs_data_set_bool(s, S_USE_VNR, false);
 	last_use_vnr = false;
 	mode = Mode::text;
