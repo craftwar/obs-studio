@@ -13,7 +13,7 @@ init:
   - ps: if (0) { iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1')) } #rdp debug
 environment:
   CURL_VERSION: 7.55.1
-  cl_options: -MP -Oi -arch:AVX2 -Gw -Gy -GL
+  cl_options: -MP -Oi -arch:AVX2 -Gw -Gy -GL -GS-
 
   matrix:
     - favor_arch: AMD64
