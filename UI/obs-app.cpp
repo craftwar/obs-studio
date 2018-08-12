@@ -78,8 +78,9 @@ string opt_starting_collection;
 string opt_starting_profile;
 string opt_starting_scene;
 
-// AMD PowerXpress High Performance Flags
+// GPU hint exports for AMD/NVIDIA laptops
 #ifdef _MSC_VER
+extern "C" __declspec(dllexport) DWORD NvOptimusEnablement = 1;
 extern "C" __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
@@ -435,6 +436,7 @@ bool OBSApp::InitGlobalConfigDefaults()
 #ifdef _WIN32
 	config_set_default_bool(globalConfig, "Audio", "DisableAudioDucking",
 			true);
+	config_set_default_bool(globalConfig, "General", "BrowserHWAccel", true);
 #endif
 
 #ifdef __APPLE__
@@ -1223,6 +1225,19 @@ bool OBSApp::OBSInit()
 
 		if (!StartupOBS(locale.c_str(), GetProfilerNameStore()))
 			return false;
+
+#ifdef _WIN32
+		bool browserHWAccel = config_get_bool(globalConfig, "General",
+				"BrowserHWAccel");
+
+		obs_data_t *settings = obs_data_create();
+		obs_data_set_bool(settings, "BrowserHWAccel", browserHWAccel);
+		obs_apply_private_data(settings);
+		obs_data_release(settings);
+
+		blog(LOG_INFO, "Browser Hardware Acceleration: %s",
+				browserHWAccel ? "true" : "false");
+#endif
 
 		blog(LOG_INFO, "Portable mode: %s",
 				portable_mode ? "true" : "false");
