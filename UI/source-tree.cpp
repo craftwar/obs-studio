@@ -119,6 +119,7 @@ void SourceTreeItem::DisconnectSignals()
 {
 	sceneRemoveSignal.Disconnect();
 	itemRemoveSignal.Disconnect();
+	deselectSignal.Disconnect();
 	visibleSignal.Disconnect();
 	renameSignal.Disconnect();
 	removeSignal.Disconnect();
@@ -163,6 +164,16 @@ void SourceTreeItem::ReconnectSignals()
 					Q_ARG(bool, visible));
 	};
 
+	auto itemDeselect = [] (void *data, calldata_t *cd)
+	{
+		SourceTreeItem *this_ = reinterpret_cast<SourceTreeItem*>(data);
+		obs_sceneitem_t *curItem =
+			(obs_sceneitem_t*)calldata_ptr(cd, "item");
+
+		if (curItem == this_->sceneitem)
+			QMetaObject::invokeMethod(this_, "Deselect");
+	};
+
 	auto reorderGroup = [] (void *data, calldata_t*)
 	{
 		SourceTreeItem *this_ = reinterpret_cast<SourceTreeItem*>(data);
@@ -184,6 +195,10 @@ void SourceTreeItem::ReconnectSignals()
 		groupReorderSignal.Connect(signal, "reorder", reorderGroup,
 				this);
 	}
+
+	if (scene != GetCurrentScene())
+		deselectSignal.Connect(signal, "item_deselect", itemDeselect,
+				this);
 
 	/* --------------------------------------------------------- */
 
@@ -321,7 +336,7 @@ bool SourceTreeItem::eventFilter(QObject *object, QEvent *event)
 	} else if (event->type() == QEvent::FocusOut) {
 		QMetaObject::invokeMethod(this, "ExitEditMode",
 				Qt::QueuedConnection,
-				Q_ARG(bool, false));
+				Q_ARG(bool, true));
 		return true;
 	}
 
@@ -430,6 +445,11 @@ void SourceTreeItem::ExpandClicked(bool checked)
 		tree->GetStm()->ExpandGroup(sceneitem);
 	else
 		tree->GetStm()->CollapseGroup(sceneitem);
+}
+
+void SourceTreeItem::Deselect()
+{
+	tree->SelectItem(sceneitem, false);
 }
 
 /* ========================================================================= */

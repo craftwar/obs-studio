@@ -1622,6 +1622,7 @@ static obs_sceneitem_t *obs_scene_add_internal(obs_scene_t *scene,
 	item->locked = false;
 	item->is_group = source->info.id == group_info.id;
 	item->private_settings = obs_data_create();
+	item->toggle_visibility = OBS_INVALID_HOTKEY_PAIR_ID;
 	os_atomic_set_long(&item->active_refs, 1);
 	vec2_set(&item->scale, 1.0f, 1.0f);
 	matrix4_identity(&item->draw_transform);
@@ -2320,8 +2321,8 @@ static void get_ungrouped_transform(obs_sceneitem_t *group,
 	vec4_set(&mat.t, 0.0f, 0.0f, 0.0f, 1.0f);
 	matrix4_mul(&mat, &mat, &transform);
 
-	scale->x = vec4_len(&mat.x);
-	scale->y = vec4_len(&mat.y);
+	scale->x = vec4_len(&mat.x) * (scale->x > 0.0f ? 1.0f : -1.0f);
+	scale->y = vec4_len(&mat.y) * (scale->y > 0.0f ? 1.0f : -1.0f);
 	*rot += group->rot;
 }
 
@@ -2356,8 +2357,8 @@ static void apply_group_transform(obs_sceneitem_t *item, obs_sceneitem_t *group)
 	vec4_set(&mat.t, 0.0f, 0.0f, 0.0f, 1.0f);
 	matrix4_mul(&mat, &mat, &transform);
 
-	item->scale.x = vec4_len(&mat.x);
-	item->scale.y = vec4_len(&mat.y);
+	item->scale.x = vec4_len(&mat.x) * (item->scale.x > 0.0f ? 1.0f : -1.0f);
+	item->scale.y = vec4_len(&mat.y) * (item->scale.y > 0.0f ? 1.0f : -1.0f);
 	item->rot -= group->rot;
 
 	update_item_transform(item, false);
@@ -2883,4 +2884,13 @@ void obs_sceneitem_group_enum_items(obs_sceneitem_t *group,
 	obs_scene_t *scene = group->source->context.data;
 	if (scene)
 		obs_scene_enum_items(scene, callback, param);
+}
+
+void obs_sceneitem_force_update_transform(obs_sceneitem_t *item)
+{
+	if (!item)
+		return;
+
+	if (os_atomic_set_bool(&item->update_transform, false))
+		update_item_transform(item, false);
 }
