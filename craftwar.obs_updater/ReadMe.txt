@@ -18,13 +18,12 @@ Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86) is req
 2015 Redistributable is installed and 2017 is not installed, OBS may work abnormally. Install 2017 please. (don't uninstall old 2015/2017)
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
-If you need browser plugin, you should download from (no auto update to this plugin) and extract it into OBS.
-https://github.com/obsproject/obs-browser/releases
+If you need browser plugin, you should download official OBS and replace with my updater (browser plugin can't be downloaded alone any more)
 
 
 Q:	How do I know I need update plugin?
 A:	When OBS version is changed, you may need update it.
-	Put newer plugin into OBS to overwrite it or download official OBS and overwite with my updater.
+	Put newer plugin into OBS to overwrite it or download official OBS and overwite with my updater. (double click "update and run OBS.cmd")
 
 
 These files should not be used in most cases

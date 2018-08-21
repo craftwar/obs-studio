@@ -19,13 +19,12 @@ updater只會更新craftwar做的OBS，不會更新你另外安裝的任何插�
 如果只裝2015沒裝2017的，程式可能會出現異常行為，請安裝2017的 (不用移除舊的2015/2017)
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
-如果你需要瀏覽器插件 (這個也不會自動更新到)，解壓縮進去就行了
-https://github.com/obsproject/obs-browser/releases
+如果你需要瀏覽器插件，下載官方版用我的版本蓋過混用 (官方不提供單獨下載)
 
 
 Q:	如何知道我該更新其他插件?
-A:	當OBS版本號改變時，就有可能需要更新，否則有可能出現相容問題，你要等到出問題再處理也可以(?
-	更新方法為，把加裝的plugin覆蓋過去，或是下載官方版本，放入updater執行更新覆蓋
+A:	當OBS版本號改變時，就有可能需要更新，否則有可能出現問題，你要等到出問題再處理也可以(?
+	更新方法為，把加裝的plugin覆蓋過去，或是下載官方版本，放入updater執行更新覆蓋 ("update and run OBS.cmd")
 
 
 下面的檔通常不會用到
