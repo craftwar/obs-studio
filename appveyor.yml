@@ -26,7 +26,7 @@ matrix:
   fast_finish: true
 
 install:
-  - git submodule update --init --recursive plugins\win-dshow
+  - git submodule update --init --recursive --remote plugins\win-dshow
   - git fetch --tags --prune https://github.com/obsproject/obs-studio.git # get tags from official obs
   - if exist dependencies2017.zip (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
   #- set VCdeps_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps-blend.7z?job=Environment%3A%20favor_arch%3D%favor_arch%
