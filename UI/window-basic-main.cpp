@@ -2522,7 +2522,7 @@ void OBSBasic::VolControlContextMenu()
 
 	/* ------------------- */
 
-	QMenu popup(this);
+	QMenu popup;
 	popup.addAction(&unhideAllAction);
 	popup.addAction(&hideAction);
 	popup.addAction(&mixerRenameAction);
@@ -2574,7 +2574,7 @@ void OBSBasic::StackedMixerAreaContextMenuRequested()
 
 	/* ------------------- */
 
-	QMenu popup(this);
+	QMenu popup;
 	popup.addAction(&unhideAllAction);
 	popup.addSeparator();
 	popup.addAction(&toggleControlLayoutAction);
@@ -3460,9 +3460,13 @@ void OBSBasic::changeEvent(QEvent *event)
 void OBSBasic::on_actionShow_Recordings_triggered()
 {
 	const char *mode = config_get_string(basicConfig, "Output", "Mode");
+	const char *type = config_get_string(basicConfig, "AdvOut", "RecType");
+	const char *adv_path = strcmp(type, "Standard") ?
+			config_get_string(basicConfig, "AdvOut", "FFFilePath") :
+			config_get_string(basicConfig, "AdvOut", "RecFilePath");
 	const char *path = strcmp(mode, "Advanced") ?
-		config_get_string(basicConfig, "SimpleOutput", "FilePath") :
-		config_get_string(basicConfig, "AdvOut", "RecFilePath");
+			config_get_string(basicConfig, "SimpleOutput", "FilePath") :
+			adv_path;
 	QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 }
 
