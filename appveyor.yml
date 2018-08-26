@@ -47,7 +47,7 @@ install:
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
   - set VCPKG_LINKER_FLAGS=/LTCG
-  - set VCPKG_C_FLAGS=/arch:AVX2 /Gw /Gy /GL /favor:%favor_arch%
+  - set VCPKG_C_FLAGS=/arch:AVX2 /Gw /Gy /GL /GS- /favor:%favor_arch%
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
   - vcpkg install jansson:x64-windows-static
 
@@ -71,9 +71,9 @@ build_script:
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/inject-helper/inject-helper.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 #/t:Clean;Build #if I wana to make AVX2 as seperate build
 before_deploy:
+  - cd ..
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
   - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-${env:favor_arch}.7z"
-  - cd ..
   - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text-${env:favor_arch}.dll"
   - set release=%APPVEYOR_REPO_COMMIT:~0,7%
 
@@ -91,7 +91,7 @@ deploy:
 test: off
 
 cache:
-  - C:\tools\vcpkg\installed\
+  - C:\tools\vcpkg\installed\ -> .appveyor.yml
   - dependencies2017.zip
   - 'VCdeps-%favor_arch%.7z'
 
