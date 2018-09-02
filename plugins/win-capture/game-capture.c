@@ -922,6 +922,8 @@ static const char *blacklisted_exes[] = {
 	"shellexperiencehost.exe",
 	"winstore.app.exe",
 	"searchui.exe",
+	"lockapp.exe",
+	"windowsinternal.composableshell.experiences.textinput.inputapp.exe",
 };
 
 static bool is_blacklisted_exe(const char *exe)
