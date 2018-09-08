@@ -853,6 +853,42 @@ bool obs_startup(const char *locale, const char *module_config_path,
 	return success;
 }
 
+static struct obs_cmdline_args cmdline_args = {0, NULL};
+void obs_set_cmdline_args(int argc, char **argv)
+{
+	char *data;
+	size_t len;
+	int i;
+
+	/* Once argc is set (non-zero) we shouldn't call again */
+	if (cmdline_args.argc)
+		return;
+
+	cmdline_args.argc = argc;
+
+	/* Safely copy over argv */
+	len = 0;
+	for (i = 0; i < argc; i++)
+		len += strlen(argv[i]) + 1;
+
+	cmdline_args.argv = bmalloc(sizeof(char *) * (argc + 1) + len);
+	data = (char *) cmdline_args.argv + sizeof(char *) * (argc + 1);
+
+	for (i = 0; i < argc; i++) {
+		cmdline_args.argv[i] = data;
+		len = strlen(argv[i]) + 1;
+		memcpy(data, argv[i], len);
+		data += len;
+	}
+
+	cmdline_args.argv[argc] = NULL;
+}
+
+struct obs_cmdline_args obs_get_cmdline_args(void)
+{
+	return cmdline_args;
+}
+
 void obs_shutdown(void)
 {
 	struct obs_module *module;
@@ -918,6 +954,7 @@ void obs_shutdown(void)
 	bfree(core->module_config_path);
 	bfree(core->locale);
 	bfree(core);
+	bfree(cmdline_args.argv);
 
 #ifdef _WIN32
 	uninitialize_com();
@@ -1563,6 +1600,7 @@ static obs_source_t *obs_load_source_type(obs_data_t *source_data)
 	obs_data_t   *settings = obs_data_get_obj(source_data, "settings");
 	obs_data_t   *hotkeys  = obs_data_get_obj(source_data, "hotkeys");
 	double       volume;
+	double       balance;
 	int64_t      sync;
 	uint32_t     flags;
 	uint32_t     mixers;
@@ -1577,6 +1615,10 @@ static obs_source_t *obs_load_source_type(obs_data_t *source_data)
 	obs_data_set_default_double(source_data, "volume", 1.0);
 	volume = obs_data_get_double(source_data, "volume");
 	obs_source_set_volume(source, (float)volume);
+
+	obs_data_set_default_double(source_data, "balance", 0.5);
+	balance = obs_data_get_double(source_data, "balance");
+	obs_source_set_balance_value(source, (float)balance);
 
 	sync = obs_data_get_int(source_data, "sync");
 	obs_source_set_sync_offset(source, sync);
@@ -1716,6 +1758,7 @@ obs_data_t *obs_save_source(obs_source_t *source)
 	obs_data_t *hotkey_data = source->context.hotkey_data;
 	obs_data_t *hotkeys;
 	float      volume      = obs_source_get_volume(source);
+	float      balance     = obs_source_get_balance_value(source);
 	uint32_t   mixers      = obs_source_get_audio_mixers(source);
 	int64_t    sync        = obs_source_get_sync_offset(source);
 	uint32_t   flags       = obs_source_get_flags(source);
@@ -1748,6 +1791,7 @@ obs_data_t *obs_save_source(obs_source_t *source)
 	obs_data_set_int   (source_data, "sync",     sync);
 	obs_data_set_int   (source_data, "flags",    flags);
 	obs_data_set_double(source_data, "volume",   volume);
+	obs_data_set_double(source_data, "balance",  balance);
 	obs_data_set_bool  (source_data, "enabled",  enabled);
 	obs_data_set_bool  (source_data, "muted",    muted);
 	obs_data_set_bool  (source_data, "push-to-mute", push_to_mute);

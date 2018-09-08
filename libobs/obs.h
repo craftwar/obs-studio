@@ -239,6 +239,12 @@ struct obs_source_frame {
 	bool                prev_frame;
 };
 
+/** Access to the argc/argv used to start OBS. What you see is what you get. */
+struct obs_cmdline_args {
+	int argc;
+	char **argv;
+};
+
 /* ------------------------------------------------------------------------- */
 /* OBS context */
 
@@ -290,6 +296,24 @@ EXPORT uint32_t obs_get_version(void);
 
 /** @return The current core version string */
 EXPORT const char *obs_get_version_string(void);
+
+/**
+ * Sets things up for calls to obs_get_cmdline_args. Called onl yonce at startup
+ * and safely copies argv/argc from main(). Subsequent calls do nothing.
+ *
+ * @param  argc  The count of command line arguments, from main()
+ * @param  argv  An array of command line arguments, copied from main() and ends
+ *               with NULL.
+ */
+EXPORT void obs_set_cmdline_args(int argc, char **argv);
+
+/**
+ * Get the argc/argv used to start OBS
+ *
+ * @return  The command line arguments used for main(). Don't modify this or
+ *          you'll mess things up for other callers.
+ */
+EXPORT struct obs_cmdline_args obs_get_cmdline_args(void);
 
 /**
  * Sets a new locale to use for modules.  This will call obs_module_set_locale
@@ -892,6 +916,15 @@ EXPORT void obs_source_set_volume(obs_source_t *source, float volume);
 
 /** Gets the user volume for a source that has audio output */
 EXPORT float obs_source_get_volume(const obs_source_t *source);
+
+/* Gets speaker layout of a source */
+EXPORT enum speaker_layout obs_source_get_speaker_layout(obs_source_t *source);
+
+/** Sets the balance value for a stereo audio source */
+EXPORT void obs_source_set_balance_value(obs_source_t *source, float balance);
+
+/** Gets the balance value for a stereo audio source */
+EXPORT float obs_source_get_balance_value(const obs_source_t *source);
 
 /** Sets the audio sync offset (in nanoseconds) for a source */
 EXPORT void obs_source_set_sync_offset(obs_source_t *source, int64_t offset);
