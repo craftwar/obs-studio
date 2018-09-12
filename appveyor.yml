@@ -88,7 +88,7 @@ deploy:
 test: off
 
 cache:
-  - C:\tools\vcpkg\installed\ -> .appveyor.yml
+  - C:\tools\vcpkg\installed\ -> appveyor.yml
   - dependencies2017.zip
   - 'VCdeps-%favor_arch%.7z'
 
