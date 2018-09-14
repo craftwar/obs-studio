@@ -196,7 +196,7 @@ enum class VAlign {
 };
 
 struct TextSource {
-	typedef bool (TextSource::*song_pfn)(wchar_t * const);
+	typedef bool (TextSource::*song_pfn)(const wchar_t * const);
 
 	obs_source_t *source = nullptr;
 
@@ -304,15 +304,15 @@ struct TextSource {
 	inline void Render(gs_effect_t *effect);
 
 	static BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam);
-	BOOL get_song_name(const HWND hwnd);
+	BOOL get_song_name(HWND hwnd);
 	// song players
-	static constexpr const wchar_t *browsers[] =
+	static constexpr wchar_t *browsers[] =
 		{ L"- Mozilla Firefox", L"- Google Chrome" };
-	bool get_song_browser_player(wchar_t * const title, song_pfn pfn);
-	bool get_song_browser_youtube(wchar_t * const title);
-	bool get_song_foobar2000(wchar_t * const title);
-	bool get_song_osu(wchar_t *title);
-	void set_song_name(const wchar_t *name);
+	bool get_song_browser_player(const wchar_t * const title, song_pfn const pfn);
+	bool get_song_browser_youtube(const wchar_t * const title);
+	bool get_song_foobar2000(const wchar_t * const title);
+	bool get_song_osu(const wchar_t * const title);
+	void set_song_name(const wchar_t * const name);
 
 	void VNR_initial(obs_data_t *s);
 	void VNR_FallBackToText(obs_data_t *s);
@@ -898,7 +898,7 @@ inline void TextSource::Render(gs_effect_t *effect)
 	gs_draw_sprite(tex, 0, cx, cy);
 }
 
-BOOL TextSource::get_song_name(const HWND hwnd)
+BOOL TextSource::get_song_name(HWND hwnd)
 {
 	wchar_t *title;
 	int len;
@@ -929,7 +929,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	return ok;
 }
 
-inline bool TextSource::get_song_browser_player(wchar_t * const title, song_pfn pfn)
+inline bool TextSource::get_song_browser_player(const wchar_t * const title, song_pfn const pfn)
 {
 	for (auto &brower : TextSource::browsers) {
 		if ((wcsstr(title, brower) != NULL) && (this->*pfn)(title))
@@ -938,10 +938,10 @@ inline bool TextSource::get_song_browser_player(wchar_t * const title, song_pfn 
 	return false;
 }
 
-bool TextSource::get_song_browser_youtube(wchar_t * const title)
+bool TextSource::get_song_browser_youtube(const wchar_t * const title)
 {
-	wchar_t *strEnd;
-	if ( (strEnd = wcsstr(title, L"- YouTube")) != NULL ) {
+	wchar_t *strEnd = const_cast<wchar_t *>(wcsstr(title, L"- YouTube"));
+	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
 		set_song_name(title);
 		song_pfunc = &TextSource::get_song_browser_youtube;
@@ -950,10 +950,10 @@ bool TextSource::get_song_browser_youtube(wchar_t * const title)
 	return false;
 }
 
-bool TextSource::get_song_foobar2000(wchar_t * const title)
+bool TextSource::get_song_foobar2000(const wchar_t * const title)
 {
-	wchar_t *strEnd;
-	if ((strEnd = wcsstr(title, L"[foobar2000 v")) != NULL) {
+	wchar_t *strEnd = const_cast<wchar_t *>(wcsstr(title, L"[foobar2000 v"));
+	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
 		set_song_name(title);
 		song_pfunc = &TextSource::get_song_foobar2000;
@@ -962,10 +962,11 @@ bool TextSource::get_song_foobar2000(wchar_t * const title)
 	return false;
 }
 
-bool TextSource::get_song_osu(wchar_t * const title)
+bool TextSource::get_song_osu(const wchar_t * const title)
 {
 	static const wchar_t app[] = L"osu!  -";
-	if (wchar_t *strStart = wcsstr(title, app); strStart != NULL) {
+	wchar_t *strStart = const_cast<wchar_t*>(wcsstr(title, app));
+	if (strStart != nullptr) {
 		// don't + 1 (including '\0'), 1 space after strStart is removed
 		strStart += sizeof(app) / sizeof(*app);
 		set_song_name(strStart);
@@ -975,7 +976,7 @@ bool TextSource::get_song_osu(wchar_t * const title)
 	return false;
 }
 
-void TextSource::set_song_name(const wchar_t *name)
+void TextSource::set_song_name(const wchar_t * const name)
 {
 	if (text.compare(name)) {
 		text = name;
@@ -984,7 +985,8 @@ void TextSource::set_song_name(const wchar_t *name)
 	}
 }
 
-inline void TextSource::VNR_initial(obs_data* s) {
+inline void TextSource::VNR_initial(obs_data *s)
+{
 	if (TextSource::shm.id == nullptr) {
 		bool createSHM = false;
 		hMapFile = OpenFileMapping(
@@ -1044,7 +1046,8 @@ inline void TextSource::VNR_initial(obs_data* s) {
 	}
 }
 
-void TextSource::VNR_FallBackToText(obs_data* s) {
+void TextSource::VNR_FallBackToText(obs_data *s)
+{
 	obs_data_set_bool(s, S_USE_VNR, false);
 	last_use_vnr = false;
 	mode = Mode::text;
