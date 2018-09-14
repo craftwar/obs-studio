@@ -49,7 +49,7 @@ install:
   - set VCPKG_LINKER_FLAGS=/LTCG
   - set VCPKG_C_FLAGS=/arch:AVX2 /Gw /Gy /GL /GS- /favor:%favor_arch%
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
-  - '"C:\Program Files\Git\usr\bin\sed.exe" -i "/CRT_LINKAGE static/CRT_LINKAGE dynamic/" /c/tools/vcpkg/triplets/x64-windows-static.cmake' #patch to dynamic crt
+  - '"C:\Program Files\Git\usr\bin\sed.exe" -i "s/CRT_LINKAGE static/CRT_LINKAGE dynamic/" /c/tools/vcpkg/triplets/x64-windows-static.cmake' #patch to dynamic crt
   - vcpkg install jansson:x64-windows-static
 
 build_script:
