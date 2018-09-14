@@ -222,7 +222,7 @@ struct TextSource {
 
 	bool last_use_vnr = false;
 	const char *vnr_mode = nullptr;
-	unsigned char vnr_id = 0;
+	unsigned char vnr_id;
 	static unsigned char vnr_count;
 	static HANDLE hMapFile;
 	static HANDLE hMutex;
@@ -322,7 +322,7 @@ struct TextSource {
 unsigned char TextSource::vnr_count = 0;
 HANDLE TextSource::hMapFile = NULL;
 HANDLE TextSource::hMutex = NULL;
-struct TextSource::SHM TextSource::shm = { 0 };
+struct TextSource::SHM TextSource::shm = {};
 
 
 static time_t get_modified_timestamp(const char *filename)
@@ -1014,6 +1014,8 @@ inline void TextSource::VNR_initial(obs_data *s)
 			TextSource::CloseSHM();
 			return;
 		}
+		// force ReadFromVNR() read data after initial
+		vnr_id = *TextSource::shm.id - 1;
 
 		TextSource::hMutex = OpenMutex(
 			SYNCHRONIZE,
