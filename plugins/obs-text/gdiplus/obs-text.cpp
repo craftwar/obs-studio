@@ -902,26 +902,22 @@ BOOL TextSource::get_song_name(HWND hwnd)
 	const int len = GetWindowTextLengthW(hwnd);
 	if (!len)
 		return FALSE;
-	wchar_t * const title = reinterpret_cast<wchar_t *>( malloc(sizeof(wchar_t) * (len + 1)) );
-	if (!title || !GetWindowTextW(hwnd, title, len + 1)) {
-		free(title);
+	std::unique_ptr<wchar_t> title(new wchar_t[len + 1]);
+	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 		return FALSE;
-	}
+
 	if (song_pfunc) {
-		const bool result = (this->*song_pfunc)(title);
+		const bool result = (this->*song_pfunc)(title.get());
 		if (!result)
 			song_pfunc = nullptr;
-		else {
-			free(title);
+		else 
 			return TRUE;
-		}
 	}
 
-	const bool ok = get_song_browser_player(title,
+	const bool ok = get_song_browser_player(title.get(),
 			&TextSource::get_song_browser_youtube) ||
-			get_song_foobar2000(title) ||
-			get_song_osu(title);
-	free(title);
+			get_song_foobar2000(title.get()) ||
+			get_song_osu(title.get());
 
 	if (ok)
 		song_hwnd = hwnd;
