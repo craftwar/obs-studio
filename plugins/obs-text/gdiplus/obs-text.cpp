@@ -794,8 +794,7 @@ inline void TextSource::Update(obs_data_t *s)
 	} else if (new_use_vnr) {
 		mode = Mode::vnr;
 		VNR_initial(s);
-		if (mode == Mode::vnr)
-			ReadFromVNR();
+		ReadFromVNR();
 	} else {
 		mode = Mode::text;
 		text = to_wide(GetMainString(new_text));
@@ -871,7 +870,7 @@ inline void TextSource::Tick(float seconds)
 				::EnumWindows(&TextSource::find_target
 					, reinterpret_cast<LPARAM>(this));
 			}
-			// compiler bug? no BOOL = error, will lambda object be created every run?
+			// lambda can't be used (will be this call, not callback)
 			//::EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL
 			//{
 			//	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
@@ -900,22 +899,22 @@ inline void TextSource::Render(gs_effect_t *effect)
 
 BOOL TextSource::get_song_name(HWND hwnd)
 {
-	wchar_t *title;
-	int len;
-	len = GetWindowTextLengthW(hwnd);
+	const int len = GetWindowTextLengthW(hwnd);
 	if (!len)
 		return FALSE;
-	title = reinterpret_cast<wchar_t *>( malloc(sizeof(wchar_t) * (len + 1)) );
+	wchar_t * const title = reinterpret_cast<wchar_t *>( malloc(sizeof(wchar_t) * (len + 1)) );
 	if (!title || !GetWindowTextW(hwnd, title, len + 1)) {
 		free(title);
 		return FALSE;
 	}
 	if (song_pfunc) {
-		bool result = (this->*song_pfunc)(title);
-		free(title);
+		const bool result = (this->*song_pfunc)(title);
 		if (!result)
 			song_pfunc = nullptr;
-		return result;
+		else {
+			free(title);
+			return TRUE;
+		}
 	}
 
 	const bool ok = get_song_browser_player(title,
