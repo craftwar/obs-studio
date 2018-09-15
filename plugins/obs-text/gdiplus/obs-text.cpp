@@ -918,7 +918,7 @@ BOOL TextSource::get_song_name(HWND hwnd)
 		return result;
 	}
 
-	bool ok = get_song_browser_player(title,
+	const bool ok = get_song_browser_player(title,
 			&TextSource::get_song_browser_youtube) ||
 			get_song_foobar2000(title) ||
 			get_song_osu(title);
@@ -988,7 +988,6 @@ void TextSource::set_song_name(const wchar_t * const name)
 inline void TextSource::VNR_initial(obs_data *s)
 {
 	if (TextSource::shm.id == nullptr) {
-		bool createSHM = false;
 		hMapFile = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS,   // read/write access
 			FALSE,                 // do not inherit the name
@@ -1000,7 +999,6 @@ inline void TextSource::VNR_initial(obs_data *s)
 				VNR_FallBackToText(s);
 				return;
 			}
-			createSHM = true;
 		}
 
 		TextSource::shm.id = static_cast<unsigned char *>(
@@ -1032,15 +1030,9 @@ inline void TextSource::VNR_initial(obs_data *s)
 
 		TextSource::shm.data = reinterpret_cast<wchar_t *>
 			(TextSource::shm.id + 1);
-		if (createSHM) {
-			// This happens rarely, no crash no need to lock
-			// start game and OBS at the same time is prone to error
-			//WaitForSingleObject(TextSource::hMutex, 5000);
-
-			// set 3 bytes to 0 (actual 4)
-			*reinterpret_cast<int *>(TextSource::shm.id) = 0;
-			//ReleaseMutex(TextSource::hMutex);
-		}
+		// No initialization is required https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
+		// The initial contents of the pages in a file mapping object backed by
+		// the operating system paging file are 0 (zero).
 	}
 	if (!last_use_vnr) {
 		++TextSource::vnr_count;
