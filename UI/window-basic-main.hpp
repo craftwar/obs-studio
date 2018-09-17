@@ -53,6 +53,7 @@ class OBSBasicStats;
 #define AUX_AUDIO_1     Str("AuxAudioDevice1")
 #define AUX_AUDIO_2     Str("AuxAudioDevice2")
 #define AUX_AUDIO_3     Str("AuxAudioDevice3")
+#define AUX_AUDIO_4     Str("AuxAudioDevice4")
 
 #define SIMPLE_ENCODER_X264                    "x264"
 #define SIMPLE_ENCODER_X264_LOWCPU             "x264_lowcpu"
@@ -147,6 +148,7 @@ private:
 	QPointer<OBSBasicTransform> transformWindow;
 	QPointer<OBSBasicAdvAudio> advAudioWindow;
 	QPointer<OBSBasicFilters> filters;
+	QPointer<QDockWidget> statsDock;
 	QPointer<OBSAbout> about;
 
 	QPointer<QTimer>    cpuUsageTimer;
@@ -192,8 +194,10 @@ private:
 	QPointer<QAction>         showHide;
 	QPointer<QAction>         exit;
 	QPointer<QMenu>           trayMenu;
+	QPointer<QMenu>           previewProjector;
+	QPointer<QMenu>           studioProgramProjector;
+	QPointer<QMenu>           multiviewProjectorMenu;
 
-	QPointer<QMenu> multiviewProjectorMenu;
 	void          UpdateMultiviewProjectorMenu();
 
 	void          DrawBackdrop(float cx, float cy);
