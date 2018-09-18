@@ -7,6 +7,10 @@ else()
 	set(FIND_MODE QUIET)
 endif()
 
+if(BROWSER_AVAILABLE_INTERNAL)
+	add_definitions(-DBROWSER_AVAILABLE)
+endif()
+
 add_subdirectory(obs-frontend-api)
 
 # ----------------------------------------------------------------------------
@@ -14,27 +18,11 @@ add_subdirectory(obs-frontend-api)
 project(obs)
 
 set(ENABLE_WIN_UPDATER FALSE CACHE BOOL "Enable the windows updater")
-
-if(DEFINED QTDIR${_lib_suffix})
-	list(APPEND CMAKE_PREFIX_PATH "${QTDIR${_lib_suffix}}")
-elseif(DEFINED QTDIR)
-	list(APPEND CMAKE_PREFIX_PATH "${QTDIR}")
-elseif(DEFINED ENV{QTDIR${_lib_suffix}})
-	list(APPEND CMAKE_PREFIX_PATH "$ENV{QTDIR${_lib_suffix}}")
-elseif(DEFINED ENV{QTDIR})
-	list(APPEND CMAKE_PREFIX_PATH "$ENV{QTDIR}")
-endif()
+set(DISABLE_UPDATE_MODULE TRUE CACHE BOOL "Disables building the update module")
 
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 set(CMAKE_AUTOMOC TRUE)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(_lib_suffix 64)
-else()
-	set(_lib_suffix 32)
-endif()
-
-find_package(Qt5Widgets ${FIND_MODE})
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil avformat)
 
 if(APPLE)
@@ -55,6 +43,10 @@ include_directories(${FFMPEG_INCLUDE_DIRS})
 include_directories(SYSTEM "obs-frontend-api")
 include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/libobs")
 include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/deps/libff")
+include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/deps/json11")
+if(BROWSER_AVAILABLE_INTERNAL)
+	include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/plugins/obs-browser/panel")
+endif()
 
 find_package(Libcurl REQUIRED)
 include_directories(${LIBCURL_INCLUDE_DIRS})
@@ -131,6 +123,7 @@ endif()
 set(obs_SOURCES
 	${obs_PLATFORM_SOURCES}
 	${obs_libffutil_SOURCES}
+	../deps/json11/json11.cpp
 	obs-app.cpp
 	api-interface.cpp
 	window-basic-main.cpp
@@ -182,6 +175,7 @@ set(obs_SOURCES
 set(obs_HEADERS
 	${obs_PLATFORM_HEADERS}
 	${obs_libffutil_HEADERS}
+	../deps/json11/json11.cpp
 	obs-app.hpp
 	platform.hpp
 	window-main.hpp

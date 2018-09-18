@@ -70,7 +70,15 @@
 #include <QScreen>
 #include <QWindow>
 
+#include <json11.hpp>
+
+using namespace json11;
 using namespace std;
+
+#if defined(_WIN32) && defined(BROWSER_AVAILABLE)
+#include <browser-panel.hpp>
+static CREATE_BROWSER_WIDGET_PROC create_browser_widget = nullptr;
+#endif
 
 namespace {
 
@@ -1496,6 +1504,10 @@ void OBSBasic::OBSInit()
 	blog(LOG_INFO, "---------------------------------");
 	obs_post_load_modules();
 
+#if defined(_WIN32) && defined(BROWSER_AVAILABLE)
+	create_browser_widget = obs_browser_init_panel();
+#endif
+
 	CheckForSimpleModeX264Fallback();
 
 	blog(LOG_INFO, STARTUP_SEPARATOR);
@@ -1722,6 +1734,21 @@ void OBSBasic::OnFirstLoad()
 {
 	if (api)
 		api->on_event(OBS_FRONTEND_EVENT_FINISHED_LOADING);
+
+#if defined(_WIN32) && defined(BROWSER_AVAILABLE)
+	/* Attempt to load init screen if available */
+	if (create_browser_widget) {
+		WhatsNewInfoThread *wnit = new WhatsNewInfoThread();
+		if (wnit) {
+			connect(wnit, &WhatsNewInfoThread::Result,
+					this, &OBSBasic::ReceivedIntroJson);
+		}
+		if (wnit) {
+			introCheckThread.reset(wnit);
+			introCheckThread->start();
+		}
+	}
+#endif
 }
 
 void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
@@ -1741,6 +1768,114 @@ void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
 	/* Minimizng to tray on initial startup does not work on mac
 	 * unless it is done in the deferred load */
 	SystemTray(true);
+}
+
+/* shows a "what's new" page on startup of new versions using CEF */
+void OBSBasic::ReceivedIntroJson(const QString &text)
+{
+#ifdef BROWSER_AVAILABLE
+#ifdef _WIN32
+	std::string err;
+	Json json = Json::parse(QT_TO_UTF8(text), err);
+	if (!err.empty())
+		return;
+
+	std::string info_url;
+	int info_increment = -1;
+
+	/* check to see if there's an info page for this version */
+	const Json::array &items = json.array_items();
+	for (const Json &item : items) {
+		const std::string &version = item["version"].string_value();
+		const std::string &url = item["url"].string_value();
+		int increment = item["increment"].int_value();
+		int rc = item["RC"].int_value();
+
+		int major = 0;
+		int minor = 0;
+
+		sscanf(version.c_str(), "%d.%d", &major, &minor);
+#if OBS_RELEASE_CANDIDATE > 0
+		if (major == OBS_RELEASE_CANDIDATE_MAJOR &&
+		    minor == OBS_RELEASE_CANDIDATE_MINOR &&
+		    rc == OBS_RELEASE_CANDIDATE) {
+#else
+		if (major == LIBOBS_API_MAJOR_VER &&
+		    minor == LIBOBS_API_MINOR_VER &&
+		    rc == 0) {
+#endif
+			info_url = url;
+			info_increment = increment;
+		}
+	}
+
+	/* this version was not found, or no info for this version */
+	if (info_increment == -1) {
+		return;
+	}
+
+#if OBS_RELEASE_CANDIDATE > 0
+	uint32_t lastVersion = config_get_int(App()->GlobalConfig(), "General",
+			"LastRCVersion");
+#else
+	uint32_t lastVersion = config_get_int(App()->GlobalConfig(), "General",
+			"LastVersion");
+#endif
+
+	int current_version_increment = -1;
+
+#if OBS_RELEASE_CANDIDATE > 0
+	if (lastVersion < OBS_RELEASE_CANDIDATE_VER) {
+#else
+	if (lastVersion < LIBOBS_API_VER) {
+#endif
+		config_set_int(App()->GlobalConfig(), "General",
+				"InfoIncrement", -1);
+	} else {
+		current_version_increment = config_get_int(
+				App()->GlobalConfig(), "General",
+				"InfoIncrement");
+	}
+
+	if (info_increment <= current_version_increment) {
+		return;
+	}
+
+	config_set_int(App()->GlobalConfig(), "General",
+			"InfoIncrement", info_increment);
+
+	QDialog dlg(this);
+	dlg.setWindowTitle("What's New");
+	dlg.resize(700, 600);
+
+	QCefWidget *cefWidget = create_browser_widget(nullptr, info_url);
+	if (!cefWidget) {
+		return;
+	}
+
+	connect(cefWidget, SIGNAL(titleChanged(const QString &)),
+			&dlg, SLOT(setWindowTitle(const QString &)));
+
+	QPushButton *close = new QPushButton(QTStr("Close"));
+	connect(close, &QAbstractButton::clicked,
+			&dlg, &QDialog::accept);
+
+	QHBoxLayout *bottomLayout = new QHBoxLayout();
+	bottomLayout->addStretch();
+	bottomLayout->addWidget(close);
+	bottomLayout->addStretch();
+
+	QVBoxLayout *topLayout = new QVBoxLayout(&dlg);
+	topLayout->addWidget(cefWidget);
+	topLayout->addLayout(bottomLayout);
+
+	dlg.exec();
+#else
+	UNUSED_PARAMETER(text);
+#endif
+#else
+	UNUSED_PARAMETER(text);
+#endif
 }
 
 void OBSBasic::UpdateMultiviewProjectorMenu()
