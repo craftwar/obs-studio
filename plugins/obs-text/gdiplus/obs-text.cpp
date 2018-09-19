@@ -990,10 +990,8 @@ inline void TextSource::VNR_initial(obs_data *s)
 		if (hMapFile == NULL) {
 			hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
 				NULL, PAGE_READWRITE, 0, VNR_SHM_SIZE, VNR_SHM);
-			if (hMapFile == NULL) {
-				VNR_FallBackToText(s);
-				return;
-			}
+			if (hMapFile == NULL)
+				goto VNR_fallback;
 		}
 
 		TextSource::shm.id = static_cast<unsigned char *>(
@@ -1002,13 +1000,8 @@ inline void TextSource::VNR_initial(obs_data *s)
 				0,
 				0,
 				VNR_SHM_SIZE));
-		if (TextSource::shm.id == nullptr) {
-			VNR_FallBackToText(s);
-			TextSource::CloseSHM();
-			return;
-		}
-		// force ReadFromVNR() read data after initial
-		vnr_id = *TextSource::shm.id - 1;
+		if (TextSource::shm.id == nullptr)
+			goto SHM_error_clean;
 
 		TextSource::hMutex = OpenMutex(
 			SYNCHRONIZE,
@@ -1016,11 +1009,8 @@ inline void TextSource::VNR_initial(obs_data *s)
 			VNR_SHM_MUTEX);
 		if (hMutex == NULL) {
 			hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
-			if (hMutex == NULL) {
-				VNR_FallBackToText(s);
-				TextSource::CloseSHM();
-				return;
-			}
+			if (hMutex == NULL)
+				goto SHM_error_clean;
 		}
 
 		TextSource::shm.data = reinterpret_cast<wchar_t *>
@@ -1028,11 +1018,20 @@ inline void TextSource::VNR_initial(obs_data *s)
 		// No initialization is required https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
 		// The initial contents of the pages in a file mapping object backed by
 		// the operating system paging file are 0 (zero).
+
+		// force ReadFromVNR() read data after initial
+		vnr_id = *TextSource::shm.id - 1;
 	}
 	if (!last_use_vnr) {
 		++TextSource::vnr_count;
 		last_use_vnr = true;
 	}
+	return;
+
+SHM_error_clean:
+	TextSource::CloseSHM();
+VNR_fallback:
+	VNR_FallBackToText(s);
 }
 
 void TextSource::VNR_FallBackToText(obs_data *s)
