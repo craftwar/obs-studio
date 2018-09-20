@@ -303,8 +303,8 @@ struct TextSource {
 	inline void Tick(float seconds);
 	inline void Render(gs_effect_t *effect);
 
-	static BOOL CALLBACK find_target(HWND hwnd, LPARAM lParam);
-	BOOL get_song_name(HWND hwnd);
+	static BOOL CALLBACK find_target(const HWND hwnd, const LPARAM lParam);
+	BOOL get_song_name(const HWND hwnd);
 	// song players
 	static constexpr wchar_t *browsers[] =
 		{ L"- Mozilla Firefox", L"- Google Chrome" };
@@ -897,7 +897,7 @@ inline void TextSource::Render(gs_effect_t *effect)
 	gs_draw_sprite(tex, 0, cx, cy);
 }
 
-BOOL TextSource::get_song_name(HWND hwnd)
+BOOL TextSource::get_song_name(const HWND hwnd)
 {
 	const int len = GetWindowTextLengthW(hwnd);
 	if (!len)
@@ -915,7 +915,7 @@ BOOL TextSource::get_song_name(HWND hwnd)
 	}
 
 	const bool ok = get_song_browser_player(title.get(),
-			&TextSource::get_song_browser_youtube) ||
+				&TextSource::get_song_browser_youtube) ||
 			get_song_foobar2000(title.get()) ||
 			get_song_osu(title.get());
 
@@ -927,7 +927,7 @@ BOOL TextSource::get_song_name(HWND hwnd)
 inline bool TextSource::get_song_browser_player(const wchar_t * const title, song_pfn const pfn)
 {
 	for (auto &brower : TextSource::browsers) {
-		if ((wcsstr(title, brower) != NULL) && (this->*pfn)(title))
+		if ((wcsstr(title, brower) != nullptr) && (this->*pfn)(title))
 			return true;
 	}
 	return false;
@@ -935,7 +935,7 @@ inline bool TextSource::get_song_browser_player(const wchar_t * const title, son
 
 bool TextSource::get_song_browser_youtube(const wchar_t * const title)
 {
-	wchar_t *strEnd = const_cast<wchar_t *>(wcsstr(title, L"- YouTube"));
+	wchar_t * const strEnd = const_cast<wchar_t *>(wcsstr(title, L"- YouTube"));
 	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
 		set_song_name(title);
@@ -947,7 +947,7 @@ bool TextSource::get_song_browser_youtube(const wchar_t * const title)
 
 bool TextSource::get_song_foobar2000(const wchar_t * const title)
 {
-	wchar_t *strEnd = const_cast<wchar_t *>(wcsstr(title, L"[foobar2000 v"));
+	wchar_t * const strEnd = const_cast<wchar_t *>(wcsstr(title, L"[foobar2000]"));
 	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
 		set_song_name(title);
@@ -959,12 +959,11 @@ bool TextSource::get_song_foobar2000(const wchar_t * const title)
 
 bool TextSource::get_song_osu(const wchar_t * const title)
 {
-	static const wchar_t app[] = L"osu!  -";
-	wchar_t *strStart = const_cast<wchar_t*>(wcsstr(title, app));
+	static constexpr wchar_t app[] = L"osu!  -";
+	const wchar_t * const strStart = wcsstr(title, app);
 	if (strStart != nullptr) {
-		// don't + 1 (including '\0'), 1 space after strStart is removed
-		strStart += sizeof(app) / sizeof(*app);
-		set_song_name(strStart);
+		// len includes '\0', 1 space after strStart is auto-removed
+		set_song_name(strStart + sizeof(app) / sizeof(*app));
 		song_pfunc = &TextSource::get_song_osu;
 		return true;
 	}
@@ -1041,10 +1040,9 @@ void TextSource::VNR_FallBackToText(obs_data *s)
 	mode = Mode::text;
 }
 
-BOOL CALLBACK TextSource::find_target(HWND hwnd, LPARAM lParam)
+BOOL CALLBACK TextSource::find_target(const HWND hwnd, const LPARAM lParam)
 {
-	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
-	return !_TextSource->get_song_name(hwnd);
+	return !reinterpret_cast<TextSource *>(lParam)->get_song_name(hwnd);
 }
 
 void TextSource::CloseSHM()
