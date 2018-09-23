@@ -33,7 +33,7 @@ install:
   - set VCdeps_url=https://github.com/craftwar/obs-deps/releases/download/git/VCdeps-%favor_arch%.7z
   - if exist VCdeps-%favor_arch%.7z (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -z VCdeps-%favor_arch%.7z) else (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -C -)
 
-# need libcurl
+# for 32bit cmake run
   - 7z x dependencies2017.zip -oold_dep
   - 7z x VCdeps-%favor_arch%.7z -odependencies2017
   - set DepsPath32=%CD%\old_dep\win32
@@ -64,7 +64,6 @@ install:
 build_script:
   - mkdir build build32 build64
   - cd ./build64
-#  - cmd
   - cmake -E env CFLAGS="%cl_options%"  CXXFLAGS="%cl_options%" LDFLAGS="-LTCG" cmake -G "Visual Studio 15 2017 Win64" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:\Tools\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_EXE_LINKER_FLAGS_INIT=/LTCG -DCMAKE_SHARED_LINKER_FLAGS_INIT=/LTCG -DCMAKE_STATIC_LINKER_FLAGS_INIT=/LTCG -DCMAKE_MODULE_LINKER_FLAGS_INIT=/LTCG -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=false -DENABLE_SCRIPTING=false ..
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
@@ -74,14 +73,13 @@ build_script:
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/get-graphics-offsets/get-graphics-offsets.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/graphics-hook/graphics-hook.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/inject-helper/inject-helper.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-#/t:Clean;Build #if I wana to make AVX2 as seperate build
-#TODO: build generic obs-text.dll (add a matrix to build full obs?)
-before_deploy:
+# package Artifact and build generic obs-text.dll in INTEL64 matrix
   - cd ..
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
   - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-${env:favor_arch}.7z"
   - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text-${env:favor_arch}.dll"
   - set release=%APPVEYOR_REPO_COMMIT:~0,7%
+  - C:\projects\obs-studio\CI\craftwar\obs-text-bland.cmd
 
 deploy:
   - provider: GitHub
