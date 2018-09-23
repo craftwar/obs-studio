@@ -38,7 +38,7 @@ install:
   - 7z x VCdeps-%favor_arch%.7z -odependencies2017
   - set DepsPath32=%CD%\old_dep\win32
   - set DepsPath64=%CD%\dependencies2017\win64
-  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
+#  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
   - set QTDIR32=C:\Qt\latest\msvc2015
   - set QTDIR64=C:\Qt\latest\msvc2017_64
   - set build_config=Release
@@ -50,7 +50,16 @@ install:
   - set VCPKG_C_FLAGS=/arch:AVX2 /Gw /Gy /GL /GS- /favor:%favor_arch%
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
   - '"C:\Program Files\Git\usr\bin\sed.exe" -i "s/CRT_LINKAGE static/CRT_LINKAGE dynamic/" /c/tools/vcpkg/triplets/x64-windows-static.cmake' #patch to dynamic crt
+  - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows-static.cmake
   - vcpkg install jansson:x64-windows-static
+  - vcpkg install zlib:x64-windows
+  - copy /Y dependencies2017\win64\lib\zlib.lib C:\tools\vcpkg\installed\x64-windows\lib\
+  - copy /Y dependencies2017\win64\bin\zlib.dll C:\tools\vcpkg\installed\x64-windows\bin\
+  - copy /Y dependencies2017\win64\include\z* C:\tools\vcpkg\installed\x64-windows\include\
+#  - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows.cmake # bug curl can't build
+  - echo set(CURL_USE_WINSSL on) >> C:\tools\vcpkg\triplets\x64-windows.cmake
+  - vcpkg install curl:x64-windows
+  - set curlPath=C:\tools\vcpkg\installed\x64-windows\include
 
 build_script:
   - mkdir build build32 build64
