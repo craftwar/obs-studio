@@ -990,15 +990,15 @@
             "servers": [
                 {
                     "name": "US",
-                    "url": "rtmp://usmedia11.liveedu.tv/liveedutv"
+                    "url": "rtmp://usmedia11.liveedu.tv/livecodingtv"
                 },
                 {
                     "name": "EU",
-                    "url": "rtmp://eumedia8.liveedu.tv/liveedutv"
+                    "url": "rtmp://eumedia8.liveedu.tv/livecodingtv"
                 },
                 {
                     "name": "Asia",
-                    "url": "rtmp://apmedia1.liveedu.tv/liveedutv"
+                    "url": "rtmp://apmedia1.liveedu.tv/livecodingtv"
                 }
             ]
         },
@@ -1257,6 +1257,29 @@
                 "profile": "baseline",
                 "max video bitrate": 4000,
                 "max audio bitrate": 128
+            }
+        },
+        {
+            "name": "Vimm.TV",
+            "servers": [
+                {
+                    "name": "Default",
+                    "url": "rtmp://www.vimm.tv/live"
+                }
+            ]
+        },
+        {
+            "name": "DLive",
+            "servers": [
+                {
+                    "name": "Default",
+                    "url": "rtmp://stream.dlive.tv/live"
+                }
+            ],
+            "recommend": {
+                "keyint": 2,
+                "max video bitrate": 6000,
+                "max audio bitrate": 160
             }
         }
     ]
