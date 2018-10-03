@@ -175,7 +175,7 @@ set(obs_SOURCES
 set(obs_HEADERS
 	${obs_PLATFORM_HEADERS}
 	${obs_libffutil_HEADERS}
-	../deps/json11/json11.cpp
+	../deps/json11/json11.hpp
 	obs-app.hpp
 	platform.hpp
 	window-main.hpp
