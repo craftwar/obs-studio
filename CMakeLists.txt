@@ -1,4 +1,3 @@
-set(CMAKE_CXX_STANDARD 17)
 cmake_minimum_required(VERSION 2.8.12)
 
 if (UNIX AND POLICY CMP0072)
@@ -23,6 +22,8 @@ if(WIN32)
 		set(DepsPath "" CACHE PATH "Path to compiled dependencies (e.g. D:/dependencies/win64)")
 		message(WARNING "DepsPath variable is missing.  Please set this variable to specify path to compiled dependencies (e.g. D:/dependencies/win64)")
 	endif()
+	# option to min build
+	option(CRAFTWAR_MIN_BUILD "craftwar debloated build" ON)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -83,7 +84,7 @@ elseif(MSVC)
 	endif()
 
 	# Disable pointless constant condition warnings
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4127 /wd4201 /wd4456 /wd4457 /wd4458 /wd4459 /wd4595 /source-charset:utf-8")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4127 /wd4201 /wd4456 /wd4457 /wd4458 /wd4459 /wd4595 /source-charset:utf-8 /std:c++latest")
 endif()
 
 if(WIN32)
