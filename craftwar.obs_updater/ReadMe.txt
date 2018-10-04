@@ -5,6 +5,8 @@ Don't delete downloaded .7z/zip files, it's used for update check. (delete it on
 
 "update and run OBS.cmd"
 	to update and start OBS (use this to start obs, it detects INTEL/AMD CPU automatically and downloads CPU specific version)
+"update and run OBS-BLEND.cmd"
+	to update and start OBS (for old computer, include most OBS plugins ex: obs-browser)
 "get obs-text.cmd"
 	download obs-text.dll only (put updater in OBS root directory)
 "get obs-text -CPU.cmd"

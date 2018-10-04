@@ -28,11 +28,15 @@ using namespace std;
 #define WIN_MANIFEST_URL "https://obsproject.com/update_studio/manifest.json"
 #endif
 
+#ifndef WIN_WHATSNEW_URL
+#define WIN_WHATSNEW_URL "https://obsproject.com/update_studio/whatsnew.json"
+#endif
+
 #ifndef WIN_UPDATER_URL
 #define WIN_UPDATER_URL "https://obsproject.com/update_studio/updater.exe"
 #endif
 
-static HCRYPTPROV provider = 0;
+static __declspec(thread) HCRYPTPROV provider = 0;
 
 #pragma pack(push, r1, 1)
 
