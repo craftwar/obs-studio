@@ -44,12 +44,13 @@ install:
   - set QTDIR32=C:\Qt\latest\msvc2015
   - set QTDIR64=C:\Qt\latest\msvc2017_64
   - set build_config=Release
-  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -favor:%favor_arch%
+#  -Zc:inline is disabled when -GL is on
+  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -favor:%favor_arch% -Zc:__cplusplus
 #vcpkg
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
   - set VCPKG_LINKER_FLAGS=/LTCG
-  - set VCPKG_C_FLAGS=/arch:%vc_inc_arch% /Gw /Gy /GL /GS- /favor:%favor_arch%
+  - set VCPKG_C_FLAGS=/arch:%vc_inc_arch% /Gw /Gy /GL /GS- /favor:%favor_arch% /Zc:__cplusplus
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
   - '"C:\Program Files\Git\usr\bin\sed.exe" -i "s/CRT_LINKAGE static/CRT_LINKAGE dynamic/" /c/tools/vcpkg/triplets/x64-windows-static.cmake' #patch to dynamic crt
   - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows-static.cmake
