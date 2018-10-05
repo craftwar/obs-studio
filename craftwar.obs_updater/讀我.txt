@@ -6,7 +6,7 @@
 
 "update and run OBS.cmd"
 	更新並啟動 OBS (一般情況下用這個啟動，會自動判斷CPU為INTEL或AMD下載對應版本)
-"update and run OBS-BLEND.cmd"
+"update and run OBS-blend.cmd"
 	更新並啟動 OBS (舊電腦用，提供多數OBS官方plugin ex: obs-browser)
 "get obs-text.cmd"
 	只下載我改寫的obs-text.dll (updater需放在OBS根目錄)
