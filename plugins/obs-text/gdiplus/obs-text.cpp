@@ -1049,18 +1049,23 @@ void TextSource::CloseSHM()
 {
 	if (TextSource::vnr_count != 0)
 		return;
-	if (TextSource::hMutex) {
-		CloseHandle(TextSource::hMutex);
-		TextSource::hMutex = NULL;
-	}
-	if (TextSource::shm.id) {
-		UnmapViewOfFile(TextSource::shm.id);
-		TextSource::shm.id = nullptr;
-	}
-	if (TextSource::hMapFile) {
-		CloseHandle(TextSource::hMapFile);
-		TextSource::hMapFile = NULL;
-	}
+
+	if (TextSource::hMutex)
+		goto close_mutex;
+	if (TextSource::shm.id)
+		goto unmap_view;
+	if (TextSource::hMapFile)
+		goto close_map;
+
+close_mutex:
+	CloseHandle(TextSource::hMutex);
+	TextSource::hMutex = NULL;
+unmap_view:
+	UnmapViewOfFile(TextSource::shm.id);
+	TextSource::shm.id = nullptr;
+close_map:
+	CloseHandle(TextSource::hMapFile);
+	TextSource::hMapFile = NULL;
 }
 
 void TextSource::ReadFromVNR()
