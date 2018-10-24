@@ -40,6 +40,8 @@ install:
 # for 32bit cmake run
   - 7z x dependencies2017.zip -oold_dep
   - 7z x VCdeps-%favor_arch%.7z -odependencies2017
+# update nvenc related headers
+  - move /Y dependencies2017\Win64\include\ffnvcodec\*.h "C:\projects\\%APPVEYOR_PROJECT_NAME%\plugins\obs-ffmpeg"
   - set DepsPath32=%CD%\old_dep\win32
   - set DepsPath64=%CD%\dependencies2017\win64
 #  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
