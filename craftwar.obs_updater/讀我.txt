@@ -1,17 +1,18 @@
-這是craftwar修改的OBS Studio，提高效能及修正bug外
+﻿這是craftwar修改的OBS Studio，提高效能及修正bug外
 有增加和移除功能 ex: 顯示播放中的歌名及VNR翻譯
 如果你需要的功能沒有，請另外安裝或使用官方版本
+設定是和官方版共用的，不需要重新設定
 **不要放在系統目錄下 (ex: C:\Program Files (x86)\) ，會沒權限寫入更新
 請勿刪除下載的壓縮案7z/zip，會用來檢查有無更新 (只有出問題時需要刪除重置)
 
-"update and run OBS.cmd"
-	更新並啟動 OBS (一般情況下用這個啟動，會自動判斷CPU為INTEL或AMD下載對應版本)
 "update and run OBS-blend.cmd"
-	更新並啟動 OBS (舊電腦用，提供多數OBS官方plugin ex: obs-browser)
+	更新並啟動 OBS (不懂的人用這版，和官方一樣沒有CPU優化參數的版本，提供多數OBS官方plugin ex: obs-browser)
+"update and run OBS.cmd"
+	更新並啟動 OBS (減肥版，會自動判斷CPU為INTEL或AMD下載對應版本，舊電腦無法使用)
 "get obs-text.cmd"
 	只下載我改寫的obs-text.dll (updater需放在OBS根目錄)
 "get obs-text -CPU.cmd"
-	更多優化的obs-text.dll (無法在舊電腦上執行)
+	CPU優化的obs-text.dll (無法在舊電腦上執行)
 
 updater只會更新craftwar做的OBS，不會更新你另外安裝的任何插件
 分享時請給updater就好，不要給更新完的OBS (CPU特化版本用在不對的CPU會變慢)
@@ -21,7 +22,7 @@ updater只會更新craftwar做的OBS，不會更新你另外安裝的任何插�
 如果只裝2015沒裝2017的，程式可能會出現異常行為，請安裝2017的 (不用移除舊的2015/2017)
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
-如果你需要瀏覽器插件，下載官方版用我的版本蓋過混用 (官方不提供單獨下載)
+如果你需要瀏覽器插件，下載官方版用我的版本蓋過混用或用blend版本 (官方不提供單獨下載)
 
 
 Q:	如何知道我該更新其他插件?

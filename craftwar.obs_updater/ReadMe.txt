@@ -1,12 +1,13 @@
 This is craftwar's customized OBS Studio. (improve performance, add/remove features ex: display playing song, VNR translation)
 If You need more features, you need install yourself or use official OBS Studio version instead.
+It share the same settings with official OBS, no extra setup.
 Don't install under system folder (ex: C:\Program Files (x86)\), updater can't write.
 Don't delete downloaded .7z/zip files, it's used for update check. (delete it only when you encounter download problem)
 
-"update and run OBS.cmd"
-	to update and start OBS (use this to start obs, it detects INTEL/AMD CPU automatically and downloads CPU specific version)
 "update and run OBS-blend.cmd"
-	to update and start OBS (for old computer, include most OBS plugins ex: obs-browser)
+	to update and start OBS (for general users, same as official OBS, no extra CPU optimization,  include most OBS plugins ex: obs-browser)
+"update and run OBS.cmd"
+	to update and start OBS (debloated version, it detects INTEL/AMD CPU automatically and downloads CPU specific version, not for old computers)
 "get obs-text.cmd"
 	download obs-text.dll only (put updater in OBS root directory)
 "get obs-text -CPU.cmd"
@@ -20,7 +21,7 @@ Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86) is req
 2015 Redistributable is installed and 2017 is not installed, OBS may work abnormally. Install 2017 please. (don't uninstall old 2015/2017)
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
-If you need browser plugin, you should download official OBS and replace with my updater (browser plugin can't be downloaded alone any more)
+If you need browser plugin, you should download official OBS and replace with my updater or use blend version(browser plugin can't be downloaded alone any more)
 
 
 Q:	How do I know I need update plugin?
