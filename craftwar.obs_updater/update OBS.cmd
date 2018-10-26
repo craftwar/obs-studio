@@ -7,8 +7,10 @@ if NOT DEFINED file_url (
 		set file_url=https://github.com/craftwar/obs-studio/releases/download/git/OBS-git-craftwar-%favor_arch%.7z
 	) 
 )
+if NOT DEFINED file (
+	set file=OBS-git-craftwar.7z
+)
 
-set file=OBS-git-craftwar.7z
 set file-new=%file%-new
 set _7z=7za.exe
 ::set _7z_options=
