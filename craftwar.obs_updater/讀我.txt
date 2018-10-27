@@ -35,8 +35,8 @@ A:	當OBS版本號改變時，就有可能需要更新，否則有可能出現�
 	更新OBS (會自動檢查是AMD或INTEL CPU，無法判定時請自己選)
 "extract OBS.cmd"
 	解壓縮OBS (不下載，只解壓縮，忘記關OBS或其他原因解壓縮錯誤時使用)
-"no gc.cmd"
-	更新OBS (除了game capture不更新以外都一樣)
+"download game capture.cmd"
+	下載官方的game capture
 "update updater.cmd"
 	更新updater (包含說明文件, 已改成會自動更新)
 "update and run OBS-AMD.cmd"

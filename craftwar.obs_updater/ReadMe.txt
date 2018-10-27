@@ -34,8 +34,8 @@ These files should not be used in most cases
 	to update OBS (auto check AMD/CPU. Pick it manually if it can't detect)
 "extract OBS.cmd"
 	extract OBS (no download, extract only. use when extract error happens)
-"no gc.cmd"
-	update OBS except game capture
+"download game capture.cmd"
+	download game capture from official OBS
 "update updater.cmd"
 	to update updater (including doc, change to auto update updater now)
 "update and run OBS-AMD.cmd"
