@@ -17,9 +17,9 @@ if "%favor_arch%"=="blend" (
 :: enc-amf  error
 	move /Y C:\projects\obs-studio-craftwar\CMakeLists.txt C:\projects\obs-studio\CMakeLists.txt
 	move /Y C:\projects\obs-studio-craftwar\cmake\Modules\ObsCpack.cmake C:\projects\obs-studio\cmake\Modules\ObsCpack.cmake
-	move /Y C:\projects\obs-studio-craftwar\CI\craftwar C:\projects\obs-studio\CI\craftwar
 	move /Y C:\projects\obs-studio-craftwar\plugins\obs-text\gdiplus\obs-text.cpp C:\projects\obs-studio\plugins\obs-text\gdiplus\obs-text.cpp
+	move /Y C:\projects\obs-studio-craftwar\CI\craftwar C:\projects\obs-studio\CI\craftwar
 	move /Y C:\projects\obs-studio-craftwar\CI\before-deploy-win.cmd C:\projects\obs-studio\CI\before-deploy-win.cmd
-) else (
+	) else (
 	git submodule update --init --recursive --remote plugins\win-dshow
 )

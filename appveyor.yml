@@ -81,7 +81,8 @@ build_script:
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/get-graphics-offsets/get-graphics-offsets.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/graphics-hook/graphics-hook.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/inject-helper/inject-helper.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-# package Artifact and build generic obs-text.dll in INTEL64 matrix
+# package Artifact
+# back to project root
   - cd ..
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
   - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-${env:favor_arch}.7z"
@@ -109,6 +110,7 @@ cache:
 # for blend  
   - vlc.zip
   - 'cef_binary_%CEF_VERSION%_windows64.zip'
+  - Jim_OBS
 
 #notifications:
 #  - provider: Webhook

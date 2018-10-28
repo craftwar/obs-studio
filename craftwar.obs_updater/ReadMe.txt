@@ -4,6 +4,10 @@ It share the same settings with official OBS, no extra setup.
 Don't install under system folder (ex: C:\Program Files (x86)\), updater can't write.
 Don't delete downloaded .7z/zip files, it's used for update check. (delete it only when you encounter download problem)
 
+Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86) is required.
+2015 Redistributable is installed and 2017 is not installed, OBS may work abnormally. Install 2017 please. (don't uninstall old 2015/2017)
+https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
+
 "update and run OBS-blend.cmd"
 	to update and start OBS (for general users, same as official OBS, no extra CPU optimization,  include most OBS plugins ex: obs-browser)
 "update and run OBS.cmd"
@@ -17,16 +21,12 @@ Updater updates craftwar's OBS studio only. (not including plugins you install)
 Share updater only, not OBS you get from updating. (CPU specific version is slower in incorrect CPU)
 
 
-Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86) is required.
-2015 Redistributable is installed and 2017 is not installed, OBS may work abnormally. Install 2017 please. (don't uninstall old 2015/2017)
-https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
-
-If you need browser plugin, you should download official OBS and replace with my updater or use blend version(browser plugin can't be downloaded alone any more)
-
-
 Q:	How do I know I need update plugin?
 A:	When OBS version is changed, you may need update it.
 	Put newer plugin into OBS to overwrite it or download official OBS and overwite with my updater. (double click "update and run OBS.cmd")
+
+more details (in Traditional Chinese)
+http://craftwarblog.blogspot.com/2017/09/chatty-obs-by-craftwar.html
 
 
 These files should not be used in most cases
@@ -42,6 +42,3 @@ These files should not be used in most cases
 	for AMD CPU, higher performance (use only when dectection error. lower performance to Intel CPU, use "update and run OBS-INTEL.cmd")
 "update OBS -Dev.cmd"
 	update OBS Dev (don't use if you are not pro. test only, not always lastest/stable)
-	
-more details (in Traditional Chinese)
-http://craftwarblog.blogspot.com/2017/09/chatty-obs-by-craftwar.html
