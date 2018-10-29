@@ -1258,30 +1258,9 @@ bool OBSApp::OBSInit()
 	return true;
 }
 
-string OBSApp::GetVersionString() const
+constexpr char *OBSApp::GetVersionString()
 {
-	stringstream ver;
-
-#ifdef HAVE_OBSCONFIG_H
-	ver << OBS_VERSION;
-#else
-	ver <<  LIBOBS_API_MAJOR_VER << "." <<
-		LIBOBS_API_MINOR_VER << "." <<
-		LIBOBS_API_PATCH_VER;
-
-#endif
-
-#ifdef _WIN32
-	ver << " (by craftwar)";
-#elif __APPLE__
-	ver << "mac)";
-#elif __FreeBSD__
-	ver << "freebsd)";
-#else /* assume linux for the time being */
-	ver << "linux)";
-#endif
-
-	return ver.str();
+	return OBS_VERSION " (by craftwar)";
 }
 
 bool OBSApp::IsPortableMode()
