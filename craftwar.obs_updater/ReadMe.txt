@@ -1,7 +1,7 @@
-This is craftwar's customized OBS Studio. (improve performance, add/remove features ex: display playing song, VNR translation)
-If You need more features, you need install yourself or use official OBS Studio version instead.
+This is craftwar's customized OBS Studio. (improve performance, added features ex: display playing song, VNR translation)
+I remove some plugins. You need more features, you need install them yourself or use official OBS Studio version instead.
 It share the same settings with official OBS, no extra setup.
-Don't install under system folder (ex: C:\Program Files (x86)\), updater can't write.
+Don't install under system folder (ex: C:\Program Files (x86)\), updater can't write. Install in C:\craftwar_OBS or D:\craftwar_OBS ...etc
 Don't delete downloaded .7z/zip files, it's used for update check. (delete it only when you encounter download problem)
 
 Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86) is required.
@@ -10,8 +10,9 @@ https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloa
 
 "update and run OBS-blend.cmd"
 	to update and start OBS (for general users, same as official OBS, no extra CPU optimization,  include most OBS plugins ex: obs-browser)
+	suitable for 90%+ usage
 "update and run OBS.cmd"
-	to update and start OBS (debloated version, it detects INTEL/AMD CPU automatically and downloads CPU specific version, not for old computers)
+	to update and start OBS (debloated version, it detects INTEL/AMD CPU automatically and downloads CPU specific version, crash or close on old computers)
 "get obs-text.cmd"
 	download obs-text.dll only (put updater in OBS root directory)
 "get obs-text -CPU.cmd"
@@ -23,7 +24,7 @@ Share updater only, not OBS you get from updating. (CPU specific version is slow
 
 Q:	How do I know I need update plugin?
 A:	When OBS version is changed, you may need update it.
-	Put newer plugin into OBS to overwrite it or download official OBS and overwite with my updater. (double click "update and run OBS.cmd")
+	Put newer plugin into OBS to overwrite it or download official OBS and overwite with my updater.
 
 more details (in Traditional Chinese)
 http://craftwarblog.blogspot.com/2017/09/chatty-obs-by-craftwar.html

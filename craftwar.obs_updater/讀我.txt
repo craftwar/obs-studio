@@ -1,10 +1,12 @@
 ﻿這是craftwar修改的OBS Studio，提高效能及修正bug外
-有增加和移除功能 ex: 顯示播放中的歌名及VNR翻譯
-如果你需要的功能沒有，請另外安裝或使用官方版本
+新增功能 ex: 顯示播放中的歌名及VNR翻譯
+有拔掉一些功能，如果你需要的沒有，請另外安裝或使用官方版本
 設定是和官方版共用的，不需要重新設定
-**不要放在系統目錄下 (ex: C:\Program Files (x86)\) ，會沒權限寫入更新
+**不要放在系統目錄下 (ex: C:\Program Files (x86)\) ，會沒權限寫入更新，可放在 C:\craftwar_OBS 或 D:\craftwar_OBS ...etc
 請勿刪除下載的壓縮案7z/zip，會用來檢查有無更新 (只有出問題時需要刪除重置)
 
+不想用我的OBS，也建議看的實況設定優化
+https://craftwarblog.blogspot.com/2018/07/obs-streaming-settings.html
 
 需先安裝 Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64和x86)
 如果只裝2015沒裝2017的，程式可能會出現異常行為，請安裝2017的 (不用移除舊的2015/2017)
@@ -13,8 +15,9 @@ https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloa
 
 "update and run OBS-blend.cmd"
 	更新並啟動 OBS (不懂的人用這版，和官方一樣沒有CPU優化參數的版本，提供多數OBS官方plugin ex: obs-browser)
+	應該可滿足9成以上使用者
 "update and run OBS.cmd"
-	更新並啟動 OBS (減肥版，會自動判斷CPU為INTEL或AMD下載對應版本，舊電腦無法使用)
+	更新並啟動 OBS (減肥版，自動判斷CPU為INTEL或AMD下載對應版本，舊電腦無法使用會crash或無反應)
 "get obs-text.cmd"
 	只下載我改寫的obs-text.dll (updater需放在OBS根目錄)
 "get obs-text -CPU.cmd"
@@ -26,9 +29,9 @@ updater只會更新craftwar做的OBS，不會更新你另外安裝的任何插�
 
 Q:	如何知道我該更新其他插件?
 A:	當OBS版本號改變時，就有可能需要更新，否則有可能出現問題，你要等到出問題再處理也可以(?
-	更新方法為，把加裝的plugin覆蓋過去，或是下載官方版本，放入updater執行更新覆蓋 ("update and run OBS.cmd")
+	更新方法為，把加裝的plugin覆蓋過去，或是下載官方版本，放入updater執行更新覆蓋
 
-其他詳細訊息請看，無法使用也先看這裡
+其他詳細資訊，無法使用的時候
 http://craftwarblog.blogspot.com/2017/09/chatty-obs-by-craftwar.html
 
 
