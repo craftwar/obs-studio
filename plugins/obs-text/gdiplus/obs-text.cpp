@@ -789,8 +789,7 @@ inline void TextSource::Update(obs_data_t *s)
 		LoadFileText();
 	} else if (new_use_song) {
 		mode = Mode::song;
-		if (IsWindow(song_hwnd))
-			get_song_name(song_hwnd);
+		get_song_name(song_hwnd);
 	} else if (new_use_vnr) {
 		mode = Mode::vnr;
 		VNR_initial(s);
@@ -866,7 +865,7 @@ inline void TextSource::Tick(float seconds)
 		update_time_elapsed += seconds;
 		if (update_time_elapsed >= 1.0f) {
 			update_time_elapsed = 0.0f;
-			if (!IsWindow(song_hwnd) || !get_song_name(song_hwnd)) {
+			if (!get_song_name(song_hwnd)) {
 				::EnumWindows(&TextSource::find_target
 					, reinterpret_cast<LPARAM>(this));
 			}
