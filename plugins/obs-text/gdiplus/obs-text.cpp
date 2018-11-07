@@ -196,7 +196,7 @@ enum class VAlign {
 };
 
 struct TextSource {
-	typedef bool (TextSource::*song_pfn)(const wchar_t * const);
+	typedef wchar_t *(TextSource::*song_pfn)(wchar_t * const);
 
 	obs_source_t *source = nullptr;
 
@@ -308,14 +308,14 @@ struct TextSource {
 	// song players
 	static constexpr wchar_t *browsers[] =
 		{ L"- Mozilla Firefox", L"- Google Chrome" };
-	bool get_song_browser_player(const wchar_t * const title, song_pfn const pfn);
-	bool get_song_browser_youtube(const wchar_t * const title);
-	bool get_song_foobar2000(const wchar_t * const title);
-	bool get_song_osu(const wchar_t * const title);
-	void set_song_name(const wchar_t * const name);
+	inline wchar_t *get_song_browser_player(wchar_t * const title, song_pfn const pfn);
+	wchar_t *get_song_browser_youtube(wchar_t * const title);
+	wchar_t *get_song_foobar2000(wchar_t * const title);
+	wchar_t *get_song_osu(wchar_t * const title);
+	void set_song_name(wchar_t * const name);
 
-	void VNR_initial(obs_data_t *s);
-	void VNR_FallBackToText(obs_data_t *s);
+	inline void VNR_initial(obs_data_t *s);
+	inline void VNR_FallBackToText(obs_data_t *s);
 	static void CloseSHM();
 	void ReadFromVNR();
 };
@@ -906,70 +906,76 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		return FALSE;
 
 	if (song_pfunc) {
-		const bool result = (this->*song_pfunc)(title.get());
-		if (!result)
+		wchar_t * const song_name = (this->*song_pfunc)(title.get());
+		if (!song_name)
 			song_pfunc = nullptr;
-		else 
+		else {
+			set_song_name(song_name);
 			return TRUE;
+		}
 	}
 
-	const bool ok = get_song_browser_player(title.get(),
-				&TextSource::get_song_browser_youtube) ||
-			get_song_foobar2000(title.get()) ||
-			get_song_osu(title.get());
-
-	if (ok)
-		song_hwnd = hwnd;
-	return ok;
+	wchar_t *song_name = get_song_browser_player(title.get(),
+		&TextSource::get_song_browser_youtube);
+	if (song_name)
+		goto song_found;
+	song_name = get_song_foobar2000(title.get());
+	if (song_name)
+		goto song_found;
+	song_name = get_song_osu(title.get());
+	if (!song_name)
+		goto song_not_found;
+song_found:
+	set_song_name(song_name);
+	song_hwnd = hwnd;
+song_not_found:
+	return !!song_name;
 }
 
-inline bool TextSource::get_song_browser_player(const wchar_t * const title, song_pfn const pfn)
+wchar_t *TextSource::get_song_browser_player(wchar_t * const title, song_pfn const pfn)
 {
 	for (auto &brower : TextSource::browsers) {
 		if ((wcsstr(title, brower) != nullptr) && (this->*pfn)(title))
-			return true;
+			return title;
 	}
-	return false;
+	return nullptr;
 }
 
-bool TextSource::get_song_browser_youtube(const wchar_t * const title)
+wchar_t *TextSource::get_song_browser_youtube(wchar_t * const title)
 {
 	wchar_t * const strEnd = const_cast<wchar_t *>(wcsstr(title, L"- YouTube"));
 	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
-		set_song_name(title);
 		song_pfunc = &TextSource::get_song_browser_youtube;
-		return true;
+		return title;
 	}
-	return false;
+	return nullptr;
 }
 
-bool TextSource::get_song_foobar2000(const wchar_t * const title)
+wchar_t *TextSource::get_song_foobar2000(wchar_t * const title)
 {
-	wchar_t * const strEnd = const_cast<wchar_t *>(wcsstr(title, L"[foobar2000]"));
+	wchar_t * const strEnd = wcsstr(title, L"[foobar2000]");
 	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
-		set_song_name(title);
 		song_pfunc = &TextSource::get_song_foobar2000;
-		return true;
+		return title;
 	}
-	return false;
+	return nullptr;
 }
 
-bool TextSource::get_song_osu(const wchar_t * const title)
+wchar_t *TextSource::get_song_osu(wchar_t * const title)
 {
 	static constexpr wchar_t app[] = L"osu!  -";
-	const wchar_t * const strStart = wcsstr(title, app);
+	wchar_t * const strStart = wcsstr(title, app);
 	if (strStart != nullptr) {
 		// len includes '\0', 1 space after strStart is auto-removed
-		set_song_name(strStart + sizeof(app) / sizeof(*app));
 		song_pfunc = &TextSource::get_song_osu;
-		return true;
+		return strStart + sizeof(app) / sizeof(*app);
 	}
-	return false;
+	return nullptr;
 }
 
-void TextSource::set_song_name(const wchar_t * const name)
+void TextSource::set_song_name(wchar_t * const name)
 {
 	if (text.compare(name)) {
 		text = name;
@@ -978,7 +984,7 @@ void TextSource::set_song_name(const wchar_t * const name)
 	}
 }
 
-inline void TextSource::VNR_initial(obs_data *s)
+void TextSource::VNR_initial(obs_data *s)
 {
 	if (TextSource::shm.id == nullptr) {
 		hMapFile = OpenFileMapping(
