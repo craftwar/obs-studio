@@ -8,11 +8,10 @@ Microsoft Visual C++ Redistributable for Visual Studio 2017 (x64 and x86) is req
 2015 Redistributable is installed and 2017 is not installed, OBS may work abnormally. Install 2017 please. (don't uninstall old 2015/2017)
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
-"update and run OBS-blend.cmd"
-	to update and start OBS (for general users, same as official OBS, no extra CPU optimization,  include most OBS plugins ex: obs-browser)
-	suitable for 90%+ usage
-"update and run OBS.cmd"
-	to update and start OBS (debloated version, it detects INTEL/AMD CPU automatically and downloads CPU specific version, crash or close on old computers)
+"update and run OBS-blend.cmd"	to update and start OBS blend for general users
+	include most OBS plugins (ex: obs-browser), suitable for 90%+ usage
+"update and run OBS.cmd"	to update and start OBS CPU-specific/debloated version, more optimizations, most funtions is removed.
+	It detects INTEL/AMD CPU automatically and downloads CPU-specific version, crash or close on old computers
 "get obs-text.cmd"
 	download obs-text.dll only (put updater in OBS root directory)
 "get obs-text -CPU.cmd"
@@ -40,6 +39,6 @@ These files should not be used in most cases
 "update updater.cmd"
 	to update updater (including doc, change to auto update updater now)
 "update and run OBS-AMD.cmd"
-	for AMD CPU, higher performance (use only when dectection error. lower performance to Intel CPU, use "update and run OBS-INTEL.cmd")
+	for AMD CPU, higher performance (use only when CPU-specific version can't detect your CPU. lower performance to Intel CPU, use "update and run OBS-INTEL.cmd")
 "update OBS -Dev.cmd"
 	update OBS Dev (don't use if you are not pro. test only, not always lastest/stable)

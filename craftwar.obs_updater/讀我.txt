@@ -13,15 +13,14 @@ https://craftwarblog.blogspot.com/2018/07/obs-streaming-settings.html
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
 
-"update and run OBS-blend.cmd"
-	更新並啟動 OBS (不懂的人用這版，和官方一樣沒有CPU優化參數的版本，提供多數OBS官方plugin ex: obs-browser)
-	應該可滿足9成以上使用者
-"update and run OBS.cmd"
-	更新並啟動 OBS (減肥版，自動判斷CPU為INTEL或AMD下載對應版本，舊電腦無法使用會crash或無反應)
+"update and run OBS-blend.cmd"		更新並啟動 OBS，適合一般使用者
+	提供多數OBS官方plugin (ex: obs-browser)，應該可滿足9成以上使用者
+"update and run OBS.cmd"		更新並啟動 OBS CPU特化/減肥版，更多優化及拔掉很多功能
+	判斷CPU為INTEL或AMD下載對應版本，舊電腦無法使用會crash或無反應
 "get obs-text.cmd"
 	只下載我改寫的obs-text.dll (updater需放在OBS根目錄)
 "get obs-text -CPU.cmd"
-	CPU優化的obs-text.dll (無法在舊電腦上執行)
+	更多CPU優化的版本 (無法在舊電腦上執行)
 
 updater只會更新craftwar做的OBS，不會更新你另外安裝的任何插件
 分享時請給updater就好，不要給完整的OBS (CPU特化版本用在不對的CPU會變慢)
@@ -45,6 +44,6 @@ http://craftwarblog.blogspot.com/2017/09/chatty-obs-by-craftwar.html
 "update updater.cmd"
 	更新updater (包含說明文件, 已改成會自動更新)
 "update and run OBS-AMD.cmd"
-	如果你用AMD的CPU，可以使用這個獲得更高效能 (只有自動判斷出錯時才該用，Intel CPU效能會下降，改用"update and run OBS-INTEL.cmd")
+	如果你用AMD的CPU，可以使用這個獲得更高效能 (只有CPU特化/減肥版判斷出錯時才該用，Intel CPU效能會下降，改用"update and run OBS-INTEL.cmd")
 "update OBS -Dev.cmd"
 	更新OBS Dev版 (一般人不推薦，除非你知道我都改了什麼，否則不推薦用，測試用，不一定是最新/穩定的)
