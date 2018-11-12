@@ -1,3 +1,4 @@
+#VS2017 15.8.9 (bump this to force clean vcpkg cache)
 version: '{build}'
 skip_tags: true
 skip_commits:
@@ -51,6 +52,10 @@ install:
 #  -Zc:inline is disabled when -GL is on
   - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -favor:%favor_arch% -Zc:__cplusplus
 #vcpkg
+# update vcpkg when workaround is required
+  - cd C:\tools\vcpkg
+  - git pull && .\bootstrap-vcpkg.bat
+  - cd %APPVEYOR_BUILD_FOLDER%
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
   - set VCPKG_LINKER_FLAGS=/LTCG
