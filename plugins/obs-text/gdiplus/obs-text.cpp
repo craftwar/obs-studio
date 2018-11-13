@@ -917,13 +917,19 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 	wchar_t *song_name = get_song_browser_player(title.get(),
 		&TextSource::get_song_browser_youtube);
-	if (song_name)
+	if (song_name) {
+		song_pfunc = &TextSource::get_song_browser_youtube;
 		goto song_found;
+	}
 	song_name = get_song_foobar2000(title.get());
-	if (song_name)
+	if (song_name) {
+		song_pfunc = &TextSource::get_song_foobar2000;
 		goto song_found;
+	}
 	song_name = get_song_osu(title.get());
-	if (!song_name)
+	if (song_name)
+		song_pfunc = &TextSource::get_song_osu;
+	else
 		goto song_not_found;
 song_found:
 	set_song_name(song_name);
@@ -946,7 +952,6 @@ wchar_t *TextSource::get_song_browser_youtube(wchar_t * const title)
 	wchar_t * const strEnd = const_cast<wchar_t *>(wcsstr(title, L"- YouTube"));
 	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
-		song_pfunc = &TextSource::get_song_browser_youtube;
 		return title;
 	}
 	return nullptr;
@@ -957,7 +962,6 @@ wchar_t *TextSource::get_song_foobar2000(wchar_t * const title)
 	wchar_t * const strEnd = wcsstr(title, L"[foobar2000]");
 	if (strEnd != nullptr) {
 		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
-		song_pfunc = &TextSource::get_song_foobar2000;
 		return title;
 	}
 	return nullptr;
@@ -969,7 +973,6 @@ wchar_t *TextSource::get_song_osu(wchar_t * const title)
 	wchar_t * const strStart = wcsstr(title, app);
 	if (strStart != nullptr) {
 		// len includes '\0', 1 space after strStart is auto-removed
-		song_pfunc = &TextSource::get_song_osu;
 		return strStart + sizeof(app) / sizeof(*app);
 	}
 	return nullptr;
