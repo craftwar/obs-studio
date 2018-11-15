@@ -17,6 +17,7 @@ if "%favor_arch%"=="blend" (
 :: enc-amf  error
 	move /Y C:\projects\obs-studio-craftwar\CMakeLists.txt C:\projects\obs-studio\CMakeLists.txt
 	move /Y C:\projects\obs-studio-craftwar\cmake\Modules\ObsCpack.cmake C:\projects\obs-studio\cmake\Modules\ObsCpack.cmake
+	"C:\Program Files\Git\usr\bin\sed.exe" -i "22,23c\ \t\t\tCOMMAND tail -1" /C/projects/obs-studio/cmake/Modules/ObsCpack.cmake
 	move /Y C:\projects\obs-studio-craftwar\plugins\obs-text\gdiplus\obs-text.cpp C:\projects\obs-studio\plugins\obs-text\gdiplus\obs-text.cpp
 	move /Y C:\projects\obs-studio-craftwar\UI\obs-app.* C:\projects\obs-studio\UI
 :: -r, --regexp-extended, basic re (BRE) treat () as plain text, use \( if you want grouping
