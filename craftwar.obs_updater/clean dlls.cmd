@@ -1,1 +1,0 @@
-del /Q bin\64bit\av*.dll bin\64bit\libx264-*.dll

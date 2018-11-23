@@ -1,1 +1,0 @@
-set file_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-studio/artifacts/OBS-git-craftwar.7z?branch=dev
