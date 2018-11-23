@@ -210,7 +210,7 @@ struct TextSource {
 	HFONTObj hfont;
 	unique_ptr<Font> font;
 
-	string file;
+	const char *file = nullptr;
 	time_t file_timestamp = 0;
 	float update_time_elapsed = 0.0f;
 
@@ -680,7 +680,7 @@ const char *TextSource::GetMainString(const char *str)
 
 void TextSource::LoadFileText()
 {
-	BPtr<char> file_text = os_quick_read_utf8_file(file.c_str());
+	BPtr<char> file_text = os_quick_read_utf8_file(file);
 	text = to_wide(GetMainString(file_text));
 
 	if (!text.empty() && text.back() != '\n')
@@ -846,7 +846,7 @@ inline void TextSource::Tick(float seconds)
 		update_time_elapsed += seconds;
 		if (update_time_elapsed >= 1.0f) {
 			update_time_elapsed = 0.0f;
-			time_t t = get_modified_timestamp(file.c_str());
+			time_t t = get_modified_timestamp(file);
 
 			if (file_timestamp != t) {
 				file_timestamp = t;
@@ -1240,7 +1240,7 @@ static obs_properties_t *get_properties(void *data)
 	filter += T_FILTER_ALL_FILES;
 	filter += " (*.*)";
 
-	if (s && !s->file.empty()) {
+	if (s && s->file && *(s->file) != '\0') {
 		const char *slash;
 
 		path = s->file;
