@@ -347,7 +347,9 @@ void TextSource::UpdateFont()
 	lf.lfCharSet = DEFAULT_CHARSET;
 
 	if (!face.empty()) {
-		wcscpy(lf.lfFaceName, face.c_str());
+		const std::size_t length = face.copy(lf.lfFaceName, sizeof(lf.lfFaceName) /
+			sizeof(lf.lfFaceName[0]) );
+		lf.lfFaceName[length] = '\0';
 		hfont = CreateFontIndirect(&lf);
 	}
 
@@ -880,6 +882,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		}
 	}
 
+	// Using "else if"s produces bigger binary (why?)
 	wchar_t *song_name = get_song_browser_player(title.get(),
 		&TextSource::get_song_browser_youtube);
 	if (song_name) {
@@ -1184,7 +1187,7 @@ static bool extents_modified(obs_properties_t *props, obs_property_t *p,
 static obs_properties_t *get_properties(void *data)
 {
 	TextSource *s = reinterpret_cast<TextSource*>(data);
-	string path;
+	string path(s->file);
 
 	obs_properties_t *props = obs_properties_create();
 	obs_property_t *p;
@@ -1213,13 +1216,10 @@ static obs_properties_t *get_properties(void *data)
 
 	// s won't be nullptr?
 	if (*(s->file) != '\0') {
-		const char *slash;
-
-		path = s->file;
 		replace(path.begin(), path.end(), '\\', '/');
-		slash = strrchr(path.c_str(), '/');
-		if (slash)
-			path.resize(slash - path.c_str() + 1);
+		const size_t pos = path.find_last_of('/');
+		if (pos != path.npos)
+			path.resize(pos + 1);
 	}
 
 	obs_properties_add_text(props, S_TEXT, T_TEXT, OBS_TEXT_MULTILINE);
@@ -1314,6 +1314,7 @@ bool obs_module_load(void)
 		obs_data_set_default_int(font_obj, "size", 36);
 
 		obs_data_set_default_obj(settings, S_FONT, font_obj);
+		obs_data_release(font_obj);
 #if VNR_kyob1010_MultipleStream
 		obs_data_set_default_string(settings, S_VNR_MODE, "t");
 #endif
@@ -1333,8 +1334,6 @@ bool obs_module_load(void)
 		obs_data_set_default_bool(settings, S_EXTENTS_WRAP, true);
 		obs_data_set_default_int(settings, S_EXTENTS_CX, 100);
 		obs_data_set_default_int(settings, S_EXTENTS_CY, 100);
-
-		obs_data_release(font_obj);
 	};
 	si.update = [] (void *data, obs_data_t *settings)
 	{
