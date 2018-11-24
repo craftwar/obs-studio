@@ -210,7 +210,7 @@ struct TextSource {
 	HFONTObj hfont;
 	unique_ptr<Font> font;
 
-	const char *file = nullptr;
+	const char *file;
 	time_t file_timestamp = 0;
 	float update_time_elapsed = 0.0f;
 
@@ -691,49 +691,46 @@ void TextSource::LoadFileText()
 
 inline void TextSource::Update(obs_data_t *s)
 {
-	const char *new_text   = obs_data_get_string(s, S_TEXT);
-	obs_data_t *font_obj   = obs_data_get_obj(s, S_FONT);
-	const char *align_str  = obs_data_get_string(s, S_ALIGN);
-	const char *valign_str = obs_data_get_string(s, S_VALIGN);
-	uint32_t new_color     = obs_data_get_uint32(s, S_COLOR);
-	uint32_t new_opacity   = obs_data_get_uint32(s, S_OPACITY);
-	bool gradient          = obs_data_get_bool(s, S_GRADIENT);
-	uint32_t new_color2    = obs_data_get_uint32(s, S_GRADIENT_COLOR);
-	uint32_t new_opacity2  = obs_data_get_uint32(s, S_GRADIENT_OPACITY);
-	float new_grad_dir     = (float)obs_data_get_double(s, S_GRADIENT_DIR);
-	bool new_vertical      = obs_data_get_bool(s, S_VERTICAL);
-	bool new_outline       = obs_data_get_bool(s, S_OUTLINE);
-	uint32_t new_o_color   = obs_data_get_uint32(s, S_OUTLINE_COLOR);
-	uint32_t new_o_opacity = obs_data_get_uint32(s, S_OUTLINE_OPACITY);
-	uint32_t new_o_size    = obs_data_get_uint32(s, S_OUTLINE_SIZE);
-	bool new_use_file      = obs_data_get_bool(s, S_USE_FILE);
-	bool new_use_song      = obs_data_get_bool(s, S_USE_SONG);
-	bool new_use_vnr       = obs_data_get_bool(s, S_USE_VNR);
+	obs_data_t *font_obj	= obs_data_get_obj(s, S_FONT);
+	const char *align_str	= obs_data_get_string(s, S_ALIGN);
+	const char *valign_str	= obs_data_get_string(s, S_VALIGN);
+	color			= rgb_to_bgr(obs_data_get_uint32(s, S_COLOR));
+	opacity			= obs_data_get_uint32(s, S_OPACITY);
+	bool gradient		= obs_data_get_bool(s, S_GRADIENT);
+	color2			= rgb_to_bgr(obs_data_get_uint32(s, S_GRADIENT_COLOR));
+	opacity2		= obs_data_get_uint32(s, S_GRADIENT_OPACITY);
+	gradient_dir		= (float)obs_data_get_double(s, S_GRADIENT_DIR);
+	vertical		= obs_data_get_bool(s, S_VERTICAL);
+	use_outline		= obs_data_get_bool(s, S_OUTLINE);
+	outline_color		= rgb_to_bgr(obs_data_get_uint32(s, S_OUTLINE_COLOR));
+	outline_opacity		= obs_data_get_uint32(s, S_OUTLINE_OPACITY);
+	outline_size		= roundf(obs_data_get_uint32(s, S_OUTLINE_SIZE));
+	bool use_file		= obs_data_get_bool(s, S_USE_FILE);
+	bool use_song		= obs_data_get_bool(s, S_USE_SONG);
+	bool use_vnr		= obs_data_get_bool(s, S_USE_VNR);
 #if VNR_kyob1010_MultipleStream
 	vnr_mode               = obs_data_get_string(s, S_VNR_MODE);
 #endif
-	const char *new_file   = obs_data_get_string(s, S_FILE);
-	bool new_chat_mode     = obs_data_get_bool(s, S_CHATLOG_MODE);
-	int new_chat_lines     = (int)obs_data_get_int(s, S_CHATLOG_LINES);
-	bool new_extents       = obs_data_get_bool(s, S_EXTENTS);
-	bool new_extents_wrap  = obs_data_get_bool(s, S_EXTENTS_WRAP);
-	uint32_t n_extents_cx  = obs_data_get_uint32(s, S_EXTENTS_CX);
-	uint32_t n_extents_cy  = obs_data_get_uint32(s, S_EXTENTS_CY);
+	file			= obs_data_get_string(s, S_FILE);
+	chatlog_mode		= obs_data_get_bool(s, S_CHATLOG_MODE);
+	chatlog_lines		= (int)obs_data_get_int(s, S_CHATLOG_LINES);
+	use_extents		= obs_data_get_bool(s, S_EXTENTS);
+	wrap			= obs_data_get_bool(s, S_EXTENTS_WRAP);
+	extents_cx		= obs_data_get_uint32(s, S_EXTENTS_CX);
+	extents_cy		= obs_data_get_uint32(s, S_EXTENTS_CY);
 
-	const char *font_face  = obs_data_get_string(font_obj, "face");
-	int font_size          = (int)obs_data_get_int(font_obj, "size");
-	int64_t font_flags     = obs_data_get_int(font_obj, "flags");
-	bool new_bold          = (font_flags & OBS_FONT_BOLD) != 0;
-	bool new_italic        = (font_flags & OBS_FONT_ITALIC) != 0;
-	bool new_underline     = (font_flags & OBS_FONT_UNDERLINE) != 0;
-	bool new_strikeout     = (font_flags & OBS_FONT_STRIKEOUT) != 0;
+	wstring new_face	= to_wide(obs_data_get_string(font_obj, "face"));
+	int font_size		= (int)obs_data_get_int(font_obj, "size");
+	int64_t font_flags	= obs_data_get_int(font_obj, "flags");
+	bool new_bold		= (font_flags & OBS_FONT_BOLD) != 0;
+	bool new_italic		= (font_flags & OBS_FONT_ITALIC) != 0;
+	bool new_underline	= (font_flags & OBS_FONT_UNDERLINE) != 0;
+	bool new_strikeout	= (font_flags & OBS_FONT_STRIKEOUT) != 0;
 
-	uint32_t new_bk_color   = obs_data_get_uint32(s, S_BKCOLOR);
-	uint32_t new_bk_opacity = obs_data_get_uint32(s, S_BKOPACITY);
+	bk_color		= rgb_to_bgr(obs_data_get_uint32(s, S_BKCOLOR));
+	bk_opacity		= obs_data_get_uint32(s, S_BKOPACITY);
 
 	/* ----------------------------- */
-
-	wstring new_face = to_wide(font_face);
 
 	if (new_face      != face      ||
 	    face_size     != font_size ||
@@ -754,47 +751,25 @@ inline void TextSource::Update(obs_data_t *s)
 
 	/* ----------------------------- */
 
-	new_color = rgb_to_bgr(new_color);
-	new_color2 = rgb_to_bgr(new_color2);
-	new_o_color = rgb_to_bgr(new_o_color);
-	new_bk_color = rgb_to_bgr(new_bk_color);
-
-	color = new_color;
-	opacity = new_opacity;
-	color2 = new_color2;
-	opacity2 = new_opacity2;
-	gradient_dir = new_grad_dir;
-	vertical = new_vertical;
-
-	bk_color = new_bk_color;
-	bk_opacity = new_bk_opacity;
-	use_extents = new_extents;
-	wrap = new_extents_wrap;
-	extents_cx = n_extents_cx;
-	extents_cy = n_extents_cy;
-
 	if (!gradient) {
 		color2 = color;
 		opacity2 = opacity;
 	}
 
-	chatlog_mode = new_chat_mode;
-	chatlog_lines = new_chat_lines;
-
-	if (new_use_file) {
+	if (use_file) {
 		mode = Mode::file;
-		file = new_file;
-		file_timestamp = get_modified_timestamp(new_file);
+		file_timestamp = get_modified_timestamp(file);
 		LoadFileText();
-	} else if (new_use_song) {
+	} else if (use_song) {
 		mode = Mode::song;
 		get_song_name(song_hwnd);
-	} else if (new_use_vnr) {
+	} else if (use_vnr) {
 		mode = Mode::vnr;
 		VNR_initial(s);
 		ReadFromVNR();
 	} else {
 		mode = Mode::text;
+		const char *new_text = obs_data_get_string(s, S_TEXT);
 		text = to_wide(GetMainString(new_text));
 
 		/* all text should end with newlines due to the fact that GDI+
@@ -803,16 +778,12 @@ inline void TextSource::Update(obs_data_t *s)
 		if (!text.empty())
 			text.push_back('\n');
 	}
-	if (!new_use_vnr && last_use_vnr) {
+	if (!use_vnr && last_use_vnr) {
 		--TextSource::vnr_count;
 		last_use_vnr = false;
 		TextSource::CloseSHM();
 	}
 
-	use_outline = new_outline;
-	outline_color = new_o_color;
-	outline_opacity = new_o_opacity;
-	outline_size = roundf(float(new_o_size));
 
 	if (strcmp(align_str, S_ALIGN_CENTER) == 0)
 		align = Align::Center;
@@ -1240,7 +1211,8 @@ static obs_properties_t *get_properties(void *data)
 	filter += T_FILTER_ALL_FILES;
 	filter += " (*.*)";
 
-	if (s && s->file && *(s->file) != '\0') {
+	// s won't be nullptr?
+	if (*(s->file) != '\0') {
 		const char *slash;
 
 		path = s->file;
