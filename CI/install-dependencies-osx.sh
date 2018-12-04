@@ -37,8 +37,8 @@ tar -xf ./osx-deps-2018-08-09.tar.gz -C /tmp
 
 # Fetch vlc codebase
 hr "Downloading VLC repo"
-wget --quiet --retry-connrefused --waitretry=1 -O vlc-master.zip https://github.com/videolan/vlc/archive/master.zip
-unzip -q ./vlc-master.zip
+wget --quiet --retry-connrefused --waitretry=1 https://downloads.videolan.org/vlc/3.0.4/vlc-3.0.4.tar.xz
+tar -xf vlc-3.0.4.tar.xz
 
 # Get sparkle
 hr "Downloading Sparkle framework"

@@ -4929,6 +4929,9 @@ void OBSBasic::StreamDelayStopping(int sec)
 	ui->streamButton->setMenu(startStreamMenu);
 
 	ui->statusbar->StreamDelayStopping(sec);
+
+	if (api)
+		api->on_event(OBS_FRONTEND_EVENT_STREAMING_STOPPING);
 }
 
 void OBSBasic::StreamingStart()
@@ -6106,7 +6109,7 @@ void OBSBasic::OpenSavedProjectors()
 		}
 		}
 
-		if (projector && !info->geometry.empty()) {
+		if (projector && !info->geometry.empty() && info->monitor < 0) {
 			QByteArray byteArray = QByteArray::fromBase64(
 					QByteArray(info->geometry.c_str()));
 			projector->restoreGeometry(byteArray);
