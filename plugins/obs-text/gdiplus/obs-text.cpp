@@ -219,7 +219,6 @@ struct TextSource {
 	enum class Mode : unsigned char
 		{ text, file, song, vnr } mode;
 
-	bool last_use_vnr = false;
 	const char *vnr_mode = nullptr;
 	unsigned char vnr_id;
 	static unsigned char vnr_count;
@@ -313,8 +312,7 @@ struct TextSource {
 	wchar_t *get_song_osu(wchar_t * const title);
 	void set_song_name(wchar_t * const name);
 
-	inline void VNR_initial(obs_data_t *s);
-	inline void VNR_FallBackToText(obs_data_t *s);
+	inline bool VNR_initial(obs_data_t *s);
 	static void CloseSHM();
 	void ReadFromVNR();
 };
@@ -707,9 +705,6 @@ inline void TextSource::Update(obs_data_t *s)
 	outline_color		= rgb_to_bgr(obs_data_get_uint32(s, S_OUTLINE_COLOR));
 	outline_opacity		= obs_data_get_uint32(s, S_OUTLINE_OPACITY);
 	outline_size		= roundf(obs_data_get_uint32(s, S_OUTLINE_SIZE));
-	bool use_file		= obs_data_get_bool(s, S_USE_FILE);
-	bool use_song		= obs_data_get_bool(s, S_USE_SONG);
-	bool use_vnr		= obs_data_get_bool(s, S_USE_VNR);
 #if VNR_kyob1010_MultipleStream
 	vnr_mode               = obs_data_get_string(s, S_VNR_MODE);
 #endif
@@ -758,18 +753,29 @@ inline void TextSource::Update(obs_data_t *s)
 		opacity2 = opacity;
 	}
 
-	if (use_file) {
+	if (obs_data_get_bool(s, S_USE_VNR)) {
+		if (VNR_initial(s)) {
+			mode = Mode::vnr;
+			ReadFromVNR();
+			goto skip_non_vnr_mode_setup;
+		} else { // fallback to text mode
+			obs_data_set_bool(s, S_USE_VNR, false);
+			goto fallback_to_text_mode;
+		}
+	// check if use vnr last time
+	} else if (mode == Mode::vnr) {
+		--TextSource::vnr_count;
+		TextSource::CloseSHM();
+	}
+	if (obs_data_get_bool(s, S_USE_FILE)) {
 		mode = Mode::file;
 		file_timestamp = get_modified_timestamp(file);
 		LoadFileText();
-	} else if (use_song) {
+	} else if (obs_data_get_bool(s, S_USE_SONG)) {
 		mode = Mode::song;
 		get_song_name(song_hwnd);
-	} else if (use_vnr) {
-		mode = Mode::vnr;
-		VNR_initial(s);
-		ReadFromVNR();
 	} else {
+fallback_to_text_mode:
 		mode = Mode::text;
 		const char *new_text = obs_data_get_string(s, S_TEXT);
 		text = to_wide(GetMainString(new_text));
@@ -780,12 +786,7 @@ inline void TextSource::Update(obs_data_t *s)
 		if (!text.empty())
 			text.push_back('\n');
 	}
-	if (!use_vnr && last_use_vnr) {
-		--TextSource::vnr_count;
-		last_use_vnr = false;
-		TextSource::CloseSHM();
-	}
-
+skip_non_vnr_mode_setup:
 
 	if (strcmp(align_str, S_ALIGN_CENTER) == 0)
 		align = Align::Center;
@@ -955,7 +956,7 @@ void TextSource::set_song_name(wchar_t * const name)
 	}
 }
 
-void TextSource::VNR_initial(obs_data *s)
+bool TextSource::VNR_initial(obs_data *s)
 {
 	if (TextSource::shm.id == nullptr) {
 		hMapFile = OpenFileMapping(
@@ -966,7 +967,7 @@ void TextSource::VNR_initial(obs_data *s)
 			hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
 				NULL, PAGE_READWRITE, 0, VNR_SHM_SIZE, VNR_SHM);
 			if (hMapFile == NULL)
-				goto VNR_fallback;
+				goto SHM_fail;
 		}
 
 		TextSource::shm.id = static_cast<unsigned char *>(
@@ -997,24 +998,16 @@ void TextSource::VNR_initial(obs_data *s)
 		// force ReadFromVNR() read data after initial
 		vnr_id = *TextSource::shm.id - 1;
 	}
-	if (!last_use_vnr) {
+	if (mode != Mode::vnr)
 		++TextSource::vnr_count;
-		last_use_vnr = true;
-	}
-	return;
+	return true;
 
 SHM_error_clean:
 	TextSource::CloseSHM();
-VNR_fallback:
-	VNR_FallBackToText(s);
+SHM_fail:
+	return false;
 }
 
-void TextSource::VNR_FallBackToText(obs_data *s)
-{
-	obs_data_set_bool(s, S_USE_VNR, false);
-	last_use_vnr = false;
-	mode = Mode::text;
-}
 
 BOOL CALLBACK TextSource::find_target(const HWND hwnd, const LPARAM lParam)
 {
