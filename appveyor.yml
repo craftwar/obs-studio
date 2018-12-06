@@ -68,8 +68,7 @@ install:
   - copy /Y dependencies2017\win64\bin\zlib.dll C:\tools\vcpkg\installed\x64-windows\bin\
   - copy /Y dependencies2017\win64\include\z* C:\tools\vcpkg\installed\x64-windows\include\
 #  - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows.cmake # bug curl can't build
-  - echo set(CURL_USE_WINSSL on) >> C:\tools\vcpkg\triplets\x64-windows.cmake
-  - vcpkg install curl:x64-windows
+  - vcpkg install curl[core,winssl]:x64-windows
   - set curlPath=C:\tools\vcpkg\installed\x64-windows\include
 
 build_script:
