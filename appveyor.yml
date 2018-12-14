@@ -1,4 +1,4 @@
-#VS2017 15.8.9 (bump this to force clean vcpkg cache)
+#VS2017 15.9.4 (bump this to force clean vcpkg cache)
 version: '{build}'
 skip_tags: true
 skip_commits:
@@ -45,8 +45,11 @@ install:
   - set DepsPath32=%CD%\old_dep\win32
   - set DepsPath64=%CD%\dependencies2017\win64
 #  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
-  - set QTDIR32=C:\Qt\latest\msvc2015
-  - set QTDIR64=C:\Qt\latest\msvc2017_64
+# latest
+# use 5.11 to prevent 5.12 issue
+  - set QT_VERSION=5.11
+  - set QTDIR32=C:\Qt\%QT_VERSION%\msvc2015
+  - set QTDIR64=C:\Qt\%QT_VERSION%\msvc2017_64
   - set build_config=Release
 #  -Zc:inline is disabled when -GL is on
   - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -favor:%favor_arch% -Zc:__cplusplus
