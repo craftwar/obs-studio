@@ -210,7 +210,7 @@ struct TextSource {
 	HFONTObj hfont;
 	unique_ptr<Font> font;
 
-	const char *file;
+	const char *file = nullptr;
 	time_t file_timestamp = 0;
 	float update_time_elapsed = 0.0f;
 
@@ -1180,7 +1180,7 @@ static bool extents_modified(obs_properties_t *props, obs_property_t *p,
 static obs_properties_t *get_properties(void *data)
 {
 	TextSource *s = reinterpret_cast<TextSource*>(data);
-	string path(s->file);
+	string path;
 
 	obs_properties_t *props = obs_properties_create();
 	obs_property_t *p;
@@ -1208,7 +1208,8 @@ static obs_properties_t *get_properties(void *data)
 	filter += " (*.*)";
 
 	// s won't be nullptr?
-	if (*(s->file) != '\0') {
+	if (s->file && *(s->file) != '\0') {
+		path = s->file;
 		replace(path.begin(), path.end(), '\\', '/');
 		const size_t pos = path.find_last_of('/');
 		if (pos != path.npos)
