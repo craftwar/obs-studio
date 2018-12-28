@@ -762,30 +762,33 @@ inline void TextSource::Update(obs_data_t *s)
 			obs_data_set_bool(s, S_USE_VNR, false);
 			goto fallback_to_text_mode;
 		}
-	// check if use vnr last time
-	} else if (mode == Mode::vnr) {
-		--TextSource::vnr_count;
-		TextSource::CloseSHM();
-	}
-	if (obs_data_get_bool(s, S_USE_FILE)) {
-		mode = Mode::file;
-		file_timestamp = get_modified_timestamp(file);
-		LoadFileText();
-	} else if (obs_data_get_bool(s, S_USE_SONG)) {
-		mode = Mode::song;
-		get_song_name(song_hwnd);
 	} else {
-fallback_to_text_mode:
-		mode = Mode::text;
-		const char *new_text = obs_data_get_string(s, S_TEXT);
-		text = to_wide(GetMainString(new_text));
+		if (mode == Mode::vnr) { // check if use vnr last time
+			--TextSource::vnr_count;
+			TextSource::CloseSHM();
+		}
 
-		/* all text should end with newlines due to the fact that GDI+
-		* treats strings without newlines differently in terms of
-		* render size */
-		if (!text.empty())
-			text.push_back('\n');
+		if (obs_data_get_bool(s, S_USE_FILE)) {
+			mode = Mode::file;
+			file_timestamp = get_modified_timestamp(file);
+			LoadFileText();
+		} else if (obs_data_get_bool(s, S_USE_SONG)) {
+			mode = Mode::song;
+			get_song_name(song_hwnd);
+		} else {
+fallback_to_text_mode:
+			mode = Mode::text;
+			const char * const new_text = obs_data_get_string(s, S_TEXT);
+			text = to_wide(GetMainString(new_text));
+
+			/* all text should end with newlines due to the fact that GDI+
+			* treats strings without newlines differently in terms of
+			* render size */
+			if (!text.empty())
+				text.push_back('\n');
+		}
 	}
+
 skip_non_vnr_mode_setup:
 
 	if (strcmp(align_str, S_ALIGN_CENTER) == 0)
