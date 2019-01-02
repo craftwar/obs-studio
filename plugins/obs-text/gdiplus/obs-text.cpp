@@ -183,13 +183,13 @@ using HBITMAPObj = GDIObj<HBITMAP, HGDIOBJ, DeleteObject>;
 
 /* ------------------------------------------------------------------------- */
 
-enum class Align {
+enum class Align : unsigned char {
 	Left,
 	Center,
 	Right
 };
 
-enum class VAlign {
+enum class VAlign : unsigned char {
 	Top,
 	Center,
 	Bottom
@@ -820,8 +820,8 @@ inline void TextSource::Tick(float seconds)
 		return;
 	
 	switch (mode) {
-	case Mode::text :
-		break;
+	//case Mode::text :
+	//	break;
 	case Mode::file :
 		update_time_elapsed += seconds;
 		if (update_time_elapsed >= 1.0f) {
@@ -856,7 +856,8 @@ inline void TextSource::Tick(float seconds)
 		ReadFromVNR();
 		break;
 	default: // don't produce code for default
-		__assume(0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
+		break;
+		//__assume(0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
 	}
 }
 
