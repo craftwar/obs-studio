@@ -217,9 +217,8 @@ struct TextSource {
 	HWND song_hwnd = NULL;
 	song_pfn song_pfunc = nullptr;
 	enum class Mode : unsigned char
-		{ text, file, song, vnr } mode;
+		{ text, file, song, vnr } mode = Mode::text;
 
-	const char *vnr_mode = nullptr;
 	unsigned char vnr_id;
 	static unsigned char vnr_count;
 	static HANDLE hMapFile;
@@ -312,7 +311,7 @@ struct TextSource {
 	wchar_t *get_song_osu(wchar_t * const title);
 	void set_song_name(wchar_t * const name);
 
-	inline bool VNR_initial(obs_data_t *s);
+	inline bool VNR_initial();
 	static void CloseSHM();
 	void ReadFromVNR();
 };
@@ -754,7 +753,9 @@ inline void TextSource::Update(obs_data_t *s)
 	}
 
 	if (obs_data_get_bool(s, S_USE_VNR)) {
-		if (VNR_initial(s)) {
+		if (VNR_initial()) {
+			if (mode != Mode::vnr)
+				++TextSource::vnr_count;
 			mode = Mode::vnr;
 			ReadFromVNR();
 			goto skip_non_vnr_mode_setup;
@@ -959,7 +960,7 @@ void TextSource::set_song_name(wchar_t * const name)
 	}
 }
 
-bool TextSource::VNR_initial(obs_data *s)
+bool TextSource::VNR_initial()
 {
 	if (TextSource::shm.id == nullptr) {
 		hMapFile = OpenFileMapping(
@@ -1001,8 +1002,6 @@ bool TextSource::VNR_initial(obs_data *s)
 		// force ReadFromVNR() read data after initial
 		vnr_id = *TextSource::shm.id - 1;
 	}
-	if (mode != Mode::vnr)
-		++TextSource::vnr_count;
 	return true;
 
 SHM_error_clean:
