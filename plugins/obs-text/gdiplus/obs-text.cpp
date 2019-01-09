@@ -219,12 +219,10 @@ struct TextSource {
 	enum class Mode : unsigned char
 		{ text, file, song, vnr } mode = Mode::text;
 
-	unsigned char vnr_id;
 	static unsigned char vnr_count;
 	static HANDLE hMapFile;
 	static HANDLE hMutex;
 	static struct SHM {
-		unsigned char *id;
 		wchar_t *data;
 	} shm;
 
@@ -964,7 +962,7 @@ void TextSource::set_song_name(wchar_t * const name)
 
 bool TextSource::VNR_initial()
 {
-	if (TextSource::shm.id == nullptr) {
+	if (TextSource::shm.data == nullptr) {
 		hMapFile = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS,   // read/write access
 			FALSE,                 // do not inherit the name
@@ -976,14 +974,18 @@ bool TextSource::VNR_initial()
 				goto SHM_fail;
 		}
 
-		TextSource::shm.id = static_cast<unsigned char *>(
+		TextSource::shm.data = static_cast<wchar_t *>(
 			MapViewOfFile(hMapFile,   // handle to map object
 				FILE_MAP_ALL_ACCESS, // read/write permission
 				0,
 				0,
 				VNR_SHM_SIZE));
-		if (TextSource::shm.id == nullptr)
+		if (TextSource::shm.data == nullptr)
 			goto SHM_error_clean;
+
+		// No initialization is required https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
+		// The initial contents of the pages in a file mapping object backed by
+		// the operating system paging file are 0 (zero).
 
 		TextSource::hMutex = OpenMutex(
 			SYNCHRONIZE,
@@ -994,15 +996,6 @@ bool TextSource::VNR_initial()
 			if (hMutex == NULL)
 				goto SHM_error_clean;
 		}
-
-		TextSource::shm.data = reinterpret_cast<wchar_t *>
-			(TextSource::shm.id + 1);
-		// No initialization is required https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
-		// The initial contents of the pages in a file mapping object backed by
-		// the operating system paging file are 0 (zero).
-
-		// force ReadFromVNR() read data after initial
-		vnr_id = *TextSource::shm.id - 1;
 	}
 	return true;
 
@@ -1025,7 +1018,7 @@ void TextSource::CloseSHM()
 
 	if (TextSource::hMutex)
 		goto close_mutex;
-	if (TextSource::shm.id)
+	if (TextSource::shm.data)
 		goto unmap_view;
 	if (TextSource::hMapFile)
 		goto close_map;
@@ -1034,8 +1027,8 @@ close_mutex:
 	CloseHandle(TextSource::hMutex);
 	TextSource::hMutex = NULL;
 unmap_view:
-	UnmapViewOfFile(TextSource::shm.id);
-	TextSource::shm.id = nullptr;
+	UnmapViewOfFile(TextSource::shm.data);
+	TextSource::shm.data = nullptr;
 close_map:
 	CloseHandle(TextSource::hMapFile);
 	TextSource::hMapFile = NULL;
@@ -1054,10 +1047,10 @@ void TextSource::ReadFromVNR()
 		break;
 	}
 #endif
-	WaitForSingleObject(TextSource::hMutex, 5000);
-	if (vnr_id != *TextSource::shm.id) {
-		vnr_id = *TextSource::shm.id;
+	if (WaitForSingleObject(TextSource::hMutex, 0) == WAIT_OBJECT_0
+		&& *TextSource::shm.data != '\0') {
 		text = TextSource::shm.data;
+		*TextSource::shm.data = '\0';
 		// text always not empty? better let vnr add '\n'
 		//text.push_back('\n');
 		RenderText();
