@@ -196,7 +196,7 @@ enum class VAlign : unsigned char {
 };
 
 struct TextSource {
-	typedef wchar_t *(TextSource::*song_pfn)(wchar_t * const);
+	typedef wchar_t *(*song_pfn)(wchar_t * const);
 
 	obs_source_t *source = nullptr;
 
@@ -303,11 +303,11 @@ struct TextSource {
 	// song players
 	static constexpr wchar_t *browsers[] =
 		{ L"- Mozilla Firefox", L"- Google Chrome" };
-	inline wchar_t *get_song_browser_player(wchar_t * const title, song_pfn const pfn);
-	wchar_t *get_song_browser_youtube(wchar_t * const title);
-	wchar_t *get_song_foobar2000(wchar_t * const title);
-	wchar_t *get_song_osu(wchar_t * const title);
-	void set_song_name(wchar_t * const name);
+	inline static wchar_t *get_song_browser_player(wchar_t * const title, song_pfn const pfn);
+	static wchar_t *get_song_browser_youtube(wchar_t * const title);
+	static wchar_t *get_song_foobar2000(wchar_t * const title);
+	static wchar_t *get_song_osu(wchar_t * const title);
+	void set_song_name(const wchar_t * const name);
 
 	inline bool VNR_initial();
 	static void CloseSHM();
@@ -878,7 +878,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		return FALSE;
 
 	if (song_pfunc) {
-		wchar_t * const song_name = (this->*song_pfunc)(title.get());
+		wchar_t * const song_name = (*song_pfunc)(title.get());
 		if (!song_name)
 			song_pfunc = nullptr;
 		else {
@@ -914,7 +914,7 @@ song_not_found:
 wchar_t *TextSource::get_song_browser_player(wchar_t * const title, song_pfn const pfn)
 {
 	for (auto &brower : TextSource::browsers) {
-		if ((wcsstr(title, brower) != nullptr) && (this->*pfn)(title))
+		if ((wcsstr(title, brower) != nullptr) && (*pfn)(title))
 			return title;
 	}
 	return nullptr;
@@ -951,7 +951,7 @@ wchar_t *TextSource::get_song_osu(wchar_t * const title)
 	return nullptr;
 }
 
-void TextSource::set_song_name(wchar_t * const name)
+void TextSource::set_song_name(const wchar_t * const name)
 {
 	if (text.compare(name)) {
 		text = name;
