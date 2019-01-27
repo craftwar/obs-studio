@@ -37,14 +37,16 @@ static DWORD WINAPI init_hooks(LPVOID param)
 {
 	char *config_path = param;
 
-	if (USE_HOOK_ADDRESS_CACHE &&
-	    cached_versions_match() &&
+#if USE_HOOK_ADDRESS_CACHE
+	if (cached_versions_match() &&
 	    load_cached_graphics_offsets(IS32BIT, config_path)) {
 
 		load_cached_graphics_offsets(!IS32BIT, config_path);
 		obs_register_source(&game_capture_info);
 
-	} else if (load_graphics_offsets(IS32BIT, config_path)) {
+	} else
+#endif
+	if (load_graphics_offsets(IS32BIT, config_path)) {
 		load_graphics_offsets(!IS32BIT, config_path);
 	}
 
