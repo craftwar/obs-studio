@@ -686,6 +686,7 @@ void TextSource::LoadFileText()
 
 #define obs_data_get_uint32 (uint32_t)obs_data_get_int
 
+#pragma optimize ("s", on)
 inline void TextSource::Update(obs_data_t *s)
 {
 	obs_data_t *font_obj	= obs_data_get_obj(s, S_FONT);
