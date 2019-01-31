@@ -889,9 +889,12 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 	if (song_pfunc) {
 		wchar_t * const song_name = (*song_pfunc)(title.get());
-		if (!song_name)
+		if (!song_name) {
+			song_hwnd = NULL;
 			song_pfunc = nullptr;
-		else {
+			text = L"";
+			RenderText();
+		} else {
 			set_song_name(song_name);
 			return TRUE;
 		}
@@ -970,6 +973,7 @@ void TextSource::set_song_name(const wchar_t * const name)
 	}
 }
 
+#pragma optimize ("s", on)
 bool TextSource::VNR_initial()
 {
 	if (TextSource::shm.data == nullptr) {
@@ -1021,6 +1025,7 @@ BOOL CALLBACK TextSource::find_target(const HWND hwnd, const LPARAM lParam)
 	return !reinterpret_cast<TextSource *>(lParam)->get_song_name(hwnd);
 }
 
+#pragma optimize ("s", on)
 void TextSource::CloseSHM()
 {
 	if (TextSource::vnr_count != 0)
@@ -1184,6 +1189,7 @@ static bool extents_modified(obs_properties_t *props, obs_property_t *p,
 
 #undef set_vis
 
+#pragma optimize ("s", on)
 static obs_properties_t *get_properties(void *data)
 {
 	TextSource *s = reinterpret_cast<TextSource*>(data);
