@@ -753,11 +753,11 @@ inline void TextSource::Update(obs_data_t *s)
 
 	if (obs_data_get_bool(s, S_USE_VNR)) {
 		if (VNR_initial()) {
-			if (mode != Mode::vnr)
+			if (mode != Mode::vnr) {
 				++TextSource::vnr_count;
-			mode = Mode::vnr;
+				mode = Mode::vnr;
+			}
 			ReadFromVNR();
-			goto skip_non_vnr_mode_setup;
 		} else { // fallback to text mode
 			obs_data_set_bool(s, S_USE_VNR, false);
 			goto fallback_to_text_mode;
@@ -789,7 +789,6 @@ fallback_to_text_mode:
 		}
 	}
 
-skip_non_vnr_mode_setup:
 
 	if (strcmp(align_str, S_ALIGN_CENTER) == 0)
 		align = Align::Center;
@@ -817,10 +816,13 @@ inline void TextSource::Tick(float seconds)
 {
 	if (!obs_source_showing(source))
 		return;
-	
+
+	// no difference in using case 0 or default (same asm)
+	// threaded code, gcc Labels as Values is not supported in MSVC
+	// https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
 	switch (mode) {
-	//case Mode::text :
-	//	break;
+	case Mode::text :
+		break;
 	case Mode::file :
 		update_time_elapsed += seconds;
 		if (update_time_elapsed >= 1.0f) {
@@ -855,8 +857,8 @@ inline void TextSource::Tick(float seconds)
 		ReadFromVNR();
 		break;
 	default: // don't produce code for default
+		__assume(0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
 		break;
-		//__assume(0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
 	}
 }
 
