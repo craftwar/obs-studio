@@ -682,6 +682,7 @@ void TextSource::LoadFileText()
 
 	if (!text.empty() && text.back() != '\n')
 		text.push_back('\n');
+	RenderText();
 }
 
 #define obs_data_get_uint32 (uint32_t)obs_data_get_int
@@ -751,6 +752,20 @@ inline void TextSource::Update(obs_data_t *s)
 		opacity2 = opacity;
 	}
 
+	if (strcmp(align_str, S_ALIGN_CENTER) == 0)
+		align = Align::Center;
+	else if (strcmp(align_str, S_ALIGN_RIGHT) == 0)
+		align = Align::Right;
+	else
+		align = Align::Left;
+
+	if (strcmp(valign_str, S_VALIGN_CENTER) == 0)
+		valign = VAlign::Center;
+	else if (strcmp(valign_str, S_VALIGN_BOTTOM) == 0)
+		valign = VAlign::Bottom;
+	else
+		valign = VAlign::Top;
+
 	if (obs_data_get_bool(s, S_USE_VNR)) {
 		if (VNR_initial()) {
 			if (mode != Mode::vnr) {
@@ -786,25 +801,10 @@ fallback_to_text_mode:
 			* render size */
 			if (!text.empty())
 				text.push_back('\n');
+			RenderText();
 		}
 	}
 
-
-	if (strcmp(align_str, S_ALIGN_CENTER) == 0)
-		align = Align::Center;
-	else if (strcmp(align_str, S_ALIGN_RIGHT) == 0)
-		align = Align::Right;
-	else
-		align = Align::Left;
-
-	if (strcmp(valign_str, S_VALIGN_CENTER) == 0)
-		valign = VAlign::Center;
-	else if (strcmp(valign_str, S_VALIGN_BOTTOM) == 0)
-		valign = VAlign::Bottom;
-	else
-		valign = VAlign::Top;
-
-	RenderText();
 	update_time_elapsed = 0.0f;
 
 	/* ----------------------------- */
@@ -832,7 +832,6 @@ inline void TextSource::Tick(float seconds)
 			if (file_timestamp != t) {
 				file_timestamp = t;
 				LoadFileText();
-				RenderText();
 			}
 		}
 		break;
