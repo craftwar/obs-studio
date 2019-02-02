@@ -74,11 +74,13 @@ bool obs_module_load(void)
 	bool win8_or_above = false;
 	char *config_dir;
 
+#if USE_HOOK_ADDRESS_CACHE
 	config_dir = obs_module_config_path(NULL);
 	if (config_dir) {
 		os_mkdirs(config_dir);
 		bfree(config_dir);
 	}
+#endif
 
 	get_win_ver(&ver);
 
