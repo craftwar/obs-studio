@@ -130,10 +130,12 @@ void get_window_class(struct dstr *class, HWND hwnd)
 
 /* not capturable or internal windows */
 static const char *internal_microsoft_exes[] = {
-	"applicationframehost.exe",
-	"shellexperiencehost.exe",
-	"winstore.app.exe",
-	"searchui.exe",
+	"applicationframehost",
+	"shellexperiencehost",
+	"windowsInternal",
+	"winstore.app",
+	"searchui",
+	"lockapp",
 };
 
 static bool is_microsoft_internal_window_exe(const char *exe)
@@ -144,7 +146,7 @@ static bool is_microsoft_internal_window_exe(const char *exe)
 	static const char * const *end = internal_microsoft_exes + sizeof
 		(internal_microsoft_exes) / sizeof(internal_microsoft_exes[0]);
 	for (const char **vals = internal_microsoft_exes; vals < end; ++vals) {
-		if (strcmpi(*vals, exe) == 0)
+		if (_strnicmp(*vals, exe, strlen(*vals)) == 0)
 			return true;
 	}
 
@@ -165,7 +167,14 @@ static void add_window(obs_property_t *p, HWND hwnd, add_window_cb callback)
 		dstr_free(&exe);
 		return;
 	}
+
 	get_window_title(&title, hwnd);
+	if (dstr_cmp(&exe, "explorer.exe") == 0 && dstr_is_empty(&title)) {
+		dstr_free(&exe);
+		dstr_free(&title);
+		return;
+	}
+
 	get_window_class(&class, hwnd);
 
 	if (callback && !callback(title.array, class.array, exe.array)) {
