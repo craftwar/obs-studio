@@ -322,8 +322,11 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->multiviewDrawNames,   CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->multiviewDrawAreas,   CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->multiviewLayout,      COMBO_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->service,              COMBO_CHANGED,  STREAM1_CHANGED);
+	HookWidget(ui->server,               COMBO_CHANGED,  STREAM1_CHANGED);
+	HookWidget(ui->customServer,         EDIT_CHANGED,   STREAM1_CHANGED);
+	HookWidget(ui->key,                  EDIT_CHANGED,   STREAM1_CHANGED);
 	HookWidget(ui->outputMode,           COMBO_CHANGED,  OUTPUTS_CHANGED);
-	HookWidget(ui->streamType,           COMBO_CHANGED,  STREAM1_CHANGED);
 	HookWidget(ui->simpleOutputPath,     EDIT_CHANGED,   OUTPUTS_CHANGED);
 	HookWidget(ui->simpleNoSpace,        CHECK_CHANGED,  OUTPUTS_CHANGED);
 	HookWidget(ui->simpleOutRecFormat,   COMBO_CHANGED,  OUTPUTS_CHANGED);
@@ -560,7 +563,6 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 	installEventFilter(CreateShortcutFilter());
 
-	LoadServiceTypes();
 	LoadEncoderTypes();
 	LoadColorRanges();
 	LoadFormats();
@@ -691,6 +693,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 	obs_properties_destroy(ppts);
 
+	InitStreamPage();
 	LoadSettings(false);
 
 	// Add warning checks to advanced output recording section controls
@@ -768,23 +771,6 @@ void OBSBasicSettings::SaveSpinBox(QSpinBox *widget, const char *section,
 {
 	if (WidgetChanged(widget))
 		config_set_int(main->Config(), section, value, widget->value());
-}
-
-void OBSBasicSettings::LoadServiceTypes()
-{
-	const char    *type;
-	size_t        idx = 0;
-
-	while (obs_enum_service_types(idx++, &type)) {
-		const char *name = obs_service_get_display_name(type);
-		QString qName = QT_UTF8(name);
-		QString qType = QT_UTF8(type);
-
-		ui->streamType->addItem(qName, qType);
-	}
-
-	type = obs_service_get_type(main->GetService());
-	SetComboByValue(ui->streamType, type);
 }
 
 #define TEXT_USE_STREAM_ENC \
@@ -1145,37 +1131,6 @@ void OBSBasicSettings::LoadGeneralSettings()
 	loading = false;
 }
 
-void OBSBasicSettings::LoadStream1Settings()
-{
-	QLayout *layout = ui->streamContainer->layout();
-	obs_service_t *service = main->GetService();
-	const char *type = obs_service_get_type(service);
-
-	loading = true;
-
-	obs_data_t *settings = obs_service_get_settings(service);
-
-	delete streamProperties;
-	streamProperties = new OBSPropertiesView(settings, type,
-			(PropertiesReloadCallback)obs_get_service_properties,
-			170);
-
-	streamProperties->setProperty("changed", QVariant(false));
-	layout->addWidget(streamProperties);
-
-	QObject::connect(streamProperties, SIGNAL(Changed()),
-			this, STREAM1_CHANGED);
-
-	obs_data_release(settings);
-
-	loading = false;
-
-	if (main->StreamingActive()) {
-		ui->streamType->setEnabled(false);
-		ui->streamContainer->setEnabled(false);
-	}
-}
-
 void OBSBasicSettings::LoadRendererList()
 {
 #ifdef _WIN32
@@ -1418,7 +1373,7 @@ void OBSBasicSettings::LoadVideoSettings()
 {
 	loading = true;
 
-	if (video_output_active(obs_get_video())) {
+	if (obs_video_active()) {
 		ui->videoPage->setEnabled(false);
 		ui->videoMsg->setText(
 				QTStr("Basic.Settings.Video.CurrentlyActive"));
@@ -1895,7 +1850,7 @@ void OBSBasicSettings::LoadOutputSettings()
 	LoadAdvOutputFFmpegSettings();
 	LoadAdvOutputAudioSettings();
 
-	if (video_output_active(obs_get_video())) {
+	if (obs_video_active()) {
 		ui->outputMode->setEnabled(false);
 		ui->outputModeLabel->setEnabled(false);
 		ui->simpleRecordingGroupBox->setEnabled(false);
@@ -2273,7 +2228,7 @@ void OBSBasicSettings::LoadAdvancedSettings()
 	if (!SetComboByValue(ui->bindToIP, bindIP))
 		SetInvalidValue(ui->bindToIP, bindIP, bindIP);
 
-	if (video_output_active(obs_get_video())) {
+	if (obs_video_active()) {
 		ui->advancedVideoContainer->setEnabled(false);
 	}
 
@@ -2807,26 +2762,6 @@ void OBSBasicSettings::SaveGeneralSettings()
 
 	if (multiviewChanged)
 		OBSProjector::UpdateMultiviewProjectors();
-}
-
-void OBSBasicSettings::SaveStream1Settings()
-{
-	QString streamType = GetComboData(ui->streamType);
-
-	obs_service_t *oldService = main->GetService();
-	obs_data_t *hotkeyData = obs_hotkeys_save_service(oldService);
-
-	obs_service_t *newService = obs_service_create(QT_TO_UTF8(streamType),
-			"default_service", streamProperties->GetSettings(),
-			hotkeyData);
-
-	obs_data_release(hotkeyData);
-	if (!newService)
-		return;
-
-	main->SetService(newService);
-	main->SaveService();
-	obs_service_release(newService);
 }
 
 void OBSBasicSettings::SaveVideoSettings()
@@ -3445,30 +3380,6 @@ void OBSBasicSettings::on_buttonBox_clicked(QAbstractButton *button)
 	}
 }
 
-void OBSBasicSettings::on_streamType_currentIndexChanged(int idx)
-{
-	if (loading)
-		return;
-
-	QLayout *layout = ui->streamContainer->layout();
-	QString streamType = ui->streamType->itemData(idx).toString();
-	obs_data_t *settings = obs_service_defaults(QT_TO_UTF8(streamType));
-
-	delete streamProperties;
-	streamProperties = new OBSPropertiesView(settings,
-			QT_TO_UTF8(streamType),
-			(PropertiesReloadCallback)obs_get_service_properties,
-			170);
-
-	streamProperties->setProperty("changed", QVariant(true));
-	layout->addWidget(streamProperties);
-
-	QObject::connect(streamProperties, SIGNAL(Changed()),
-			this, STREAM1_CHANGED);
-
-	obs_data_release(settings);
-}
-
 void OBSBasicSettings::on_simpleOutputBrowse_clicked()
 {
 	QString dir = QFileDialog::getExistingDirectory(this,
@@ -3510,35 +3421,50 @@ void OBSBasicSettings::on_advOutFFPathBrowse_clicked()
 
 void OBSBasicSettings::on_advOutEncoder_currentIndexChanged(int idx)
 {
-	if (loading)
-		return;
-
 	QString encoder = GetComboData(ui->advOutEncoder);
-	bool loadSettings = encoder == curAdvStreamEncoder;
+	if (!loading) {
+		bool loadSettings = encoder == curAdvStreamEncoder;
 
-	delete streamEncoderProps;
-	streamEncoderProps = CreateEncoderPropertyView(QT_TO_UTF8(encoder),
-			loadSettings ? "streamEncoder.json" : nullptr, true);
-	ui->advOutputStreamTab->layout()->addWidget(streamEncoderProps);
+		delete streamEncoderProps;
+		streamEncoderProps = CreateEncoderPropertyView(
+				QT_TO_UTF8(encoder),
+				loadSettings ? "streamEncoder.json" : nullptr,
+				true);
+		ui->advOutputStreamTab->layout()->addWidget(streamEncoderProps);
+	}
+
+	uint32_t caps = obs_get_encoder_caps(QT_TO_UTF8(encoder));
+
+	if (caps & OBS_ENCODER_CAP_PASS_TEXTURE) {
+		ui->advOutUseRescale->setChecked(false);
+		ui->advOutUseRescale->setEnabled(false);
+		ui->advOutRescale->setEnabled(false);
+	} else {
+		ui->advOutUseRescale->setEnabled(true);
+		ui->advOutRescale->setEnabled(true);
+	}
 
 	UNUSED_PARAMETER(idx);
 }
 
 void OBSBasicSettings::on_advOutRecEncoder_currentIndexChanged(int idx)
 {
-	if (loading)
+	if (!loading) {
+		ui->advOutRecUseRescale->setEnabled(idx > 0);
+		ui->advOutRecRescaleContainer->setEnabled(idx > 0);
+
+		delete recordEncoderProps;
+		recordEncoderProps = nullptr;
+	}
+
+	if (idx <= 0) {
 		return;
+	}
 
-	ui->advOutRecUseRescale->setEnabled(idx > 0);
-	ui->advOutRecRescaleContainer->setEnabled(idx > 0);
+	QString encoder = GetComboData(ui->advOutRecEncoder);
+	bool loadSettings = encoder == curAdvRecordEncoder;
 
-	delete recordEncoderProps;
-	recordEncoderProps = nullptr;
-
-	if (idx > 0) {
-		QString encoder = GetComboData(ui->advOutRecEncoder);
-		bool loadSettings = encoder == curAdvRecordEncoder;
-
+	if (!loading) {
 		recordEncoderProps = CreateEncoderPropertyView(
 				QT_TO_UTF8(encoder),
 				loadSettings ? "recordEncoder.json" : nullptr,
@@ -3546,6 +3472,17 @@ void OBSBasicSettings::on_advOutRecEncoder_currentIndexChanged(int idx)
 		ui->advOutRecStandard->layout()->addWidget(recordEncoderProps);
 		connect(recordEncoderProps, SIGNAL(Changed()),
 				this, SLOT(AdvReplayBufferChanged()));
+	}
+
+	uint32_t caps = obs_get_encoder_caps(QT_TO_UTF8(encoder));
+
+	if (caps & OBS_ENCODER_CAP_PASS_TEXTURE) {
+		ui->advOutRecUseRescale->setChecked(false);
+		ui->advOutRecUseRescale->setEnabled(false);
+		ui->advOutRecRescale->setEnabled(false);
+	} else {
+		ui->advOutRecUseRescale->setEnabled(true);
+		ui->advOutRecRescale->setEnabled(true);
 	}
 }
 
@@ -4002,7 +3939,7 @@ void OBSBasicSettings::UpdateStreamDelayEstimate()
 	UpdateAutomaticReplayBufferCheckboxes();
 }
 
-static bool EncoderAvailable(const char *encoder)
+bool EncoderAvailable(const char *encoder)
 {
 	const char *val;
 	int i = 0;
@@ -4318,11 +4255,7 @@ void OBSBasicSettings::SimpleRecordingEncoderChanged()
 	OBSService service;
 
 	if (stream1Changed) {
-		QString streamType = GetComboData(ui->streamType);
-		service = obs_service_create_private(
-				QT_TO_UTF8(streamType), nullptr,
-				streamProperties->GetSettings());
-		obs_service_release(service);
+		service = SpawnTempService();
 	} else {
 		service = main->GetService();
 	}
