@@ -65,7 +65,7 @@ install:
 #vcpkg
 # update vcpkg when workaround is required
   - cd C:\tools\vcpkg
-  - git pull && .\bootstrap-vcpkg.bat
+#  - git pull && .\bootstrap-vcpkg.bat
   - cd %APPVEYOR_BUILD_FOLDER%
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
