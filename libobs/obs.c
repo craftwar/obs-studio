@@ -309,6 +309,11 @@ static int obs_init_graphics(struct obs_video_info *ovi)
 			NULL);
 	bfree(filename);
 
+	filename = obs_find_data_file("repeat.effect");
+	video->repeat_effect = gs_effect_create_from_file(filename,
+		NULL);
+	bfree(filename);
+
 	filename = obs_find_data_file("format_conversion.effect");
 	video->conversion_effect = gs_effect_create_from_file(filename,
 			NULL);
@@ -526,6 +531,7 @@ static void obs_free_graphics(void)
 		gs_effect_destroy(video->solid_effect);
 		gs_effect_destroy(video->conversion_effect);
 		gs_effect_destroy(video->bicubic_effect);
+		gs_effect_destroy(video->repeat_effect);
 		gs_effect_destroy(video->lanczos_effect);
 		gs_effect_destroy(video->bilinear_lowres_effect);
 		video->default_effect = NULL;
@@ -1570,6 +1576,8 @@ gs_effect_t *obs_get_base_effect(enum obs_base_effect effect)
 		return obs->video.opaque_effect;
 	case OBS_EFFECT_SOLID:
 		return obs->video.solid_effect;
+	case OBS_EFFECT_REPEAT:
+		return obs->video.repeat_effect;
 	case OBS_EFFECT_BICUBIC:
 		return obs->video.bicubic_effect;
 	case OBS_EFFECT_LANCZOS:
@@ -2356,6 +2364,8 @@ void stop_gpu_encode(obs_encoder_t *encoder)
 	if (!video->gpu_encoders.num)
 		call_free = true;
 	pthread_mutex_unlock(&video->gpu_encoder_mutex);
+
+	os_event_wait(video->gpu_encode_inactive);
 
 	if (call_free) {
 		stop_gpu_encoding_thread(video);

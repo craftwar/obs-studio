@@ -145,6 +145,9 @@ static inline std::string get_config_str(
 
 bool TwitchAuth::LoadInternal()
 {
+	if (!cef)
+		return false;
+
 	OBSBasic *main = OBSBasic::Get();
 	name = get_config_str(main, service(), "Name");
 	firstLoad = false;
@@ -170,7 +173,9 @@ ffz.setAttribute('src','https://cdn.frankerfacez.com/script/script.min.js');\
 document.head.appendChild(ffz);";
 
 static const char *bttv_script = "\
+localStorage.setItem('bttv_clickTwitchEmotes', true);\
 localStorage.setItem('bttv_darkenedMode', true);\
+localStorage.setItem('bttv_bttvGIFEmotes', true);\
 var bttv = document.createElement('script');\
 bttv.setAttribute('src','https://cdn.betterttv.net/betterttv.js');\
 document.head.appendChild(bttv);";
@@ -247,6 +252,7 @@ void TwitchAuth::LoadSecondaryUIPanes()
 	std::string url;
 	std::string script;
 
+	QSize size = main->frameSize();
 	QPoint pos = main->pos();
 
 	script = "localStorage.setItem('twilight.theme', 1);";
@@ -286,8 +292,8 @@ void TwitchAuth::LoadSecondaryUIPanes()
 
 	stat.reset(new TwitchWidget());
 	stat->setObjectName("twitchStats");
-	stat->resize(200, 200);
-	stat->setMinimumSize(200, 200);
+	stat->resize(200, 250);
+	stat->setMinimumSize(200, 150);
 	stat->setWindowTitle(QTStr("TwitchAuth.Stats"));
 	stat->setAllowedAreas(Qt::AllDockWidgetAreas);
 
@@ -303,7 +309,11 @@ void TwitchAuth::LoadSecondaryUIPanes()
 	info->setFloating(true);
 	stat->setFloating(true);
 
+	QSize statSize = stat->frameSize();
+
 	info->move(pos.x() + 50, pos.y() + 50);
+	stat->move(pos.x() + size.width()  / 2 - statSize.width()  / 2,
+	           pos.y() + size.height() / 2 - statSize.height() / 2);
 
 	if (firstLoad) {
 		info->setVisible(true);

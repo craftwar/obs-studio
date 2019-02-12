@@ -181,6 +181,9 @@ static inline std::string get_config_str(
 
 bool MixerAuth::LoadInternal()
 {
+	if (!cef)
+		return false;
+
 	OBSBasic *main = OBSBasic::Get();
 	name = get_config_str(main, service(), "Name");
 	id = get_config_str(main, service(), "Id");
@@ -271,8 +274,8 @@ std::shared_ptr<Auth> MixerAuth::Login(QWidget *parent)
 
 	std::shared_ptr<MixerAuth> auth = std::make_shared<MixerAuth>(mixerDef);
 
-	std::string client_id = TWITCH_CLIENTID;
-	deobfuscate_str(&client_id[0], TWITCH_HASH);
+	std::string client_id = MIXER_CLIENTID;
+	deobfuscate_str(&client_id[0], MIXER_HASH);
 
 	if (!auth->GetToken(MIXER_TOKEN_URL, client_id, MIXER_SCOPE_VERSION,
 				QT_TO_UTF8(login.GetCode()))) {

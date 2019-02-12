@@ -1688,8 +1688,19 @@ void OBSBasic::OBSInit()
 			on_resetUI_triggered();
 	}
 
-	config_set_default_bool(App()->GlobalConfig(), "BasicWindow",
-			"DocksLocked", false);
+	bool pre23Defaults = config_get_bool(App()->GlobalConfig(),
+			"General", "Pre23Defaults");
+	if (pre23Defaults) {
+		bool resetDockLock23 = config_get_bool(App()->GlobalConfig(),
+				"General", "ResetDockLock23");
+		if (!resetDockLock23) {
+			config_set_bool(App()->GlobalConfig(),
+					"General", "ResetDockLock23", true);
+			config_remove_value(App()->GlobalConfig(),
+					"BasicWindow", "DocksLocked");
+			config_save_safe(App()->GlobalConfig(), "tmp", nullptr);
+		}
+	}
 
 	bool docksLocked = config_get_bool(App()->GlobalConfig(),
 			"BasicWindow", "DocksLocked");
@@ -1907,9 +1918,14 @@ void OBSBasic::ReceivedIntroJson(const QString &text)
 	config_set_int(App()->GlobalConfig(), "General",
 			"InfoIncrement", info_increment);
 
-	QDialog dlg(this);
-	dlg.setWindowTitle("What's New");
-	dlg.resize(700, 600);
+	QDialog *dlg = new QDialog(this);
+	dlg->setAttribute(Qt::WA_DeleteOnClose, true);
+	dlg->setWindowTitle("What's New");
+	dlg->resize(700, 600);
+
+	Qt::WindowFlags flags = dlg->windowFlags();
+	Qt::WindowFlags helpFlag = Qt::WindowContextHelpButtonHint;
+	dlg->setWindowFlags(flags & (~helpFlag));
 
 	QCefWidget *cefWidget = cef->create_widget(nullptr, info_url);
 	if (!cefWidget) {
@@ -1917,22 +1933,22 @@ void OBSBasic::ReceivedIntroJson(const QString &text)
 	}
 
 	connect(cefWidget, SIGNAL(titleChanged(const QString &)),
-			&dlg, SLOT(setWindowTitle(const QString &)));
+			dlg, SLOT(setWindowTitle(const QString &)));
 
 	QPushButton *close = new QPushButton(QTStr("Close"));
 	connect(close, &QAbstractButton::clicked,
-			&dlg, &QDialog::accept);
+			dlg, &QDialog::accept);
 
 	QHBoxLayout *bottomLayout = new QHBoxLayout();
 	bottomLayout->addStretch();
 	bottomLayout->addWidget(close);
 	bottomLayout->addStretch();
 
-	QVBoxLayout *topLayout = new QVBoxLayout(&dlg);
+	QVBoxLayout *topLayout = new QVBoxLayout(dlg);
 	topLayout->addWidget(cefWidget);
 	topLayout->addLayout(bottomLayout);
 
-	dlg.exec();
+	dlg->show();
 #else
 	UNUSED_PARAMETER(text);
 #endif
@@ -3278,6 +3294,16 @@ void OBSBasic::RenderMain(void *data, uint32_t cx, uint32_t cy)
 	gs_viewport_push();
 	gs_projection_push();
 
+	QSize previewSize = GetPixelSize(window->ui->preview);
+	float right  = float(previewSize.width())  - window->previewX;
+	float bottom = float(previewSize.height()) - window->previewY;
+
+	gs_ortho(-window->previewX, right,
+		-window->previewY, bottom,
+		-100.0f, 100.0f);
+
+	window->ui->preview->DrawOverflow();
+
 	/* --------------------------------------- */
 
 	gs_ortho(0.0f, float(ovi.base_width), 0.0f, float(ovi.base_height),
@@ -3286,6 +3312,7 @@ void OBSBasic::RenderMain(void *data, uint32_t cx, uint32_t cy)
 			window->previewCX, window->previewCY);
 
 	window->DrawBackdrop(float(ovi.base_width), float(ovi.base_height));
+
 
 	if (window->IsPreviewProgramMode()) {
 		OBSScene scene = window->GetCurrentScene();
@@ -3299,9 +3326,6 @@ void OBSBasic::RenderMain(void *data, uint32_t cx, uint32_t cy)
 
 	/* --------------------------------------- */
 
-	QSize previewSize = GetPixelSize(window->ui->preview);
-	float right  = float(previewSize.width())  - window->previewX;
-	float bottom = float(previewSize.height()) - window->previewY;
 
 	gs_ortho(-window->previewX, right,
 	         -window->previewY, bottom,
@@ -3846,7 +3870,7 @@ static void AddProjectorMenuMonitors(QMenu *parent, QObject *target,
 		QRect screenGeometry = screens[i]->geometry();
 		QString str = QString("%1 %2: %3x%4 @ %5,%6").
 			arg(QTStr("Display"),
-			    QString::number(i),
+			    QString::number(i + 1),
 			    QString::number(screenGeometry.width()),
 			    QString::number(screenGeometry.height()),
 			    QString::number(screenGeometry.x()),

@@ -316,6 +316,9 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->centerSnapping,       CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->sourceSnapping,       CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->snapDistance,         DSCROLL_CHANGED,GENERAL_CHANGED);
+	HookWidget(ui->overflowHide,         CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->overflowAlwaysVisible,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->overflowSelectionHide,CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->doubleClickSwitch,    CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->studioPortraitLayout, CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->multiviewMouseSwitch, CHECK_CHANGED,  GENERAL_CHANGED);
@@ -1087,6 +1090,18 @@ void OBSBasicSettings::LoadGeneralSettings()
 	bool projectorAlwaysOnTop = config_get_bool(GetGlobalConfig(),
 			"BasicWindow", "ProjectorAlwaysOnTop");
 	ui->projectorAlwaysOnTop->setChecked(projectorAlwaysOnTop);
+
+	bool overflowHide = config_get_bool(GetGlobalConfig(),
+		"BasicWindow", "OverflowHidden");
+	ui->overflowHide->setChecked(overflowHide);
+
+	bool overflowAlwaysVisible = config_get_bool(GetGlobalConfig(),
+		"BasicWindow", "OverflowAlwaysVisible");
+	ui->overflowAlwaysVisible->setChecked(overflowAlwaysVisible);
+
+	bool overflowSelectionHide = config_get_bool(GetGlobalConfig(),
+		"BasicWindow", "OverflowSelectionHidden");
+	ui->overflowSelectionHide->setChecked(overflowSelectionHide);
 
 	bool doubleClickSwitch = config_get_bool(GetGlobalConfig(),
 			"BasicWindow", "TransitionOnDoubleClick");
@@ -2666,6 +2681,18 @@ void OBSBasicSettings::SaveGeneralSettings()
 		config_set_double(GetGlobalConfig(), "BasicWindow",
 				"SnapDistance",
 				ui->snapDistance->value());
+	if (WidgetChanged(ui->overflowAlwaysVisible))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+			"OverflowAlwaysVisible",
+			ui->overflowAlwaysVisible->isChecked());
+	if (WidgetChanged(ui->overflowHide))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+			"OverflowHidden",
+			ui->overflowHide->isChecked());
+	if (WidgetChanged(ui->overflowSelectionHide))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+			"OverflowSelectionHidden",
+			ui->overflowSelectionHide->isChecked());
 	if (WidgetChanged(ui->doubleClickSwitch))
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"TransitionOnDoubleClick",
@@ -3450,14 +3477,14 @@ void OBSBasicSettings::on_advOutEncoder_currentIndexChanged(int idx)
 void OBSBasicSettings::on_advOutRecEncoder_currentIndexChanged(int idx)
 {
 	if (!loading) {
-		ui->advOutRecUseRescale->setEnabled(idx > 0);
-		ui->advOutRecRescaleContainer->setEnabled(idx > 0);
-
 		delete recordEncoderProps;
 		recordEncoderProps = nullptr;
 	}
 
 	if (idx <= 0) {
+		ui->advOutRecUseRescale->setChecked(false);
+		ui->advOutRecUseRescale->setEnabled(false);
+		ui->advOutRecRescaleContainer->setEnabled(false);
 		return;
 	}
 
@@ -3479,10 +3506,10 @@ void OBSBasicSettings::on_advOutRecEncoder_currentIndexChanged(int idx)
 	if (caps & OBS_ENCODER_CAP_PASS_TEXTURE) {
 		ui->advOutRecUseRescale->setChecked(false);
 		ui->advOutRecUseRescale->setEnabled(false);
-		ui->advOutRecRescale->setEnabled(false);
+		ui->advOutRecRescaleContainer->setEnabled(false);
 	} else {
 		ui->advOutRecUseRescale->setEnabled(true);
-		ui->advOutRecRescale->setEnabled(true);
+		ui->advOutRecRescaleContainer->setEnabled(true);
 	}
 }
 

@@ -15,7 +15,16 @@ environment:
   CEF_VERSION: 3.3440.1805.gbe070f9
   vc_inc_arch: AVX2
   D3D12_HOOK: false
-
+  APPVEYOR_YML_DISABLE_PS_LINUX: true
+  # TWITCH-CLIENTID:
+    # secure: D3vFGk41HZaJWAZu5slwAHZhB868mGI2aIMS03L2rt4=
+  # TWITCH-HASH:
+    # secure: IRP5JLwBmPMjA7ADbZu6x2u4thqeEF9HaU1xolhaj74=
+  # MIXER-CLIENTID:
+    # secure: lQXRRvkeZDVSTUcSaR/kthiKu89K18IubKN913PC0ldjHBQ6sWa8a/t4i1f441N3RPfzAbTrXf2ijRCYYub2Qw==
+  # MIXER-HASH:
+    # secure: fIxeDxHkiNodwPeNGX+E9tSpyjg/XuT+U9N+jtpT7xU=
+    
   matrix:
     - favor_arch: AMD64
     - favor_arch: INTEL64
