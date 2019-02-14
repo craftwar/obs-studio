@@ -1,6 +1,7 @@
 #include "DecklinkOutputUI.h"
 #include <obs-module.h>
 #include <util/platform.h>
+#include <util/util.hpp>
 #include "decklink-ui-main.h"
 
 DecklinkOutputUI::DecklinkOutputUI(QWidget *parent)
@@ -8,6 +9,8 @@ DecklinkOutputUI::DecklinkOutputUI(QWidget *parent)
 		  ui(new Ui_Output)
 {
 	ui->setupUi(this);
+
+	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	propertiesView = nullptr;
 
@@ -46,11 +49,11 @@ void DecklinkOutputUI::SetupPropertiesView()
 
 void DecklinkOutputUI::SaveSettings()
 {
-	char *modulePath = obs_module_get_config_path(obs_current_module(), "");
+	BPtr<char> modulePath = obs_module_get_config_path(obs_current_module(), "");
 
 	os_mkdirs(modulePath);
 
-	char *path = obs_module_get_config_path(obs_current_module(),
+	BPtr<char> path = obs_module_get_config_path(obs_current_module(),
 			"decklinkOutputProps.json");
 
 	obs_data_t *settings = propertiesView->GetSettings();

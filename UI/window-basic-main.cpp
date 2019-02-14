@@ -1192,6 +1192,8 @@ bool OBSBasic::InitBasicConfigDefaults()
 			true);
 	config_set_default_string(basicConfig, "SimpleOutput", "Preset",
 			"veryfast");
+	config_set_default_string(basicConfig, "SimpleOutput", "NVENCPreset",
+			"hq");
 	config_set_default_string(basicConfig, "SimpleOutput", "RecQuality",
 			"Stream");
 	config_set_default_bool(basicConfig, "SimpleOutput", "RecRB", false);
@@ -1914,6 +1916,9 @@ void OBSBasic::ReceivedIntroJson(const QString &text)
 	if (info_increment <= current_version_increment) {
 		return;
 	}
+
+	cef->init_browser();
+	ExecuteFuncSafeBlock([] {cef->wait_for_browser_init();});
 
 	config_set_int(App()->GlobalConfig(), "General",
 			"InfoIncrement", info_increment);
