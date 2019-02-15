@@ -192,6 +192,8 @@ static bool nvenc_update(void *data, obs_data_t *settings)
 
 	av_opt_set(enc->context->priv_data, "level", "auto", 0);
 	av_opt_set_int(enc->context->priv_data, "2pass", twopass, 0);
+	/* b-frames as reference, NV_ENC_BFRAME_REF_MODE_MIDDLE = 0x2 */
+	/* not supported by ffmpeg? */
 	av_opt_set_int(enc->context->priv_data, "b_ref_mode", 2, 0);
 	av_opt_set_int(enc->context->priv_data, "gpu", gpu, 0);
 
