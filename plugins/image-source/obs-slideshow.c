@@ -58,7 +58,7 @@
 /* ------------------------------------------------------------------------- */
 
 #define MOD(a,b) ((((a)%(b))+(b))%(b))
-#define MAX_LOADED 15 /* needs to be an odd number */
+#define MAX_LOADED 21 /* needs to be an odd number */
 
 struct image_file_data {
 	char *path;
@@ -907,6 +907,8 @@ static obs_properties_t *ss_properties(void *data)
 	int cy;
 
 	/* ----------------- */
+
+	obs_properties_set_flags(ppts, OBS_PROPERTIES_DEFER_UPDATE);
 
 	obs_get_video_info(&ovi);
 	cx = (int)ovi.base_width;

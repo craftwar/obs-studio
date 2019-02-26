@@ -102,7 +102,7 @@ void DuplicateCurrentCookieProfile(ConfigFile &config)
 #ifdef BROWSER_AVAILABLE
 	if (cef) {
 		OBSBasic *main = OBSBasic::Get();
-		const char *cookie_id = config_get_string(main->Config(),
+		std::string cookie_id = config_get_string(main->Config(),
 				"Panels", "CookieId");
 
 		std::string src_path;
@@ -135,14 +135,17 @@ void DuplicateCurrentCookieProfile(ConfigFile &config)
 			}
 		}
 
-		config_set_string(config, "Panels", "CookieId", new_id.c_str());
+		config_set_string(config, "Panels", "CookieId",
+				cookie_id.c_str());
+		config_set_string(main->Config(), "Panels", "CookieId",
+				new_id.c_str());
 	}
 #else
 	UNUSED_PARAMETER(config);
 #endif
 }
 
-void OBSBasic::InitBrowserPanelSafeBlock(bool showDialog)
+void OBSBasic::InitBrowserPanelSafeBlock()
 {
 #ifdef BROWSER_AVAILABLE
 	if (!cef)
@@ -152,17 +155,10 @@ void OBSBasic::InitBrowserPanelSafeBlock(bool showDialog)
 		return;
 	}
 
-	if (showDialog)
-		ExecuteFuncSafeBlockMsgBox(
-				[] {cef->wait_for_browser_init();},
-				QTStr("BrowserPanelInit.Title"),
-				QTStr("BrowserPanelInit.Text"));
-	else
-		ExecuteFuncSafeBlock(
-				[] {cef->wait_for_browser_init();});
-
+	ExecThreadedWithoutBlocking(
+			[] {cef->wait_for_browser_init();},
+			QTStr("BrowserPanelInit.Title"),
+			QTStr("BrowserPanelInit.Text"));
 	InitPanelCookieManager();
-#else
-	UNUSED_PARAMETER(showDialog);
 #endif
 }

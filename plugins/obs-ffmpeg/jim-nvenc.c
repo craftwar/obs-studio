@@ -449,19 +449,14 @@ static bool init_encoder(struct nvenc_data *enc, obs_data_t *settings)
 		? NV_ENC_PARAMS_RC_VBR_HQ
 		: NV_ENC_PARAMS_RC_VBR;
 
-	if (astrcmpi(rc, "cqp") == 0) {
-		config->rcParams.targetQuality = cqp;
-		config->rcParams.averageBitRate = 0;
-		config->rcParams.maxBitRate = 0;
-		enc->can_change_bitrate = false;
+	if (astrcmpi(rc, "cqp") == 0 || astrcmpi(rc, "lossless") == 0) {
+		if (astrcmpi(rc, "lossless") == 0)
+			cqp = 0;
 
-	} else if (astrcmpi(rc, "lossless") == 0) {
 		config->rcParams.rateControlMode = NV_ENC_PARAMS_RC_CONSTQP;
-		config->rcParams.constQP.qpInterP = 0;
-		config->rcParams.constQP.qpInterB = 0;
-		config->rcParams.constQP.qpIntra = 0;
-		config->rcParams.averageBitRate = 0;
-		config->rcParams.maxBitRate = 0;
+		config->rcParams.constQP.qpInterP = cqp;
+		config->rcParams.constQP.qpInterB = cqp;
+		config->rcParams.constQP.qpIntra = cqp;
 		enc->can_change_bitrate = false;
 
 	} else if (astrcmpi(rc, "vbr") != 0) { /* CBR by default */
@@ -602,9 +597,6 @@ static void nvenc_destroy(void *data)
 {
 	struct nvenc_data *enc = data;
 
-	for (size_t i = 0; i < enc->textures.num; i++) {
-		nv_texture_free(enc, &enc->textures.array[i]);
-	}
 	if (enc->encode_started) {
 		size_t next_bitstream = enc->next_bitstream;
 		HANDLE next_event = enc->bitstreams.array[next_bitstream].event;
@@ -614,6 +606,9 @@ static void nvenc_destroy(void *data)
 		params.completionEvent = next_event;
 		nv.nvEncEncodePicture(enc->session, &params);
 		get_encoded_packet(enc, true);
+	}
+	for (size_t i = 0; i < enc->textures.num; i++) {
+		nv_texture_free(enc, &enc->textures.array[i]);
 	}
 	for (size_t i = 0; i < enc->bitstreams.num; i++) {
 		nv_bitstream_free(enc, &enc->bitstreams.array[i]);

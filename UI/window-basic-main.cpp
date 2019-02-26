@@ -1738,7 +1738,9 @@ void OBSBasic::OBSInit()
 					msg);
 
 		if (button == QMessageBox::Yes) {
-			on_autoConfigure_triggered();
+			QMetaObject::invokeMethod(this,
+					"on_autoConfigure_triggered",
+					Qt::QueuedConnection);
 		} else {
 			msg = QTStr("Basic.FirstStartup.RunWizard.NoClicked");
 			OBSMessageBox::information(this,
@@ -4359,10 +4361,7 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 		int width = obs_source_get_width(source);
 		int height = obs_source_get_height(source);
 
-		resizeOutput->setEnabled(!(ui->streamButton->isChecked() ||
-				ui->recordButton->isChecked() ||
-				(replayBufferButton &&
-				replayBufferButton->isChecked())));
+		resizeOutput->setEnabled(!obs_video_active());
 
 		if (width == 0 || height == 0)
 			resizeOutput->setEnabled(false);
@@ -5150,18 +5149,42 @@ void OBSBasic::StreamingStop(int code, QString last_error)
 void OBSBasic::AutoRemux()
 {
 	const char *mode = config_get_string(basicConfig, "Output", "Mode");
-	const char *path = strcmp(mode, "Advanced") ?
-	config_get_string(basicConfig, "SimpleOutput", "FilePath") :
-	config_get_string(basicConfig, "AdvOut", "RecFilePath");
-	std::string s(path);
-	s += "/";
-	s += remuxFilename;
-	const QString &str = QString::fromStdString(s);
-	QString file = str.section(".", 0, 0);
+	bool advanced = astrcmpi(mode, "Advanced") == 0;
+
+	const char *path = !advanced
+		? config_get_string(basicConfig, "SimpleOutput", "FilePath")
+		: config_get_string(basicConfig, "AdvOut", "RecFilePath");
+
+	/* do not save if using FFmpeg output in advanced output mode */
+	if (advanced) {
+		const char *type = config_get_string(basicConfig, "AdvOut",
+				"RecType");
+		if (astrcmpi(type, "FFmpeg") == 0) {
+			return;
+		}
+	}
+
+	QString input;
+	input += path;
+	input += "/";
+	input += remuxFilename.c_str();
+
+	QFileInfo fi(remuxFilename.c_str());
+
+	/* do not remux if lossless */
+	if (fi.suffix().compare("avi", Qt::CaseInsensitive) == 0) {
+		return;
+	}
+
+	QString output;
+	output += path;
+	output += "/";
+	output += fi.completeBaseName();
+	output += ".mp4";
 
 	OBSRemux *remux = new OBSRemux(path, this, true);
 	remux->show();
-	remux->AutoRemux(str, file + ".mp4");
+	remux->AutoRemux(input, output);
 }
 
 void OBSBasic::StartRecording()
@@ -5297,6 +5320,7 @@ void OBSBasic::StartReplayBuffer()
 		OBSMessageBox::information(this,
 				RP_NO_HOTKEY_TITLE,
 				RP_NO_HOTKEY_TEXT);
+		replayBufferButton->setChecked(false);
 		return;
 	}
 
@@ -5342,6 +5366,7 @@ void OBSBasic::ReplayBufferStart()
 		return;
 
 	replayBufferButton->setText(QTStr("Basic.Main.StopReplayBuffer"));
+	replayBufferButton->setChecked(true);
 
 	if (sysTrayReplayBuffer)
 		sysTrayReplayBuffer->setText(replayBufferButton->text());
@@ -6995,4 +7020,25 @@ QAction *OBSBasic::AddDockWidget(QDockWidget *dock)
 OBSBasic *OBSBasic::Get()
 {
 	return reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+}
+
+bool OBSBasic::StreamingActive()
+{
+	if (!outputHandler)
+		return false;
+	return outputHandler->StreamingActive();
+}
+
+bool OBSBasic::RecordingActive()
+{
+	if (!outputHandler)
+		return false;
+	return outputHandler->RecordingActive();
+}
+
+bool OBSBasic::ReplayBufferActive()
+{
+	if (!outputHandler)
+		return false;
+	return outputHandler->ReplayBufferActive();
 }

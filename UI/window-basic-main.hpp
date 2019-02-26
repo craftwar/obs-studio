@@ -788,6 +788,10 @@ private slots:
 public slots:
 	void on_actionResetTransform_triggered();
 
+	bool StreamingActive();
+	bool RecordingActive();
+	bool ReplayBufferActive();
+
 public:
 	explicit OBSBasic(QWidget *parent = 0);
 	virtual ~OBSBasic();
@@ -799,7 +803,7 @@ public:
 	virtual int GetProfilePath(char *path, size_t size, const char *file)
 		const override;
 
-	static void InitBrowserPanelSafeBlock(bool showDialog);
+	static void InitBrowserPanelSafeBlock();
 
 private:
 	std::unique_ptr<Ui::OBSBasic> ui;
