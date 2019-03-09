@@ -41,7 +41,7 @@ install:
 #  - git submodule update --init --recursive --remote plugins\win-dshow
   - C:\projects\obs-studio\CI\craftwar\submodule.cmd
   - git fetch --tags --prune https://github.com/obsproject/obs-studio.git # get tags from official obs
-  - if exist dependencies2017.zip (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
+  - if exist dependencies2017.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
   #- set VCdeps_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps-blend.7z?job=Environment%3A%20favor_arch%3D%favor_arch%
   - set VCdeps_url=https://github.com/craftwar/obs-deps/releases/download/git/VCdeps-%favor_arch%.7z
   - if exist VCdeps-%favor_arch%.7z (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -z VCdeps-%favor_arch%.7z) else (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -C -)

@@ -861,6 +861,8 @@ struct gs_device {
 
 	void RebuildDevice();
 
+	bool HasBadNV12Output();
+
 	gs_device(uint32_t adapterIdx);
 	~gs_device();
 };
