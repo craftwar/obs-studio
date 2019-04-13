@@ -206,8 +206,6 @@ enum class VAlign : unsigned char {
 };
 
 struct TextSource {
-	typedef wchar_t *(*song_pfn)(wchar_t * const);
-
 	obs_source_t *source = nullptr;
 
 	gs_texture_t *tex = nullptr;
@@ -225,6 +223,8 @@ struct TextSource {
 	float update_time_elapsed = 0.0f;
 
 	HWND song_hwnd = NULL;
+	unsigned char browser_suffix_len;
+	typedef wchar_t* (*song_pfn)(wchar_t* const, size_t);
 	song_pfn song_pfunc = nullptr;
 	enum class Mode : unsigned char
 		{ text, file, song, vnr } mode = Mode::text;
@@ -314,11 +314,11 @@ struct TextSource {
 	BOOL get_song_name(const HWND hwnd);
 	// song players
 	static constexpr wchar_t *browsers[] =
-		{ L"- Mozilla Firefox", L"- Google Chrome" };
-	inline static wchar_t *get_song_browser_player(wchar_t * const title, song_pfn const pfn);
-	static wchar_t *get_song_browser_youtube(wchar_t * const title);
-	static wchar_t *get_song_foobar2000(wchar_t * const title);
-	static wchar_t *get_song_osu(wchar_t * const title);
+		{ L" - Mozilla Firefox", L" - Google Chrome" };
+	inline static unsigned char isBrowser(wchar_t * const title, size_t str_len);
+	static wchar_t *get_song_browser_youtube(wchar_t * const title, size_t str_len);
+	static wchar_t *get_song_foobar2000(wchar_t * const title, size_t str_len);
+	static wchar_t *get_song_osu(wchar_t * const title, size_t str_len);
 	void set_song_name(const wchar_t * const name);
 
 	inline bool VNR_initial();
@@ -906,8 +906,9 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 		return FALSE;
 
-	if (song_pfunc) {
-		wchar_t * const song_name = (*song_pfunc)(title.get());
+	if (len > browser_suffix_len && song_pfunc) {
+		wchar_t * const song_name = (*song_pfunc)(title.get(),
+			len - browser_suffix_len);
 		if (!song_name) {
 			song_hwnd = NULL;
 			song_pfunc = nullptr;
@@ -920,22 +921,25 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	}
 
 	// Using "else if"s produces bigger binary (why?)
-	wchar_t *song_name = get_song_browser_player(title.get(),
-		&TextSource::get_song_browser_youtube);
+	browser_suffix_len = isBrowser(title.get(), len);
+	wchar_t *song_name = browser_suffix_len?
+		get_song_browser_youtube(title.get(), len - browser_suffix_len)
+		: nullptr;
 	if (song_name) {
 		song_pfunc = &TextSource::get_song_browser_youtube;
 		goto song_found;
 	}
-	song_name = get_song_foobar2000(title.get());
+	song_name = get_song_foobar2000(title.get(), len);
 	if (song_name) {
 		song_pfunc = &TextSource::get_song_foobar2000;
 		goto song_found;
 	}
-	song_name = get_song_osu(title.get());
+	song_name = get_song_osu(title.get(), len);
 	if (song_name)
 		song_pfunc = &TextSource::get_song_osu;
 	else
 		goto song_not_found;
+
 song_found:
 	set_song_name(song_name);
 	song_hwnd = hwnd;
@@ -943,43 +947,54 @@ song_not_found:
 	return !!song_name;
 }
 
-wchar_t *TextSource::get_song_browser_player(wchar_t * const title, song_pfn const pfn)
-{
-	for (auto &brower : TextSource::browsers) {
-		if ((wcsstr(title, brower) != nullptr) && (*pfn)(title))
-			return title;
-	}
-	return nullptr;
+// reutrn endString length or 0
+unsigned char wcs_endWith(wchar_t *str, wchar_t *strSearch, size_t str_len) {
+	const size_t suffix_len = wcslen(strSearch);
+	if ((str_len > suffix_len) &&
+		(wmemcmp(str + str_len - suffix_len, strSearch,
+			suffix_len) == 0))
+		return suffix_len;
+
+	return 0;
 }
 
-wchar_t *TextSource::get_song_browser_youtube(wchar_t * const title)
+unsigned char TextSource::isBrowser(wchar_t * const title, size_t str_len)
 {
-	wchar_t * const strEnd = const_cast<wchar_t *>(wcsstr(title, L"- YouTube"));
-	if (strEnd != nullptr) {
-		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
+	for (auto& brower : TextSource::browsers) {
+		const unsigned char len = wcs_endWith(title, brower, str_len);
+		if (len)
+			return len;
+	}
+	return 0;
+}
+
+wchar_t *TextSource::get_song_browser_youtube(wchar_t * const title, size_t str_len)
+{
+	const unsigned char len = wcs_endWith(title, L"- YouTube", str_len);
+	if (len) {
+		*(title + str_len - len - 1) = '\0'; // remove 1 space before suffix
 		return title;
 	}
 	return nullptr;
 }
 
-wchar_t *TextSource::get_song_foobar2000(wchar_t * const title)
+wchar_t *TextSource::get_song_foobar2000(wchar_t * const title, size_t str_len)
 {
-	wchar_t * const strEnd = wcsstr(title, L"[foobar2000]");
-	if (strEnd != nullptr) {
-		*(strEnd - 1) = '\0'; // remove 1 space before strEnd
+	const unsigned char len = wcs_endWith(title, L"[foobar2000]", str_len);
+	if (len) {
+		*(title + str_len - len - 1) = '\0'; // remove 1 space before suffix
 		return title;
 	}
 	return nullptr;
 }
 
-wchar_t *TextSource::get_song_osu(wchar_t * const title)
+wchar_t *TextSource::get_song_osu(wchar_t * const title, size_t str_len)
 {
 	static constexpr wchar_t app[] = L"osu!  -";
-	wchar_t * const strStart = wcsstr(title, app);
-	if (strStart != nullptr) {
-		// len includes '\0', 1 space after strStart is auto-removed
-		return strStart + sizeof(app) / sizeof(*app);
-	}
+	constexpr unsigned char app_len = sizeof(app) / sizeof(*app) - 1;
+	if (str_len > app_len && (wmemcmp(title, app, app_len) == 0))
+		return title + app_len + 1; // skip 1 space after prefix
+
 	return nullptr;
 }
 
