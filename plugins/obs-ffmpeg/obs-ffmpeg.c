@@ -154,18 +154,6 @@ static const wchar_t *blacklisted_adapters[] = {
 	L"930M",
 	L"940M",
 	L"945M",
-	L"720A",
-	L"730A",
-	L"740A",
-	L"745A",
-	L"820A",
-	L"830A",
-	L"840A",
-	L"845A",
-	L"920A",
-	L"930A",
-	L"940A",
-	L"945A",
 	L"1030",
 	L"MX110",
 	L"MX130",
@@ -181,11 +169,32 @@ static const wchar_t *blacklisted_adapters[] = {
 static const size_t num_blacklisted =
 	sizeof(blacklisted_adapters) / sizeof(blacklisted_adapters[0]);
 
+static bool is_adapter(const wchar_t *name, const wchar_t *adapter)
+{
+	const wchar_t *find = wstrstri(name, adapter);
+	if (!find) {
+		return false;
+	}
+
+	/* check before string for potential numeric mismatch */
+	if (find > name && iswdigit(find[-1]) && iswdigit(find[0])) {
+		return false;
+	}
+
+	/* check after string for potential numeric mismatch */
+	size_t len = wcslen(adapter);
+	if (iswdigit(find[len - 1]) && iswdigit(find[len])) {
+		return false;
+	}
+
+	return true;
+}
+
 static bool is_blacklisted(const wchar_t *name)
 {
 	for (size_t i = 0; i < num_blacklisted; i++) {
 		const wchar_t *blacklisted_adapter = blacklisted_adapters[i];
-		if (wstrstri(name, blacklisted_adapter)) {
+		if (is_adapter(name, blacklisted_adapter)) {
 			return true;
 		}
 	}
@@ -193,7 +202,7 @@ static bool is_blacklisted(const wchar_t *name)
 	return false;
 }
 
-typedef HRESULT (*create_dxgi_proc)(const IID *, IDXGIFactory1 **);
+typedef HRESULT (WINAPI *create_dxgi_proc)(const IID *, IDXGIFactory1 **);
 
 static bool nvenc_device_available(void)
 {
@@ -288,7 +297,9 @@ static bool nvenc_supported(void)
 cleanup:
 	if (lib)
 		os_dlclose(lib);
+#if defined(_WIN32)
 finish:
+#endif
 	profile_end(nvenc_check_name);
 	return success;
 }

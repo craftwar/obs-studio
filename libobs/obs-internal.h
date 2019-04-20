@@ -259,6 +259,7 @@ struct obs_core_video {
 	gs_effect_t                     *conversion_effect;
 	gs_effect_t                     *bicubic_effect;
 	gs_effect_t                     *lanczos_effect;
+	gs_effect_t                     *area_effect;
 	gs_effect_t                     *bilinear_lowres_effect;
 	gs_effect_t                     *premultiplied_alpha_effect;
 	gs_samplerstate_t               *point_sampler;
@@ -644,10 +645,6 @@ struct obs_source {
 	enum video_format               async_format;
 	enum video_format               async_cache_format;
 	enum gs_color_format            async_texture_format;
-	float                           async_color_matrix[16];
-	bool                            async_full_range;
-	float                           async_color_range_min[3];
-	float                           async_color_range_max[3];
 	int                             async_plane_offset[2];
 	bool                            async_flip;
 	bool                            async_active;
@@ -843,6 +840,7 @@ struct obs_weak_output {
 #define CAPTION_LINE_BYTES (4*CAPTION_LINE_CHARS)
 struct caption_text {
 	char text[CAPTION_LINE_BYTES+1];
+	double display_duration;
 	struct caption_text *next;
 };
 

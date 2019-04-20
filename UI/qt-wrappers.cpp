@@ -19,6 +19,7 @@
 #include "obs-app.hpp"
 
 #include <graphics/graphics.h>
+#include <util/threading.h>
 #include <QWidget>
 #include <QLayout>
 #include <QMessageBox>
@@ -85,6 +86,30 @@ void OBSMessageBox::information(
 	QMessageBox mb(QMessageBox::Information,
 			title, text, QMessageBox::Ok,
 			parent);
+	mb.setButtonText(QMessageBox::Ok, QTStr("OK"));
+	mb.exec();
+}
+
+void OBSMessageBox::warning(
+	QWidget *parent,
+	const QString &title,
+	const QString &text)
+{
+	QMessageBox mb(QMessageBox::Warning,
+		title, text, QMessageBox::Ok,
+		parent);
+	mb.setButtonText(QMessageBox::Ok, QTStr("OK"));
+	mb.exec();
+}
+
+void OBSMessageBox::critical(
+	QWidget *parent,
+	const QString &title,
+	const QString &text)
+{
+	QMessageBox mb(QMessageBox::Critical,
+		title, text, QMessageBox::Ok,
+		parent);
 	mb.setButtonText(QMessageBox::Ok, QTStr("OK"));
 	mb.exec();
 }
@@ -224,6 +249,8 @@ QThread *CreateQThread(std::function<void()> func)
 	return new QuickThread(func);
 }
 
+volatile long insideEventLoop = 0;
+
 void ExecuteFuncSafeBlock(std::function<void()> func)
 {
 	QEventLoop eventLoop;
@@ -235,10 +262,12 @@ void ExecuteFuncSafeBlock(std::function<void()> func)
 				Qt::QueuedConnection);
 	};
 
+	os_atomic_inc_long(&insideEventLoop);
 	QScopedPointer<QThread> thread(CreateQThread(wait));
 	thread->start();
 	eventLoop.exec();
 	thread->wait();
+	os_atomic_dec_long(&insideEventLoop);
 }
 
 void ExecuteFuncSafeBlockMsgBox(
@@ -258,10 +287,12 @@ void ExecuteFuncSafeBlockMsgBox(
 		QMetaObject::invokeMethod(&dlg, "accept", Qt::QueuedConnection);
 	};
 
+	os_atomic_inc_long(&insideEventLoop);
 	QScopedPointer<QThread> thread(CreateQThread(wait));
 	thread->start();
 	dlg.exec();
 	thread->wait();
+	os_atomic_dec_long(&insideEventLoop);
 }
 
 static bool enable_message_boxes = false;

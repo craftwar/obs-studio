@@ -116,7 +116,8 @@ enum obs_scale_type {
 	OBS_SCALE_POINT,
 	OBS_SCALE_BICUBIC,
 	OBS_SCALE_BILINEAR,
-	OBS_SCALE_LANCZOS
+	OBS_SCALE_LANCZOS,
+	OBS_SCALE_AREA,
 };
 
 /**
@@ -602,6 +603,7 @@ enum obs_base_effect {
 	OBS_EFFECT_BILINEAR_LOWRES,    /**< Bilinear low resolution downscale */
 	OBS_EFFECT_PREMULTIPLIED_ALPHA,/**< Premultiplied alpha */
 	OBS_EFFECT_REPEAT,             /**< RGB/YUV (repeating) */
+	OBS_EFFECT_AREA,               /**< Area rescale */
 };
 
 /** Returns a commonly used base effect */
@@ -674,6 +676,7 @@ enum obs_obj_type {
 EXPORT enum obs_obj_type obs_obj_get_type(void *obj);
 EXPORT const char *obs_obj_get_id(void *obj);
 EXPORT bool obs_obj_invalid(void *obj);
+EXPORT void *obs_obj_get_data(void *obj);
 
 typedef bool (*obs_enum_audio_device_cb)(void *data, const char *name,
 		const char *id);
@@ -1714,6 +1717,8 @@ EXPORT const char *obs_output_get_id(const obs_output_t *output);
 #if BUILD_CAPTIONS
 EXPORT void obs_output_output_caption_text1(obs_output_t *output,
 		const char *text);
+EXPORT void obs_output_output_caption_text2(obs_output_t *output,
+		const char *text, double display_duration);
 #endif
 
 EXPORT float obs_output_get_congestion(obs_output_t *output);

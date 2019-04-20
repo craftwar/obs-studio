@@ -139,13 +139,17 @@ OBSBasicStats::OBSBasicStats(QWidget *parent, bool closeable)
 	resize(800, 280);
 
 	setWindowTitle(QTStr("Basic.Stats"));
-	setWindowIcon(QIcon(":/res/images/obs.png"));
+	setWindowIcon(QIcon::fromTheme("obs", QIcon(":/res/images/obs.png")));
+
 	setWindowModality(Qt::NonModal);
 	setAttribute(Qt::WA_DeleteOnClose, true);
 
 	QObject::connect(&timer, &QTimer::timeout, this, &OBSBasicStats::Update);
 	timer.setInterval(TIMER_INTERVAL);
-	timer.start();
+
+	if (isVisible())
+		timer.start();
+
 	Update();
 
 	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
@@ -503,4 +507,14 @@ void OBSBasicStats::OutputLabels::Reset(obs_output_t *output)
 
 	first_total   = obs_output_get_total_frames(output);
 	first_dropped = obs_output_get_frames_dropped(output);
+}
+
+void OBSBasicStats::showEvent(QShowEvent *)
+{
+	timer.start(TIMER_INTERVAL);
+}
+
+void OBSBasicStats::hideEvent(QHideEvent *)
+{
+	timer.stop();
 }

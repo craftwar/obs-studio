@@ -453,7 +453,7 @@ void OBSBasic::AddTransition()
 
 	if (accepted) {
 		if (name.empty()) {
-			OBSMessageBox::information(this,
+			OBSMessageBox::warning(this,
 					QTStr("NoNameEntered.Title"),
 					QTStr("NoNameEntered.Text"));
 			AddTransition();
@@ -462,7 +462,7 @@ void OBSBasic::AddTransition()
 
 		source = FindTransition(name.c_str());
 		if (source) {
-			OBSMessageBox::information(this,
+			OBSMessageBox::warning(this,
 					QTStr("NameExists.Title"),
 					QTStr("NameExists.Text"));
 
@@ -559,7 +559,7 @@ void OBSBasic::RenameTransition()
 
 	if (accepted) {
 		if (name.empty()) {
-			OBSMessageBox::information(this,
+			OBSMessageBox::warning(this,
 					QTStr("NoNameEntered.Title"),
 					QTStr("NoNameEntered.Text"));
 			RenameTransition();
@@ -568,7 +568,7 @@ void OBSBasic::RenameTransition()
 
 		source = FindTransition(name.c_str());
 		if (source) {
-			OBSMessageBox::information(this,
+			OBSMessageBox::warning(this,
 					QTStr("NameExists.Title"),
 					QTStr("NameExists.Text"));
 
@@ -1305,6 +1305,8 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 
 void OBSBasic::RenderProgram(void *data, uint32_t cx, uint32_t cy)
 {
+	GS_DEBUG_MARKER_BEGIN(GS_DEBUG_COLOR_DEFAULT, "RenderProgram");
+
 	OBSBasic *window = static_cast<OBSBasic*>(data);
 	obs_video_info ovi;
 
@@ -1332,6 +1334,8 @@ void OBSBasic::RenderProgram(void *data, uint32_t cx, uint32_t cy)
 
 	gs_projection_pop();
 	gs_viewport_pop();
+
+	GS_DEBUG_MARKER_END();
 
 	UNUSED_PARAMETER(cx);
 	UNUSED_PARAMETER(cy);

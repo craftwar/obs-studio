@@ -160,12 +160,12 @@ static bool graphics_init(struct graphics_subsystem *graphics)
 
 	graphics->exports.device_blend_function_separate(graphics->device,
 			GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA,
-			GS_BLEND_ONE, GS_BLEND_ONE);
+			GS_BLEND_ONE, GS_BLEND_INVSRCALPHA);
 	graphics->cur_blend_state.enabled = true;
 	graphics->cur_blend_state.src_c   = GS_BLEND_SRCALPHA;
 	graphics->cur_blend_state.dest_c  = GS_BLEND_INVSRCALPHA;
 	graphics->cur_blend_state.src_a   = GS_BLEND_ONE;
-	graphics->cur_blend_state.dest_a  = GS_BLEND_ONE;
+	graphics->cur_blend_state.dest_a  = GS_BLEND_INVSRCALPHA;
 
 	graphics->exports.device_leave_context(graphics->device);
 
@@ -1240,10 +1240,10 @@ void gs_reset_blend_state(void)
 	if (graphics->cur_blend_state.src_c  != GS_BLEND_SRCALPHA ||
 	    graphics->cur_blend_state.dest_c != GS_BLEND_INVSRCALPHA ||
 	    graphics->cur_blend_state.src_a  != GS_BLEND_ONE ||
-	    graphics->cur_blend_state.dest_a != GS_BLEND_ONE)
+	    graphics->cur_blend_state.dest_a != GS_BLEND_INVSRCALPHA)
 		gs_blend_function_separate(
 				GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA,
-				GS_BLEND_ONE, GS_BLEND_ONE);
+				GS_BLEND_ONE, GS_BLEND_INVSRCALPHA);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2554,6 +2554,49 @@ bool gs_nv12_available(void)
 		return false;
 
 	return thread_graphics->exports.device_nv12_available(
+			thread_graphics->device);
+}
+
+void gs_debug_marker_begin(const float color[4],
+		const char *markername)
+{
+	if (!gs_valid("gs_debug_marker_begin"))
+		return;
+
+	if (!markername)
+		markername = "(null)";
+
+	thread_graphics->exports.device_debug_marker_begin(
+			thread_graphics->device, markername,
+			color);
+}
+
+void gs_debug_marker_begin_format(const float color[4],
+		const char *format, ...)
+{
+	if (!gs_valid("gs_debug_marker_begin"))
+		return;
+
+	if (format) {
+		char markername[64];
+		va_list args;
+		va_start(args, format);
+		vsnprintf(markername, sizeof(markername), format, args);
+		va_end(args);
+		thread_graphics->exports.device_debug_marker_begin(
+			thread_graphics->device, markername,
+			color);
+	} else {
+		gs_debug_marker_begin(color, NULL);
+	}
+}
+
+void gs_debug_marker_end(void)
+{
+	if (!gs_valid("gs_debug_marker_end"))
+		return;
+
+	thread_graphics->exports.device_debug_marker_end(
 			thread_graphics->device);
 }
 

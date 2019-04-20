@@ -350,7 +350,7 @@
                 }
             ],
             "recommended": {
-                "keyint": 3,
+                "keyint": 2,
                 "output": "ftl_output",
                 "max audio bitrate": 160,
                 "max video bitrate": 10000,
@@ -440,7 +440,7 @@
                 }
             ],
             "recommended": {
-                "keyint": 3,
+                "keyint": 2,
                 "max audio bitrate": 160,
                 "max video bitrate": 10000,
                 "profile": "main"
@@ -458,6 +458,21 @@
                 "keyint": 2,
                 "profile": "main",
                 "max video bitrate": 6000,
+                "max audio bitrate": 160
+            }
+        },
+        {
+            "name": "GamePlank",
+            "servers": [
+                {
+                    "name": "Primary",
+                    "url": "rtmp://live.gameplank.tv/go"
+                }
+            ],
+            "recommended": {
+                "keyint": 1,
+                "profile": "main",
+                "max video bitrate": 2500,
                 "max audio bitrate": 160
             }
         },
@@ -778,6 +793,15 @@
                 "profile": "main",
                 "bframes": 0
             }
+        },
+        {
+          "name": "GameTips.TV",
+          "servers": [
+              {
+                  "name": "Server Iran",
+                  "url": "rtmp://gametips.tv:1935/hls"
+              }
+          ]
         },
         {
             "name": "Nood",
@@ -1459,6 +1483,27 @@
                 "keyint": 2,
                 "max video bitrate": 3000,
                 "max audio bitrate": 128
+            }
+        },
+        {
+            "name": "OnlyFans.com",
+            "servers": [
+                {
+                    "name": "USA",
+                    "url": "rtmp://route0.onlyfans.com/live"
+                },
+                {
+                    "name": "Europe",
+                    "url": "rtmp://route0-dc2.onlyfans.com/live"
+                }
+            ],
+            "recommend": {
+                "keyint": 2,
+                "profile": "main",
+                "max video bitrate": 2500,
+                "max audio bitrate": 192,
+                "bframes": 0,
+                "x264opts": "tune=zerolatency"
             }
         }
     ]

@@ -255,13 +255,17 @@ bool obs_output_actual_start(obs_output_t *output)
 bool obs_output_start(obs_output_t *output)
 {
 	bool encoded;
+	bool has_service;
 	if (!obs_output_valid(output, "obs_output_start"))
 		return false;
 	if (!output->context.data)
 		return false;
 
-	encoded = (output->info.flags & OBS_OUTPUT_ENCODED) != 0;
+	has_service = (output->info.flags & OBS_OUTPUT_SERVICE) != 0;
+	if (has_service && !obs_service_initialize(output->service, output))
+		return false;
 
+	encoded = (output->info.flags & OBS_OUTPUT_ENCODED) != 0;
 	if (encoded && output->delay_sec) {
 		return obs_output_delay_start(output);
 	} else {
@@ -1070,17 +1074,18 @@ static inline void send_interleaved(struct obs_output *output)
 		double frame_timestamp = (out.pts * out.timebase_num) /
 			(double)out.timebase_den;
 
-		/* TODO if output->caption_timestamp is more than 5 seconds
-		 * old, send empty frame */
 		if (output->caption_head &&
 		    output->caption_timestamp <= frame_timestamp) {
-			blog(LOG_INFO,"Sending caption: %f \"%s\"",
+			blog(LOG_DEBUG,"Sending caption: %f \"%s\"",
 					frame_timestamp,
 					&output->caption_head->text[0]);
 
+			double display_duration =
+				output->caption_head->display_duration;
+
 			if (add_caption(output, &out)) {
 				output->caption_timestamp =
-					frame_timestamp + 2.0;
+					frame_timestamp + display_duration;
 			}
 		}
 
@@ -1746,8 +1751,6 @@ bool obs_output_initialize_encoders(obs_output_t *output, uint32_t flags)
 
 	if (!encoded)
 		return false;
-	if (has_service && !obs_service_initialize(output->service, output))
-		return false;
 	if (has_video && !obs_encoder_initialize(output->video_encoder))
 		return false;
 	if (has_audio && !initialize_audio_encoders(output, num_mixes))
@@ -2133,11 +2136,13 @@ const char *obs_output_get_id(const obs_output_t *output)
 
 #if BUILD_CAPTIONS
 static struct caption_text *caption_text_new(const char *text, size_t bytes,
-		struct caption_text *tail, struct caption_text **head)
+		struct caption_text *tail, struct caption_text **head,
+		double display_duration)
 {
 	struct caption_text *next = bzalloc(sizeof(struct caption_text));
 	snprintf(&next->text[0], CAPTION_LINE_BYTES + 1, "%.*s",
 			(int)bytes, text);
+	next->display_duration = display_duration;
 
 	if (!*head) {
 		*head = next;
@@ -2152,6 +2157,14 @@ void obs_output_output_caption_text1(obs_output_t *output, const char *text)
 {
 	if (!obs_output_valid(output, "obs_output_output_caption_text1"))
 		return;
+	obs_output_output_caption_text2(output, text, 2.0f);
+}
+
+void obs_output_output_caption_text2(obs_output_t *output, const char *text,
+		double display_duration)
+{
+	if (!obs_output_valid(output, "obs_output_output_caption_text2"))
+		return;
 	if (!active(output))
 		return;
 
@@ -2164,7 +2177,8 @@ void obs_output_output_caption_text1(obs_output_t *output, const char *text)
 	output->caption_tail = caption_text_new(
 			text, size,
 			output->caption_tail,
-			&output->caption_head);
+			&output->caption_head,
+			display_duration);
 
 	pthread_mutex_unlock(&output->caption_mutex);
 }

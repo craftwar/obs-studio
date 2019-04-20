@@ -30,7 +30,8 @@ OBSProjector::OBSProjector(QWidget *widget, obs_source_t *source_, int monitor,
 	type           = type_;
 
 	if (isWindow) {
-		setWindowIcon(QIcon(":/res/images/obs.png"));
+		setWindowIcon(QIcon::fromTheme("obs",
+				QIcon(":/res/images/obs.png")));
 
 		UpdateProjectorTitle(projectorTitle);
 		windowedProjectors.push_back(this);
@@ -66,14 +67,13 @@ OBSProjector::OBSProjector(QWidget *widget, obs_source_t *source_, int monitor,
 		obs_display_add_draw_callback(GetDisplay(),
 				isMultiview ? OBSRenderMultiview : OBSRender,
 				this);
-		obs_display_set_background_color(GetDisplay(), 0x000000);
 	};
 
 	connect(this, &OBSQTDisplay::DisplayCreated, addDrawCallback);
 
 	bool hideCursor = config_get_bool(GetGlobalConfig(),
 			"BasicWindow", "HideProjectorCursor");
-	if (hideCursor && !isWindow) {
+	if (hideCursor && !isWindow && type != ProjectorType::Multiview) {
 		QPixmap empty(16, 16);
 		empty.fill(Qt::transparent);
 		setCursor(QCursor(empty));

@@ -21,6 +21,7 @@
 #include <util/dstr.h>
 #include <util/util.hpp>
 #include <graphics/matrix3.h>
+#include <d3d9.h>
 #include "d3d11-subsystem.hpp"
 
 struct UnsupportedHWError : HRError {
@@ -270,8 +271,10 @@ try {
 	vec3_set(&points[3],  1.0f,  1.0f, 0.0f);
 
 	gs_texture_2d nv12_y(this, NV12_CX, NV12_CY, GS_R8, 1, nullptr,
-			GS_RENDER_TARGET, GS_TEXTURE_2D, false, true);
-	gs_texture_2d nv12_uv(this, nv12_y.texture, GS_RENDER_TARGET);
+			GS_RENDER_TARGET | GS_SHARED_KM_TEX, GS_TEXTURE_2D,
+			false, true);
+	gs_texture_2d nv12_uv(this, nv12_y.texture,
+			GS_RENDER_TARGET | GS_SHARED_KM_TEX);
 	gs_vertex_shader nv12_vs(this, "", NV12_VS);
 	gs_pixel_shader nv12_y_ps(this, "", NV12_Y_PS);
 	gs_pixel_shader nv12_uv_ps(this, "", NV12_UV_PS);
@@ -322,6 +325,8 @@ try {
 	if (gs_stagesurface_map(&nv12_stage, &data, &linesize)) {
 		bad_driver = data[linesize * NV12_CY] == 0;
 		gs_stagesurface_unmap(&nv12_stage);
+	} else {
+		throw "Could not map surface";
 	}
 
 	if (bad_driver) {
@@ -330,9 +335,12 @@ try {
 	}
 	return bad_driver;
 
-} catch (HRError) {
+} catch (HRError error) {
+	blog(LOG_WARNING, "HasBadNV12Output failed: %s (%08lX)",
+			error.str, error.hr);
 	return false;
-} catch (const char *) {
+} catch (const char *error) {
+	blog(LOG_WARNING, "HasBadNV12Output failed: %s", error);
 	return false;
 }
 
@@ -2208,6 +2216,24 @@ extern "C" EXPORT bool device_shared_texture_available(void)
 extern "C" EXPORT bool device_nv12_available(gs_device_t *device)
 {
 	return device->nv12Supported;
+}
+
+extern "C" EXPORT void device_debug_marker_begin(gs_device_t *,
+		const char *markername, const float color[4])
+{
+	D3DCOLOR bgra = D3DCOLOR_ARGB((DWORD)(255.0f * color[3]),
+			(DWORD)(255.0f * color[0]), (DWORD)(255.0f * color[1]),
+			(DWORD)(255.0f * color[2]));
+
+	wchar_t wide[64];
+	os_utf8_to_wcs(markername, 0, wide, _countof(wide));
+
+	D3DPERF_BeginEvent(bgra, wide);
+}
+
+extern "C" EXPORT void device_debug_marker_end(gs_device_t *)
+{
+	D3DPERF_EndEvent();
 }
 
 extern "C" EXPORT gs_texture_t *device_texture_create_gdi(gs_device_t *device,

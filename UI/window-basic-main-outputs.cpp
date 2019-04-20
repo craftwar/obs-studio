@@ -63,7 +63,8 @@ static void OBSStopStreaming(void *data, calldata_t *params)
 	output->delayActive = false;
 	os_atomic_set_bool(&streaming_active, false);
 	QMetaObject::invokeMethod(output->main,
-			"StreamingStop", Q_ARG(int, code), Q_ARG(QString, arg_last_error));
+			"StreamingStop", Q_ARG(int, code),
+			Q_ARG(QString, arg_last_error));
 }
 
 static void OBSStartRecording(void *data, calldata_t *params)
@@ -81,11 +82,15 @@ static void OBSStopRecording(void *data, calldata_t *params)
 {
 	BasicOutputHandler *output = static_cast<BasicOutputHandler*>(data);
 	int code = (int)calldata_int(params, "code");
+	const char *last_error = calldata_string(params, "last_error");
+
+	QString arg_last_error = QString::fromUtf8(last_error);
 
 	output->recordingActive = false;
 	os_atomic_set_bool(&recording_active, false);
 	QMetaObject::invokeMethod(output->main,
-			"RecordingStop", Q_ARG(int, code));
+			"RecordingStop", Q_ARG(int, code),
+			Q_ARG(QString, arg_last_error));
 
 	UNUSED_PARAMETER(params);
 }
@@ -714,28 +719,39 @@ bool SimpleOutput::StartStreaming(obs_service_t *service)
 				obs_output_get_signal_handler(streamOutput),
 				"stop", OBSStopStreaming, this);
 
-		const char *codec =
-			obs_output_get_supported_audio_codecs(streamOutput);
-		if (!codec) {
-			return false;
-		}
+		bool isEncoded = obs_output_get_flags(streamOutput)
+			& OBS_OUTPUT_ENCODED;
 
-		if (strcmp(codec, "aac") != 0) {
-			const char *id = FindAudioEncoderFromCodec(codec);
-			int audioBitrate = GetAudioBitrate();
-			obs_data_t *settings = obs_data_create();
-			obs_data_set_int(settings, "bitrate", audioBitrate);
-
-			aacStreaming = obs_audio_encoder_create(id,
-					"alt_audio_enc", nullptr, 0, nullptr);
-			obs_encoder_release(aacStreaming);
-			if (!aacStreaming)
+		if (isEncoded) {
+			const char *codec =
+				obs_output_get_supported_audio_codecs(
+						streamOutput);
+			if (!codec) {
+				blog(LOG_WARNING, "Failed to load audio codec");
 				return false;
+			}
 
-			obs_encoder_update(aacStreaming, settings);
-			obs_encoder_set_audio(aacStreaming, obs_get_audio());
+			if (strcmp(codec, "aac") != 0) {
+				const char *id = FindAudioEncoderFromCodec(
+						codec);
+				int audioBitrate = GetAudioBitrate();
+				obs_data_t *settings = obs_data_create();
+				obs_data_set_int(settings, "bitrate",
+						audioBitrate);
 
-			obs_data_release(settings);
+				aacStreaming = obs_audio_encoder_create(id,
+						"alt_audio_enc", nullptr, 0,
+						nullptr);
+				obs_encoder_release(aacStreaming);
+				if (!aacStreaming)
+					return false;
+
+				obs_encoder_update(aacStreaming, settings);
+				obs_encoder_set_audio(aacStreaming,
+						obs_get_audio());
+
+				obs_data_release(settings);
+			}
 		}
 
 		outputType = type;
@@ -789,12 +805,15 @@ bool SimpleOutput::StartStreaming(obs_service_t *service)
 	}
 
 	const char *error = obs_output_get_last_error(streamOutput);
-	bool has_last_error = error && *error;
+	bool hasLastError = error && *error;
+	if (hasLastError)
+		lastError = error;
+	else
+		lastError = string();
 
-	blog(LOG_WARNING, "Stream output type '%s' failed to start!%s%s",
-			type,
-			has_last_error ? "  Last Error: " : "",
-			has_last_error ? error : "");
+	blog(LOG_WARNING, "Stream output type '%s' failed to start!%s%s", type,
+			hasLastError ? "  Last Error: " : "",
+			hasLastError ? error : "");
 	return false;
 }
 
@@ -877,7 +896,7 @@ bool SimpleOutput::ConfigureRecording(bool updateReplayBuffer)
 
 	if (!dir) {
 		if (main->isVisible())
-			OBSMessageBox::information(main,
+			OBSMessageBox::warning(main,
 					QTStr("Output.BadPath.Title"),
 					QTStr("Output.BadPath.Text"));
 		else
@@ -1506,30 +1525,42 @@ bool AdvancedOutput::StartStreaming(obs_service_t *service)
 				obs_output_get_signal_handler(streamOutput),
 				"stop", OBSStopStreaming, this);
 
-		const char *codec =
-			obs_output_get_supported_audio_codecs(streamOutput);
-		if (!codec) {
-			return false;
-		}
+		bool isEncoded = obs_output_get_flags(streamOutput)
+			& OBS_OUTPUT_ENCODED;
 
-		if (strcmp(codec, "aac") == 0) {
-			streamAudioEnc = aacTrack[trackIndex - 1];
-		} else {
-			const char *id = FindAudioEncoderFromCodec(codec);
-			int audioBitrate = GetAudioBitrate(trackIndex - 1);
-			obs_data_t *settings = obs_data_create();
-			obs_data_set_int(settings, "bitrate", audioBitrate);
-
-			streamAudioEnc = obs_audio_encoder_create(id,
-					"alt_audio_enc", nullptr,
-					trackIndex - 1, nullptr);
-			if (!streamAudioEnc)
+		if (isEncoded) {
+			const char *codec =
+				obs_output_get_supported_audio_codecs(
+						streamOutput);
+			if (!codec) {
+				blog(LOG_WARNING, "Failed to load audio codec");
 				return false;
+			}
 
-			obs_encoder_update(streamAudioEnc, settings);
-			obs_encoder_set_audio(streamAudioEnc, obs_get_audio());
+			if (strcmp(codec, "aac") == 0) {
+				streamAudioEnc = aacTrack[trackIndex - 1];
+			} else {
+				obs_data_t *settings = obs_data_create();
+				const char *id =
+					FindAudioEncoderFromCodec(codec);
+				int audioBitrate =
+					GetAudioBitrate(trackIndex - 1);
+				
+				obs_data_set_int(settings, "bitrate",
+						audioBitrate);
+				streamAudioEnc = obs_audio_encoder_create(id,
+						"alt_audio_enc", nullptr,
+						trackIndex - 1, nullptr);
 
-			obs_data_release(settings);
+				if (!streamAudioEnc)
+					return false;
+
+				obs_encoder_update(streamAudioEnc, settings);
+				obs_encoder_set_audio(streamAudioEnc,
+						obs_get_audio());
+
+				obs_data_release(settings);
+			}
 		}
 
 		outputType = type;
@@ -1581,12 +1612,15 @@ bool AdvancedOutput::StartStreaming(obs_service_t *service)
 	}
 
 	const char *error = obs_output_get_last_error(streamOutput);
-	bool has_last_error = error && *error;
+	bool hasLastError = error && *error;
+	if (hasLastError)
+		lastError = error;
+	else
+		lastError = string();
 
-	blog(LOG_WARNING, "Stream output type '%s' failed to start!%s%s",
-			type,
-			has_last_error ? "  Last Error: " : "",
-			has_last_error ? error : "");
+	blog(LOG_WARNING, "Stream output type '%s' failed to start!%s%s", type,
+			hasLastError ? "  Last Error: " : "",
+			hasLastError ? error : "");
 	return false;
 }
 
@@ -1629,7 +1663,7 @@ bool AdvancedOutput::StartRecording()
 
 		if (!dir) {
 			if (main->isVisible())
-				OBSMessageBox::information(main,
+				OBSMessageBox::warning(main,
 						QTStr("Output.BadPath.Title"),
 						QTStr("Output.BadPath.Text"));
 			else
@@ -1729,7 +1763,7 @@ bool AdvancedOutput::StartReplayBuffer()
 
 		if (!dir) {
 			if (main->isVisible())
-				OBSMessageBox::information(main,
+				OBSMessageBox::warning(main,
 						QTStr("Output.BadPath.Title"),
 						QTStr("Output.BadPath.Text"));
 			else
