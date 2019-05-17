@@ -380,7 +380,6 @@ OBSBasic::OBSBasic(QWidget *parent)
 	QPoint newPos = curPos + statsDockPos;
 	statsDock->move(newPos);
 
-	ui->previewLabel->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 	ui->previewLabel->setProperty("themeID", "previewProgramLabels");
 
 	bool labels = config_get_bool(GetGlobalConfig(),
@@ -1042,6 +1041,9 @@ retryScene:
 		opt_start_replaybuffer = false;
 	}
 
+	copyString = nullptr;
+	copyFiltersString = nullptr;
+
 	LogScenes();
 
 	disableSaving--;
@@ -1638,14 +1640,12 @@ void OBSBasic::OBSInit()
 	SET_VISIBILITY("ShowStatusBar", toggleStatusBar);
 #undef SET_VISIBILITY
 
-#ifndef __APPLE__
 	{
 		ProfileScope("OBSBasic::Load");
 		disableSaving--;
 		Load(savePath);
 		disableSaving++;
 	}
-#endif
 
 	TimedCheckForUpdates();
 	loaded = true;
@@ -1667,9 +1667,7 @@ void OBSBasic::OBSInit()
 	}
 #endif
 
-#ifndef __APPLE__
 	RefreshSceneCollections();
-#endif
 	RefreshProfiles();
 	disableSaving--;
 
@@ -1807,28 +1805,12 @@ void OBSBasic::OBSInit()
 	ui->actionCheckForUpdates = nullptr;
 #endif
 
-#ifdef __APPLE__
-	/* This is an incredibly unpleasant hack for macOS to isolate CEF
-	 * initialization until after all tasks related to Qt startup and main
-	 * window initialization have completed.  There is a macOS-specific bug
-	 * within either CEF and/or Qt that can cause a crash if both Qt and
-	 * CEF are loading at the same time.
-	 *
-	 * CEF will typically load fine after about two iterations from this
-	 * point, and all Qt tasks are typically fully completed after about
-	 * four or five iterations, but to be "ultra" safe, an arbitrarily
-	 * large number such as 10 is used.  This hack is extremely unpleasant,
-	 * but is worth doing instead of being forced to isolate the entire
-	 * browser plugin in to a separate process as before.
-	 *
-	 * Again, this hack is specific to macOS only.  Fortunately, on other
-	 * operating systems, such issues do not occur. */
-	QMetaObject::invokeMethod(this, "DeferredLoad",
-			Qt::QueuedConnection,
-			Q_ARG(QString, QT_UTF8(savePath)),
-			Q_ARG(int, 10));
-#else
 	OnFirstLoad();
+
+#ifdef __APPLE__
+	QMetaObject::invokeMethod(this, "DeferredSysTrayLoad",
+			Qt::QueuedConnection,
+			Q_ARG(int, 10));
 #endif
 }
 
@@ -1837,7 +1819,7 @@ void OBSBasic::OnFirstLoad()
 	if (api)
 		api->on_event(OBS_FRONTEND_EVENT_FINISHED_LOADING);
 
-#ifdef BROWSER_AVAILABLE
+#if defined(BROWSER_AVAILABLE) && defined(_WIN32)
 	/* Attempt to load init screen if available */
 	if (cef) {
 		WhatsNewInfoThread *wnit = new WhatsNewInfoThread();
@@ -1855,19 +1837,14 @@ void OBSBasic::OnFirstLoad()
 	Auth::Load();
 }
 
-void OBSBasic::DeferredLoad(const QString &file, int requeueCount)
+void OBSBasic::DeferredSysTrayLoad(int requeueCount)
 {
 	if (--requeueCount > 0) {
-		QMetaObject::invokeMethod(this, "DeferredLoad",
+		QMetaObject::invokeMethod(this, "DeferredSysTrayLoad",
 				Qt::QueuedConnection,
-				Q_ARG(QString, file),
 				Q_ARG(int, requeueCount));
 		return;
 	}
-
-	Load(QT_TO_UTF8(file));
-	RefreshSceneCollections();
-	OnFirstLoad();
 
 	/* Minimizng to tray on initial startup does not work on mac
 	 * unless it is done in the deferred load */
@@ -3376,9 +3353,11 @@ void OBSBasic::RenderMain(void *data, uint32_t cx, uint32_t cy)
 	gs_viewport_push();
 	gs_projection_push();
 
-	QSize previewSize = GetPixelSize(window->ui->preview);
-	float right  = float(previewSize.width())  - window->previewX;
-	float bottom = float(previewSize.height()) - window->previewY;
+	obs_display_t *display = window->ui->preview->GetDisplay();
+	uint32_t width, height;
+	obs_display_size(display, &width, &height);
+	float right  = float(width)  - window->previewX;
+	float bottom = float(height) - window->previewY;
 
 	gs_ortho(-window->previewX, right,
 		-window->previewY, bottom,
@@ -3442,6 +3421,11 @@ void OBSBasic::SetService(obs_service_t *newService)
 {
 	if (newService)
 		service = newService;
+}
+
+int OBSBasic::GetTransitionDuration()
+{
+	return ui->transitionDuration->value();
 }
 
 bool OBSBasic::StreamingActive() const
@@ -4011,9 +3995,19 @@ void OBSBasic::on_scenes_customContextMenuRequested(const QPoint &pos)
 			this, SLOT(on_actionAddScene_triggered()));
 
 	if (item) {
+		QAction *pasteFilters = new QAction(
+				QTStr("Paste.Filters"), this);
+		pasteFilters->setEnabled(copyFiltersString);
+		connect(pasteFilters, SIGNAL(triggered()), this,
+				SLOT(ScenePasteFilters()));
+
 		popup.addSeparator();
 		popup.addAction(QTStr("Duplicate"),
 				this, SLOT(DuplicateSelectedScene()));
+		popup.addAction(QTStr("Copy.Filters"),
+				this, SLOT(SceneCopyFilters()));
+		popup.addAction(pasteFilters);
+		popup.addSeparator();
 		popup.addAction(QTStr("Rename"),
 				this, SLOT(EditSceneName()));
 		popup.addAction(QTStr("Remove"),
@@ -5193,9 +5187,10 @@ void OBSBasic::StreamStopping()
 
 void OBSBasic::StreamingStop(int code, QString last_error)
 {
-	const char *errorDescription;
+	const char *errorDescription = "";
 	DStr errorMessage;
 	bool use_last_error = false;
+	bool encode_error = false;
 
 	switch (code) {
 	case OBS_OUTPUT_BAD_PATH:
@@ -5209,6 +5204,10 @@ void OBSBasic::StreamingStop(int code, QString last_error)
 
 	case OBS_OUTPUT_INVALID_STREAM:
 		errorDescription = Str("Output.ConnectFail.InvalidStream");
+		break;
+
+	case OBS_OUTPUT_ENCODE_ERROR:
+		encode_error = true;
 		break;
 
 	default:
@@ -5249,10 +5248,16 @@ void OBSBasic::StreamingStop(int code, QString last_error)
 
 	blog(LOG_INFO, STREAMING_STOP);
 
-	if (code != OBS_OUTPUT_SUCCESS && isVisible()) {
+	if (encode_error) {
+		OBSMessageBox::information(this,
+				QTStr("Output.StreamEncodeError.Title"),
+				QTStr("Output.StreamEncodeError.Msg"));
+
+	} else if (code != OBS_OUTPUT_SUCCESS && isVisible()) {
 		OBSMessageBox::information(this,
 				QTStr("Output.ConnectFail.Title"),
 				QT_UTF8(errorMessage));
+
 	} else if (code != OBS_OUTPUT_SUCCESS && !isVisible()) {
 		SysTrayNotify(QT_UTF8(errorDescription), QSystemTrayIcon::Warning);
 	}
@@ -5376,6 +5381,11 @@ void OBSBasic::RecordingStop(int code, QString last_error)
 		OBSMessageBox::critical(this,
 				QTStr("Output.RecordFail.Title"),
 				QTStr("Output.RecordFail.Unsupported"));
+
+	} else if (code == OBS_OUTPUT_ENCODE_ERROR && isVisible()) {
+		OBSMessageBox::warning(this,
+				QTStr("Output.RecordError.Title"),
+				QTStr("Output.RecordError.EncodeErrorMsg"));
 
 	} else if (code == OBS_OUTPUT_NO_SPACE && isVisible()) {
 		OBSMessageBox::warning(this,
@@ -6841,7 +6851,7 @@ void OBSBasic::IconActivated(QSystemTrayIcon::ActivationReason reason)
 void OBSBasic::SysTrayNotify(const QString &text,
 		QSystemTrayIcon::MessageIcon n)
 {
-	if (QSystemTrayIcon::supportsMessages()) {
+	if (trayIcon && QSystemTrayIcon::supportsMessages()) {
 		QSystemTrayIcon::MessageIcon icon =
 				QSystemTrayIcon::MessageIcon(n);
 		trayIcon->showMessage("OBS Studio", text, icon, 10000);
@@ -6851,6 +6861,8 @@ void OBSBasic::SysTrayNotify(const QString &text,
 void OBSBasic::SystemTray(bool firstStarted)
 {
 	if (!QSystemTrayIcon::isSystemTrayAvailable())
+		return;
+	if (!trayIcon && !firstStarted)
 		return;
 
 	bool sysTrayWhenStarted = config_get_bool(GetGlobalConfig(),
@@ -6951,6 +6963,24 @@ void OBSBasic::AudioMixerPasteFilters()
 
 	OBSSource source = obs_get_source_by_name(copyFiltersString);
 	obs_source_release(source);
+
+	if (source == dstSource)
+		return;
+
+	obs_source_copy_filters(dstSource, source);
+}
+
+void OBSBasic::SceneCopyFilters()
+{
+	copyFiltersString = obs_source_get_name(GetCurrentSceneSource());
+}
+
+void OBSBasic::ScenePasteFilters()
+{
+	OBSSource source = obs_get_source_by_name(copyFiltersString);
+	obs_source_release(source);
+
+	OBSSource dstSource = GetCurrentSceneSource();
 
 	if (source == dstSource)
 		return;
@@ -7288,4 +7318,26 @@ void SceneRenameDelegate::setEditorData(QWidget *editor,
 	QLineEdit *lineEdit = qobject_cast<QLineEdit*>(editor);
 	if (lineEdit)
 		lineEdit->selectAll();
+}
+
+bool SceneRenameDelegate::eventFilter(QObject *editor, QEvent *event)
+{
+	if (event->type() == QEvent::KeyPress) {
+		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+		if (keyEvent->key() == Qt::Key_Escape) {
+			QLineEdit *lineEdit = qobject_cast<QLineEdit*>(editor);
+			if (lineEdit)
+				lineEdit->undo();
+		}
+	}
+
+	return QStyledItemDelegate::eventFilter(editor, event);
+}
+
+void OBSBasic::UpdatePatronJson(const QString &text, const QString &error)
+{
+	if (!error.isEmpty())
+		return;
+
+	patronJson = QT_TO_UTF8(text);
 }

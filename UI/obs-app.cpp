@@ -50,6 +50,7 @@
 #include <windows.h>
 #else
 #include <signal.h>
+#include <pthread.h>
 #endif
 
 #include <iostream>
@@ -1029,21 +1030,20 @@ bool OBSApp::InitTheme()
 	const char *themeName = config_get_string(globalConfig, "General",
 			"CurrentTheme");
 
-	if (themeName && strcmp(themeName, "Default") == 0)
-		themeName = "System";
-
 	if (!themeName) {
 		/* Use deprecated "Theme" value if available */
 		themeName = config_get_string(globalConfig,
 				"General", "Theme");
 		if (!themeName)
 			themeName = DEFAULT_THEME;
+		if (!themeName)
+			themeName = "Dark";
 	}
 
-	if (strcmp(themeName, DEFAULT_THEME) != 0 && SetTheme(themeName))
-		return true;
+	if (strcmp(themeName, "Default") == 0)
+		themeName = "System";
 
-	return SetTheme(DEFAULT_THEME);
+	return SetTheme(themeName);
 }
 
 OBSApp::OBSApp(int &argc, char **argv, profiler_name_store_t *store)
@@ -2219,6 +2219,18 @@ int main(int argc, char *argv[])
 	sig_handler.sa_flags = 0;
 
 	sigaction(SIGINT, &sig_handler, NULL);
+
+
+	/* Block SIGPIPE in all threads, this can happen if a thread calls write on
+	a closed pipe. */
+	sigset_t sigpipe_mask;
+	sigemptyset(&sigpipe_mask);
+	sigaddset(&sigpipe_mask, SIGPIPE);
+	sigset_t saved_mask;
+	if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) == -1) {
+		perror("pthread_sigmask");
+		exit(1);
+	}
 #endif
 
 #ifdef _WIN32

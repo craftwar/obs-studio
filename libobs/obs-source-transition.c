@@ -630,7 +630,7 @@ static inline void render_child(obs_source_t *transition,
 		return;
 
 	if (gs_texrender_begin(transition->transition_texrender[idx], cx, cy)) {
-		vec4_set(&blank, 0.0f, 0.0f, 0.0f, 1.0f);
+		vec4_zero(&blank);
 		gs_clear(GS_CLEAR_COLOR, &blank, 0.0f, 0);
 		gs_ortho(0.0f, (float)cx, 0.0f, (float)cy, -100.0f, 100.0f);
 
@@ -663,6 +663,11 @@ static inline void handle_stop(obs_source_t *transition)
 		transition->info.transition_stop(transition->context.data);
 	obs_source_dosignal(transition, "source_transition_stop",
 			"transition_stop");
+}
+
+void obs_transition_force_stop(obs_source_t *transition)
+{
+	handle_stop(transition);
 }
 
 void obs_transition_video_render(obs_source_t *transition,
@@ -718,9 +723,15 @@ void obs_transition_video_render(obs_source_t *transition,
 
 		cx = get_cx(transition);
 		cy = get_cy(transition);
-		if (cx && cy)
+		if (cx && cy) {
+			gs_blend_state_push();
+			gs_blend_function(GS_BLEND_ONE, GS_BLEND_INVSRCALPHA);
+
 			callback(transition->context.data, tex[0], tex[1], t,
 					cx, cy);
+
+			gs_blend_state_pop();
+		}
 
 	} else if (state.transitioning_audio) {
 		if (state.s[1]) {

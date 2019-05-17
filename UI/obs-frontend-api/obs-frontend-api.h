@@ -93,6 +93,8 @@ EXPORT void obs_frontend_get_transitions(
 		struct obs_frontend_source_list *sources);
 EXPORT obs_source_t *obs_frontend_get_current_transition(void);
 EXPORT void obs_frontend_set_current_transition(obs_source_t *transition);
+EXPORT int obs_frontend_get_transition_duration(void);
+EXPORT void obs_frontend_set_transition_duration(int duration);
 
 EXPORT char **obs_frontend_get_scene_collections(void);
 EXPORT char *obs_frontend_get_current_scene_collection(void);
@@ -169,6 +171,7 @@ EXPORT void obs_frontend_save_streaming_service(void);
 
 EXPORT bool obs_frontend_preview_program_mode_active(void);
 EXPORT void obs_frontend_set_preview_program_mode(bool enable);
+EXPORT void obs_frontend_preview_program_trigger_transition(void);
 
 EXPORT void obs_frontend_set_preview_enabled(bool enable);
 EXPORT bool obs_frontend_preview_enabled(void);
