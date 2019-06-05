@@ -950,6 +950,7 @@ static const char *blacklisted_exes[] = {
 	"devenv.exe",
 	"taskmgr.exe",
 	"chrome.exe",
+	"discord.exe",
 	"systemsettings.exe",
 	"applicationframehost.exe",
 	"cmd.exe",

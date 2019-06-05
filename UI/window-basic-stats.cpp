@@ -176,7 +176,6 @@ OBSBasicStats::OBSBasicStats(QWidget *parent, bool closeable)
 	QObject::connect(&recTimeLeft, &QTimer::timeout, this,
 			&OBSBasicStats::RecordingTimeLeft);
 	recTimeLeft.setInterval(REC_TIME_LEFT_INTERVAL);
-	recTimeLeft.start();
 
 	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
 
@@ -215,6 +214,8 @@ void OBSBasicStats::closeEvent(QCloseEvent *event)
 
 OBSBasicStats::~OBSBasicStats()
 {
+	obs_frontend_remove_event_callback(OBSFrontendEvent, this);
+
 	delete shortcutFilter;
 	os_cpu_usage_info_destroy(cpu_info);
 }
