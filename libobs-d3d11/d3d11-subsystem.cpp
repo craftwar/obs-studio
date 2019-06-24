@@ -313,6 +313,7 @@ try {
 	context->Draw(4, 0);
 
 	device_load_pixelshader(this, nullptr);
+	device_load_vertexbuffer(this, nullptr);
 	device_load_vertexshader(this, nullptr);
 	device_set_render_target(this, nullptr, nullptr);
 
@@ -1503,7 +1504,7 @@ void device_draw(gs_device_t *device, enum gs_draw_mode draw_mode,
 		if (!device->curPixelShader)
 			throw "No pixel shader specified";
 
-		if (!device->curVertexBuffer)
+		if (!device->curVertexBuffer && (num_verts == 0))
 			throw "No vertex buffer specified";
 
 		if (!device->curSwapChain && !device->curRenderTarget)
@@ -1886,14 +1887,11 @@ void device_projection_push(gs_device_t *device)
 
 void device_projection_pop(gs_device_t *device)
 {
-	if (!device->projStack.size())
+	if (device->projStack.empty())
 		return;
 
-	mat4float *mat = device->projStack.data();
-	size_t end = device->projStack.size()-1;
-
-	/* XXX - does anyone know a better way of doing this? */
-	memcpy(&device->curProjMatrix, mat+end, sizeof(matrix4));
+	const mat4float &mat = device->projStack.back();
+	memcpy(&device->curProjMatrix, &mat, sizeof(matrix4));
 	device->projStack.pop_back();
 }
 
