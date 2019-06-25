@@ -41,6 +41,7 @@ using namespace Gdiplus;
 #define VNR_SHM_SIZE 1024
 #define VNR_SHM TEXT("Local\\VNR_PlotText")
 #define VNR_SHM_MUTEX TEXT("Local\\VNR_SHM_MUTEX")
+#define VNR_SHM_EVENT TEXT("Local\\VNR_SHM_EVENT")
 #define VNR_kyob1010_MultipleStream 0
 
 /* ------------------------------------------------------------------------- */
@@ -235,6 +236,8 @@ struct TextSource {
 	static unsigned char vnr_count;
 	static HANDLE hMapFile;
 	static HANDLE hMutex;
+	static HANDLE hEvent;
+	static HANDLE hVNR_thread;
 	static struct SHM {
 		wchar_t *data;
 	} shm;
@@ -292,7 +295,7 @@ struct TextSource {
 		}
 		if (mode == Mode::vnr) {
 			--TextSource::vnr_count;
-			TextSource::CloseSHM();
+			TextSource::VNR_cleanup();
 		}
 	}
 
@@ -327,12 +330,15 @@ struct TextSource {
 	void set_song_name(const wchar_t *const name);
 
 	inline bool VNR_initial();
-	static void CloseSHM();
+	static void VNR_cleanup();
+	static DWORD WINAPI VNR_thread(LPVOID lpParam);
 	void ReadFromVNR();
 };
 unsigned char TextSource::vnr_count = 0;
 HANDLE TextSource::hMapFile = NULL;
 HANDLE TextSource::hMutex = NULL;
+HANDLE TextSource::hEvent = NULL;
+HANDLE TextSource::hVNR_thread = NULL;
 struct TextSource::SHM TextSource::shm = {};
 
 static time_t get_modified_timestamp(const char *filename)
@@ -791,7 +797,6 @@ inline void TextSource::Update(obs_data_t *s)
 				++TextSource::vnr_count;
 				mode = Mode::vnr;
 			}
-			ReadFromVNR();
 		} else { // fallback to text mode
 			obs_data_set_bool(s, S_USE_VNR, false);
 			goto fallback_to_text_mode;
@@ -799,7 +804,7 @@ inline void TextSource::Update(obs_data_t *s)
 	} else {
 		if (mode == Mode::vnr) { // check if use vnr last time
 			--TextSource::vnr_count;
-			TextSource::CloseSHM();
+			TextSource::VNR_cleanup();
 		}
 
 		if (obs_data_get_bool(s, S_USE_FILE)) {
@@ -871,9 +876,6 @@ inline void TextSource::Tick(float seconds)
 			//}
 			//, reinterpret_cast<LPARAM>(this));
 		}
-		break;
-	case Mode::vnr:
-		ReadFromVNR();
 		break;
 	default: // don't produce code for default
 		__assume(
@@ -1050,11 +1052,24 @@ bool TextSource::VNR_initial()
 			if (hMutex == NULL)
 				goto SHM_error_clean;
 		}
+		TextSource::hEvent = OpenEvent(SYNCHRONIZE | EVENT_MODIFY_STATE,
+					       FALSE, VNR_SHM_EVENT);
+		if (hEvent == NULL) {
+			hEvent = CreateEvent(NULL, true, false, VNR_SHM_EVENT);
+			if (hEvent == NULL)
+				goto SHM_error_clean;
+		}
+		if (hVNR_thread == NULL) {
+			TextSource::hVNR_thread = CreateThread(
+				NULL, 0, VNR_thread, this, 0, NULL);
+			if (hVNR_thread == NULL)
+				goto SHM_error_clean;
+		}
 	}
 	return true;
 
 SHM_error_clean:
-	TextSource::CloseSHM();
+	TextSource::VNR_cleanup();
 SHM_fail:
 	return false;
 }
@@ -1065,18 +1080,27 @@ BOOL CALLBACK TextSource::find_target(const HWND hwnd, const LPARAM lParam)
 }
 
 #pragma optimize("s", on)
-void TextSource::CloseSHM()
+void TextSource::VNR_cleanup()
 {
 	if (TextSource::vnr_count != 0)
 		return;
-
+	if (TextSource::hVNR_thread)
+		goto close_thread;
+	if (TextSource::hEvent)
+		goto close_event;
 	if (TextSource::hMutex)
 		goto close_mutex;
 	if (TextSource::shm.data)
 		goto unmap_view;
 	if (TextSource::hMapFile)
 		goto close_map;
-
+close_thread:
+	TerminateThread(TextSource::hVNR_thread, 0);
+	CloseHandle(TextSource::hVNR_thread);
+	TextSource::hVNR_thread = NULL;
+close_event:
+	CloseHandle(TextSource::hEvent);
+	TextSource::hEvent = NULL;
 close_mutex:
 	CloseHandle(TextSource::hMutex);
 	TextSource::hMutex = NULL;
@@ -1086,6 +1110,13 @@ unmap_view:
 close_map:
 	CloseHandle(TextSource::hMapFile);
 	TextSource::hMapFile = NULL;
+}
+
+DWORD WINAPI TextSource::VNR_thread(LPVOID lpParam)
+{
+	for (;;)
+		reinterpret_cast<TextSource *>(lpParam)->ReadFromVNR();
+	return 1;
 }
 
 void TextSource::ReadFromVNR()
@@ -1101,10 +1132,10 @@ void TextSource::ReadFromVNR()
 		break;
 	}
 #endif
-	if (WaitForSingleObject(TextSource::hMutex, 0) == WAIT_OBJECT_0 &&
-	    *TextSource::shm.data != '\0') {
+	WaitForSingleObject(TextSource::hEvent, INFINITE);
+	if (WaitForSingleObject(TextSource::hMutex, 0) == WAIT_OBJECT_0) {
+		ResetEvent(TextSource::hEvent);
 		text = TextSource::shm.data;
-		*TextSource::shm.data = '\0';
 		// text always not empty? better let vnr add '\n'
 		//text.push_back('\n');
 		RenderText();
