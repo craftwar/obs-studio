@@ -4,14 +4,14 @@
 #include <util/platform.h>
 
 struct sharpness_data {
-	obs_source_t                   *context;
+	obs_source_t *context;
 
-	gs_effect_t                    *effect;
-	gs_eparam_t                    *sharpness_param;
-	gs_eparam_t                    *texture_width, *texture_height;
+	gs_effect_t *effect;
+	gs_eparam_t *sharpness_param;
+	gs_eparam_t *texture_width, *texture_height;
 
-	float                          sharpness;
-	float                          texwidth, texheight;
+	float sharpness;
+	float texwidth, texheight;
 };
 
 static const char *sharpness_getname(void *unused)
@@ -43,8 +43,7 @@ static void sharpness_destroy(void *data)
 
 static void *sharpness_create(obs_data_t *settings, obs_source_t *context)
 {
-	struct sharpness_data *filter =
-		bzalloc(sizeof(struct sharpness_data));
+	struct sharpness_data *filter = bzalloc(sizeof(struct sharpness_data));
 	char *effect_path = obs_module_file("sharpness.effect");
 
 	filter->context = context;
@@ -79,13 +78,13 @@ static void sharpness_render(void *data, gs_effect_t *effect)
 	struct sharpness_data *filter = data;
 
 	if (!obs_source_process_filter_begin(filter->context, GS_RGBA,
-				OBS_ALLOW_DIRECT_RENDERING))
+					     OBS_ALLOW_DIRECT_RENDERING))
 		return;
 
-	filter->texwidth =(float)obs_source_get_width(
-			obs_filter_get_target(filter->context));
+	filter->texwidth = (float)obs_source_get_width(
+		obs_filter_get_target(filter->context));
 	filter->texheight = (float)obs_source_get_height(
-			obs_filter_get_target(filter->context));
+		obs_filter_get_target(filter->context));
 
 	gs_effect_set_float(filter->sharpness_param, filter->sharpness);
 	gs_effect_set_float(filter->texture_width, filter->texwidth);
@@ -100,8 +99,8 @@ static obs_properties_t *sharpness_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
 
-	obs_properties_add_float_slider(props, "sharpness",
-		"Sharpness", 0.0, 1.0, 0.01);
+	obs_properties_add_float_slider(props, "sharpness", "Sharpness", 0.0,
+					1.0, 0.01);
 
 	UNUSED_PARAMETER(data);
 	return props;
@@ -112,15 +111,14 @@ static void sharpness_defaults(obs_data_t *settings)
 	obs_data_set_default_double(settings, "sharpness", 0.08);
 }
 
-struct obs_source_info sharpness_filter = {
-	.id = "sharpness_filter",
-	.type = OBS_SOURCE_TYPE_FILTER,
-	.output_flags = OBS_SOURCE_VIDEO,
-	.get_name = sharpness_getname,
-	.create = sharpness_create,
-	.destroy = sharpness_destroy,
-	.update = sharpness_update,
-	.video_render = sharpness_render,
-	.get_properties = sharpness_properties,
-	.get_defaults = sharpness_defaults
-};
+struct obs_source_info sharpness_filter = {.id = "sharpness_filter",
+					   .type = OBS_SOURCE_TYPE_FILTER,
+					   .output_flags = OBS_SOURCE_VIDEO,
+					   .get_name = sharpness_getname,
+					   .create = sharpness_create,
+					   .destroy = sharpness_destroy,
+					   .update = sharpness_update,
+					   .video_render = sharpness_render,
+					   .get_properties =
+						   sharpness_properties,
+					   .get_defaults = sharpness_defaults};

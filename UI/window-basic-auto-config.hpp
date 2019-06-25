@@ -29,30 +29,13 @@ class AutoConfig : public QWizard {
 	friend class AutoConfigStreamPage;
 	friend class AutoConfigTestPage;
 
-	enum class Type {
-		Invalid,
-		Streaming,
-		Recording
-	};
+	enum class Type { Invalid, Streaming, Recording };
 
-	enum class Service {
-		Twitch,
-		Smashcast,
-		Other
-	};
+	enum class Service { Twitch, Smashcast, Other };
 
-	enum class Encoder {
-		x264,
-		NVENC,
-		QSV,
-		AMD,
-		Stream
-	};
+	enum class Encoder { x264, NVENC, QSV, AMD, Stream };
 
-	enum class Quality {
-		Stream,
-		High
-	};
+	enum class Quality { Stream, High };
 
 	enum class FPSType : int {
 		PreferHighFPS,
@@ -115,12 +98,7 @@ public:
 	AutoConfig(QWidget *parent);
 	~AutoConfig();
 
-	enum Page {
-		StartPage,
-		VideoPage,
-		StreamPage,
-		TestPage
-	};
+	enum Page { StartPage, VideoPage, StreamPage, TestPage };
 };
 
 class AutoConfigStartPage : public QWizardPage {

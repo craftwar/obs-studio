@@ -4,30 +4,30 @@
 #include <graphics/image-file.h>
 #include <util/dstr.h>
 
-#define SETTING_TYPE                   "type"
-#define SETTING_IMAGE_PATH             "image_path"
-#define SETTING_COLOR                  "color"
-#define SETTING_OPACITY                "opacity"
-#define SETTING_STRETCH                "stretch"
+#define SETTING_TYPE "type"
+#define SETTING_IMAGE_PATH "image_path"
+#define SETTING_COLOR "color"
+#define SETTING_OPACITY "opacity"
+#define SETTING_STRETCH "stretch"
 
-#define TEXT_TYPE                      obs_module_text("Type")
-#define TEXT_IMAGE_PATH                obs_module_text("Path")
-#define TEXT_COLOR                     obs_module_text("Color")
-#define TEXT_OPACITY                   obs_module_text("Opacity")
-#define TEXT_STRETCH                   obs_module_text("StretchImage")
-#define TEXT_PATH_IMAGES               obs_module_text("BrowsePath.Images")
-#define TEXT_PATH_ALL_FILES            obs_module_text("BrowsePath.AllFiles")
+#define TEXT_TYPE obs_module_text("Type")
+#define TEXT_IMAGE_PATH obs_module_text("Path")
+#define TEXT_COLOR obs_module_text("Color")
+#define TEXT_OPACITY obs_module_text("Opacity")
+#define TEXT_STRETCH obs_module_text("StretchImage")
+#define TEXT_PATH_IMAGES obs_module_text("BrowsePath.Images")
+#define TEXT_PATH_ALL_FILES obs_module_text("BrowsePath.AllFiles")
 
 struct mask_filter_data {
-	uint64_t                       last_time;
+	uint64_t last_time;
 
-	obs_source_t                   *context;
-	gs_effect_t                    *effect;
+	obs_source_t *context;
+	gs_effect_t *effect;
 
-	gs_texture_t                   *target;
-	gs_image_file_t                image;
-	struct vec4                    color;
-	bool                           lock_aspect;
+	gs_texture_t *target;
+	gs_image_file_t image;
+	struct vec4 color;
+	bool lock_aspect;
 };
 
 static const char *mask_filter_get_name(void *unused)
@@ -75,13 +75,12 @@ static void mask_filter_update(void *data, obs_data_t *settings)
 static void mask_filter_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_string(settings, SETTING_TYPE,
-			"mask_color_filter.effect");
+				    "mask_color_filter.effect");
 	obs_data_set_default_int(settings, SETTING_COLOR, 0xFFFFFF);
 	obs_data_set_default_int(settings, SETTING_OPACITY, 100);
 }
 
-#define IMAGE_FILTER_EXTENSIONS \
-	" (*.bmp *.jpg *.jpeg *.tga *.gif *.png)"
+#define IMAGE_FILTER_EXTENSIONS " (*.bmp *.jpg *.jpeg *.tga *.gif *.png)"
 
 static obs_properties_t *mask_filter_properties(void *data)
 {
@@ -95,29 +94,30 @@ static obs_properties_t *mask_filter_properties(void *data)
 	dstr_cat(&filter_str, " (*.*)");
 
 	p = obs_properties_add_list(props, SETTING_TYPE, TEXT_TYPE,
-			OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+				    OBS_COMBO_TYPE_LIST,
+				    OBS_COMBO_FORMAT_STRING);
 
 	obs_property_list_add_string(p,
-			obs_module_text("MaskBlendType.MaskColor"),
-			"mask_color_filter.effect");
+				     obs_module_text("MaskBlendType.MaskColor"),
+				     "mask_color_filter.effect");
 	obs_property_list_add_string(p,
-			obs_module_text("MaskBlendType.MaskAlpha"),
-			"mask_alpha_filter.effect");
-	obs_property_list_add_string(p,
-			obs_module_text("MaskBlendType.BlendMultiply"),
-			"blend_mul_filter.effect");
-	obs_property_list_add_string(p,
-			obs_module_text("MaskBlendType.BlendAddition"),
-			"blend_add_filter.effect");
-	obs_property_list_add_string(p,
-			obs_module_text("MaskBlendType.BlendSubtraction"),
-			"blend_sub_filter.effect");
+				     obs_module_text("MaskBlendType.MaskAlpha"),
+				     "mask_alpha_filter.effect");
+	obs_property_list_add_string(
+		p, obs_module_text("MaskBlendType.BlendMultiply"),
+		"blend_mul_filter.effect");
+	obs_property_list_add_string(
+		p, obs_module_text("MaskBlendType.BlendAddition"),
+		"blend_add_filter.effect");
+	obs_property_list_add_string(
+		p, obs_module_text("MaskBlendType.BlendSubtraction"),
+		"blend_sub_filter.effect");
 
 	obs_properties_add_path(props, SETTING_IMAGE_PATH, TEXT_IMAGE_PATH,
-			OBS_PATH_FILE, filter_str.array, NULL);
+				OBS_PATH_FILE, filter_str.array, NULL);
 	obs_properties_add_color(props, SETTING_COLOR, TEXT_COLOR);
-	obs_properties_add_int_slider(props, SETTING_OPACITY, TEXT_OPACITY,
-			0, 100, 1);
+	obs_properties_add_int_slider(props, SETTING_OPACITY, TEXT_OPACITY, 0,
+				      100, 1);
 	obs_properties_add_bool(props, SETTING_STRETCH, TEXT_STRETCH);
 
 	dstr_free(&filter_str);
@@ -159,7 +159,8 @@ static void mask_filter_tick(void *data, float t)
 		if (!filter->last_time)
 			filter->last_time = cur_time;
 
-		gs_image_file_tick(&filter->image, cur_time - filter->last_time);
+		gs_image_file_tick(&filter->image,
+				   cur_time - filter->last_time);
 		obs_enter_graphics();
 		gs_image_file_update_texture(&filter->image);
 		obs_leave_graphics();
@@ -199,9 +200,8 @@ static void mask_filter_render(void *data, gs_effect_t *effect)
 		mask_aspect = mask_size.x / mask_size.y;
 		size_to_x = (source_aspect < mask_aspect);
 
-		fix = size_to_x ?
-			(source_size.x / mask_size.x) :
-			(source_size.y / mask_size.y);
+		fix = size_to_x ? (source_size.x / mask_size.x)
+				: (source_size.y / mask_size.y);
 
 		vec2_mulf(&mask_size, &mask_size, fix);
 		vec2_div(&mul_val, &source_size, &mask_size);
@@ -213,7 +213,7 @@ static void mask_filter_render(void *data, gs_effect_t *effect)
 	}
 
 	if (!obs_source_process_filter_begin(filter->context, GS_RGBA,
-				OBS_ALLOW_DIRECT_RENDERING))
+					     OBS_ALLOW_DIRECT_RENDERING))
 		return;
 
 	param = gs_effect_get_param_by_name(filter->effect, "target");
@@ -233,16 +233,14 @@ static void mask_filter_render(void *data, gs_effect_t *effect)
 	UNUSED_PARAMETER(effect);
 }
 
-struct obs_source_info mask_filter = {
-	.id                            = "mask_filter",
-	.type                          = OBS_SOURCE_TYPE_FILTER,
-	.output_flags                  = OBS_SOURCE_VIDEO,
-	.get_name                      = mask_filter_get_name,
-	.create                        = mask_filter_create,
-	.destroy                       = mask_filter_destroy,
-	.update                        = mask_filter_update,
-	.get_defaults                  = mask_filter_defaults,
-	.get_properties                = mask_filter_properties,
-	.video_tick                    = mask_filter_tick,
-	.video_render                  = mask_filter_render
-};
+struct obs_source_info mask_filter = {.id = "mask_filter",
+				      .type = OBS_SOURCE_TYPE_FILTER,
+				      .output_flags = OBS_SOURCE_VIDEO,
+				      .get_name = mask_filter_get_name,
+				      .create = mask_filter_create,
+				      .destroy = mask_filter_destroy,
+				      .update = mask_filter_update,
+				      .get_defaults = mask_filter_defaults,
+				      .get_properties = mask_filter_properties,
+				      .video_tick = mask_filter_tick,
+				      .video_render = mask_filter_render};
