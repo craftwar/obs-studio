@@ -842,44 +842,40 @@ inline void TextSource::Tick(float seconds)
 	if (!obs_source_showing(source))
 		return;
 
+	update_time_elapsed += seconds;
+	if (update_time_elapsed < 2.0f)
+		return;
+	else
+		update_time_elapsed = 0.0f;
+
 	// no difference in using case 0 or default (same asm)
 	// threaded code, gcc Labels as Values is not supported in MSVC
 	// https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
 	switch (mode) {
-	case Mode::text:
-		break;
-	case Mode::file:
-		update_time_elapsed += seconds;
-		if (update_time_elapsed >= 2.0f) {
-			update_time_elapsed = 0.0f;
-			time_t t = get_modified_timestamp(file);
+	case Mode::file: {
+		time_t t = get_modified_timestamp(file);
 
-			if (file_timestamp != t) {
-				file_timestamp = t;
-				LoadFileText();
-			}
+		if (file_timestamp != t) {
+			file_timestamp = t;
+			LoadFileText();
 		}
-		break;
+	} break;
 	case Mode::song:
-		update_time_elapsed += seconds;
-		if (update_time_elapsed >= 2.0f) {
-			update_time_elapsed = 0.0f;
-			if (!get_song_name(song_hwnd)) {
-				::EnumWindows(&TextSource::find_target,
-					      reinterpret_cast<LPARAM>(this));
-			}
-			// lambda can't be used (will be this call, not callback)
-			//::EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL
-			//{
-			//	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
-			//	return !_TextSource->get_song_name(hwnd);
-			//}
-			//, reinterpret_cast<LPARAM>(this));
+		if (!get_song_name(song_hwnd)) {
+			::EnumWindows(&TextSource::find_target,
+				      reinterpret_cast<LPARAM>(this));
 		}
+		// lambda can't be used (will be this call, not callback)
+		//::EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL
+		//{
+		//	TextSource* _TextSource = reinterpret_cast<TextSource *>(lParam);
+		//	return !_TextSource->get_song_name(hwnd);
+		//}
+		//, reinterpret_cast<LPARAM>(this));
 		break;
 	default: // don't produce code for default
 		// https://docs.microsoft.com/en-us/cpp/intrinsics/assume
-		__assume(0);
+		//__assume(0);
 		break;
 	}
 }
