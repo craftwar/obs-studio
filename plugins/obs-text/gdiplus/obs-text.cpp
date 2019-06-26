@@ -802,7 +802,7 @@ inline void TextSource::Update(obs_data_t *s)
 			goto fallback_to_text_mode;
 		}
 	} else {
-		if (mode == Mode::vnr) { // check if use vnr last time
+		if (mode == Mode::vnr) { // change from vnr mode
 			--TextSource::vnr_count;
 			TextSource::VNR_cleanup();
 		}
@@ -1017,7 +1017,7 @@ void TextSource::set_song_name(const wchar_t *const name)
 #pragma optimize("s", on)
 bool TextSource::VNR_initial()
 {
-	if (TextSource::shm.data == nullptr) {
+	if (hVNR_thread == NULL) {
 		hMapFile = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS, // read/write access
 			FALSE,               // do not inherit the name
@@ -1055,12 +1055,14 @@ bool TextSource::VNR_initial()
 			if (hEvent == NULL)
 				goto SHM_error_clean;
 		}
-		if (hVNR_thread == NULL) {
-			TextSource::hVNR_thread = CreateThread(
-				NULL, 0, VNR_thread, this, 0, NULL);
-			if (hVNR_thread == NULL)
-				goto SHM_error_clean;
-		}
+		// don't use mutiple obs-text in vnr mode
+		// I am lazy
+		// void signal_handler_connect
+		// source_show (ptr source), source_hide (ptr source)
+		TextSource::hVNR_thread =
+			CreateThread(NULL, 0, VNR_thread, this, 0, NULL);
+		if (hVNR_thread == NULL)
+			goto SHM_error_clean;
 	}
 	return true;
 
@@ -1080,6 +1082,7 @@ void TextSource::VNR_cleanup()
 {
 	if (TextSource::vnr_count != 0)
 		return;
+
 	if (TextSource::hVNR_thread)
 		goto close_thread;
 	if (TextSource::hEvent)
