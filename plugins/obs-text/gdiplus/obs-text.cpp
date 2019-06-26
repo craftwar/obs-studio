@@ -850,7 +850,7 @@ inline void TextSource::Tick(float seconds)
 		break;
 	case Mode::file:
 		update_time_elapsed += seconds;
-		if (update_time_elapsed >= 1.0f) {
+		if (update_time_elapsed >= 2.0f) {
 			update_time_elapsed = 0.0f;
 			time_t t = get_modified_timestamp(file);
 
@@ -862,7 +862,7 @@ inline void TextSource::Tick(float seconds)
 		break;
 	case Mode::song:
 		update_time_elapsed += seconds;
-		if (update_time_elapsed >= 1.0f) {
+		if (update_time_elapsed >= 2.0f) {
 			update_time_elapsed = 0.0f;
 			if (!get_song_name(song_hwnd)) {
 				::EnumWindows(&TextSource::find_target,
@@ -878,8 +878,8 @@ inline void TextSource::Tick(float seconds)
 		}
 		break;
 	default: // don't produce code for default
-		__assume(
-			0); // https://docs.microsoft.com/en-us/cpp/intrinsics/assume
+		// https://docs.microsoft.com/en-us/cpp/intrinsics/assume
+		__assume(0);
 		break;
 	}
 }
