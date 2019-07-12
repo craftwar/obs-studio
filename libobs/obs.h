@@ -727,6 +727,7 @@ EXPORT uint64_t obs_get_video_frame_time(void);
 
 EXPORT double obs_get_active_fps(void);
 EXPORT uint64_t obs_get_average_frame_time_ns(void);
+EXPORT uint64_t obs_get_frame_interval_ns(void);
 
 EXPORT uint32_t obs_get_total_frames(void);
 EXPORT uint32_t obs_get_lagged_frames(void);
@@ -1688,7 +1689,10 @@ EXPORT void obs_output_update(obs_output_t *output, obs_data_t *settings);
 EXPORT bool obs_output_can_pause(const obs_output_t *output);
 
 /** Pauses the output (if the functionality is allowed by the output */
-EXPORT void obs_output_pause(obs_output_t *output);
+EXPORT bool obs_output_pause(obs_output_t *output, bool pause);
+
+/** Returns whether output is paused */
+EXPORT bool obs_output_paused(const obs_output_t *output);
 
 /* Gets the current output settings string */
 EXPORT obs_data_t *obs_output_get_settings(const obs_output_t *output);
@@ -1863,6 +1867,8 @@ EXPORT void obs_output_end_data_capture(obs_output_t *output);
  */
 EXPORT void obs_output_signal_stop(obs_output_t *output, int code);
 
+EXPORT uint64_t obs_output_get_pause_offset(obs_output_t *output);
+
 /* ------------------------------------------------------------------------- */
 /* Encoders */
 
@@ -2026,6 +2032,9 @@ EXPORT void obs_encoder_packet_release(struct encoder_packet *packet);
 
 EXPORT void *obs_encoder_create_rerouted(obs_encoder_t *encoder,
 					 const char *reroute_id);
+
+/** Returns whether encoder is paused */
+EXPORT bool obs_encoder_paused(const obs_encoder_t *output);
 
 /* ------------------------------------------------------------------------- */
 /* Stream Services */

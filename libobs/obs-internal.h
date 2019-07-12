@@ -273,6 +273,7 @@ struct obs_core_video {
 	volatile bool gpu_encode_stop;
 
 	uint64_t video_time;
+	uint64_t video_frame_interval_ns;
 	uint64_t video_avg_frame_time_ns;
 	double video_fps;
 	video_t *video;
@@ -836,6 +837,19 @@ struct caption_text {
 	struct caption_text *next;
 };
 
+struct pause_data {
+	pthread_mutex_t mutex;
+	uint64_t last_video_ts;
+	uint64_t ts_start;
+	uint64_t ts_end;
+	uint64_t ts_offset;
+};
+
+extern bool video_pause_check(struct pause_data *pause, uint64_t timestamp);
+extern bool audio_pause_check(struct pause_data *pause, struct audio_data *data,
+			      size_t sample_rate);
+extern void pause_reset(struct pause_data *pause);
+
 struct obs_output {
 	struct obs_context_data context;
 	struct obs_output_info info;
@@ -874,12 +888,23 @@ struct obs_output {
 	int total_frames;
 
 	volatile bool active;
+	volatile bool paused;
 	video_t *video;
 	audio_t *audio;
 	obs_encoder_t *video_encoder;
 	obs_encoder_t *audio_encoders[MAX_AUDIO_MIXES];
 	obs_service_t *service;
 	size_t mixer_mask;
+
+	struct pause_data pause;
+
+	struct circlebuf audio_buffer[MAX_AUDIO_MIXES][MAX_AV_PLANES];
+	uint64_t audio_start_ts;
+	uint64_t video_start_ts;
+	size_t audio_size;
+	size_t planes;
+	size_t sample_rate;
+	size_t total_audio_frames;
 
 	uint32_t scaled_width;
 	uint32_t scaled_height;
@@ -908,6 +933,8 @@ struct obs_output {
 	volatile bool delay_capturing;
 
 	char *last_error_message;
+
+	float audio_data[MAX_AUDIO_CHANNELS][AUDIO_OUTPUT_FRAMES];
 };
 
 static inline void do_output_signal(struct obs_output *output,
@@ -974,6 +1001,7 @@ struct obs_encoder {
 	enum video_format preferred_format;
 
 	volatile bool active;
+	volatile bool paused;
 	bool initialized;
 
 	/* indicates ownership of the info.id buffer */
@@ -1008,6 +1036,8 @@ struct obs_encoder {
 
 	pthread_mutex_t callbacks_mutex;
 	DARRAY(struct encoder_callback) callbacks;
+
+	struct pause_data pause;
 
 	const char *profile_encoder_encode_name;
 };

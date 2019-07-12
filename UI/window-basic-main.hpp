@@ -123,6 +123,7 @@ class OBSBasic : public OBSMainWindow {
 	friend class Auth;
 	friend class AutoConfig;
 	friend class AutoConfigStreamPage;
+	friend class RecordButton;
 	friend struct OBSStudioAPI;
 
 	enum class MoveDir { Up, Down, Left, Right };
@@ -204,6 +205,7 @@ private:
 
 	QPointer<QPushButton> transitionButton;
 	QPointer<QPushButton> replayBufferButton;
+	QScopedPointer<QPushButton> pause;
 
 	QScopedPointer<QSystemTrayIcon> trayIcon;
 	QPointer<QAction> sysTrayStream;
@@ -323,8 +325,8 @@ private:
 
 	int GetTopSelectedSourceItem();
 
-	obs_hotkey_pair_id streamingHotkeys, recordingHotkeys, replayBufHotkeys,
-		togglePreviewHotkeys;
+	obs_hotkey_pair_id streamingHotkeys, recordingHotkeys, pauseHotkeys,
+		replayBufHotkeys, togglePreviewHotkeys;
 	obs_hotkey_id forceStreamingStopHotkey;
 
 	void InitDefaultTransitions();
@@ -439,6 +441,7 @@ public slots:
 	void RecordStopping();
 	void RecordingStop(int code, QString last_error);
 
+	void ShowReplayBufferPauseWarning();
 	void StartReplayBuffer();
 	void StopReplayBuffer();
 
@@ -463,6 +466,9 @@ public slots:
 				const QString &name = QString());
 
 	void UpdatePatronJson(const QString &text, const QString &error);
+
+	void PauseRecording();
+	void UnpauseRecording();
 
 private slots:
 	void AddSceneItem(OBSSceneItem item);
@@ -556,6 +562,7 @@ private:
 	static void HotkeyTriggered(void *data, obs_hotkey_id id, bool pressed);
 
 	void AutoRemux();
+	void UpdatePause(bool activate = true);
 
 public:
 	OBSSource GetProgramSource();
@@ -758,6 +765,8 @@ private slots:
 
 	void on_resetUI_triggered();
 	void on_lockUI_toggled(bool lock);
+
+	void PauseToggled();
 
 	void logUploadFinished(const QString &text, const QString &error);
 

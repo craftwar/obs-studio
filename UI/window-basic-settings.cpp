@@ -725,6 +725,8 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 		SLOT(AdvOutRecCheckWarnings()));
 	connect(ui->advOutRecFormat, SIGNAL(currentIndexChanged(int)), this,
 		SLOT(AdvOutRecCheckWarnings()));
+	connect(ui->advOutRecEncoder, SIGNAL(currentIndexChanged(int)), this,
+		SLOT(AdvOutRecCheckWarnings()));
 	AdvOutRecCheckWarnings();
 
 	ui->buttonBox->button(QDialogButtonBox::Apply)->setIcon(QIcon());
@@ -3925,6 +3927,13 @@ void OBSBasicSettings::AdvOutRecCheckWarnings()
 		warningMsg = QTStr("OutputWarnings.MultiTrackRecording");
 	}
 
+	bool useStreamEncoder = ui->advOutRecEncoder->currentIndex() == 0;
+	if (useStreamEncoder) {
+		if (!warningMsg.isEmpty())
+			warningMsg += "\n\n";
+		warningMsg += QTStr("OutputWarnings.CannotPause");
+	}
+
 	if (ui->advOutRecFormat->currentText().compare("mp4") == 0 ||
 	    ui->advOutRecFormat->currentText().compare("mov") == 0) {
 		if (!warningMsg.isEmpty())
@@ -4383,10 +4392,15 @@ void OBSBasicSettings::SimpleRecordingEncoderChanged()
 				warning += "\n\n";
 			warning += SIMPLE_OUTPUT_WARNING("Encoder");
 		}
+	} else {
+		if (!warning.isEmpty())
+			warning += "\n\n";
+		warning += SIMPLE_OUTPUT_WARNING("CannotPause");
 	}
 
-	if (ui->simpleOutRecFormat->currentText().compare("mp4") == 0 ||
-	    ui->simpleOutRecFormat->currentText().compare("mov") == 0) {
+	if (qual != "Lossless" &&
+	    (ui->simpleOutRecFormat->currentText().compare("mp4") == 0 ||
+	     ui->simpleOutRecFormat->currentText().compare("mov") == 0)) {
 		if (!warning.isEmpty())
 			warning += "\n\n";
 		warning += QTStr("OutputWarnings.MP4Recording");
