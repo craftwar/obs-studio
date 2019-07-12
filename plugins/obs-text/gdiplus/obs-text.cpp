@@ -223,7 +223,7 @@ struct TextSource {
 	float update_time_elapsed = 0.0f;
 
 	HWND song_hwnd = NULL;
-	unsigned char browser_suffix_len;
+	unsigned char browser_suffix_len = 0;
 	typedef wchar_t *(*song_pfn)(wchar_t *const, size_t);
 	song_pfn song_pfunc = nullptr;
 	enum class Mode : unsigned char {
