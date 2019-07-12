@@ -1132,7 +1132,7 @@ void TextSource::ReadFromVNR()
 	}
 #endif
 	WaitForSingleObject(TextSource::hEvent, INFINITE);
-	if (WaitForSingleObject(TextSource::hMutex, 0) == WAIT_OBJECT_0) {
+	if (WaitForSingleObject(TextSource::hMutex, INFINITE) == WAIT_OBJECT_0) {
 		ResetEvent(TextSource::hEvent);
 		text = TextSource::shm.data;
 		// text always not empty? better let vnr add '\n'
