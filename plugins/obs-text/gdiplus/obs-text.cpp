@@ -236,12 +236,12 @@ struct TextSource {
 	HWINEVENTHOOK hHook = NULL;
 
 	static unsigned char vnr_count;
-	static HANDLE hMapFile;
-	static HANDLE hMutex;
-	static HANDLE hEvent;
 	static TextSource *thread_owner;
-	static HANDLE hVNR_thread;
 	static struct SHM {
+		HANDLE hMapFile;
+		HANDLE hMutex;
+		HANDLE hEvent;
+		HANDLE hThread;
 		wchar_t *data;
 	} shm;
 
@@ -349,11 +349,7 @@ struct TextSource {
 };
 HANDLE TextSource::hSong_thread = NULL;
 unsigned char TextSource::vnr_count = 0;
-HANDLE TextSource::hMapFile = NULL;
-HANDLE TextSource::hMutex = NULL;
-HANDLE TextSource::hEvent = NULL;
 TextSource *TextSource::thread_owner = nullptr;
-HANDLE TextSource::hVNR_thread = NULL;
 struct TextSource::SHM TextSource::shm = {};
 
 static time_t get_modified_timestamp(const char *filename)
@@ -1042,28 +1038,23 @@ DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
 	TextSource *s = reinterpret_cast<TextSource *>(lpParam);
 
 	DWORD error;
-	WNDCLASSW wndClass = {0};
-	//WNDCLASSEXW wndClass = { 0 };
-	//wndClass.cbSize = sizeof(wndClass);
-	wndClass.lpfnWndProc = DefWindowProcW;
-	wndClass.hInstance = GetModuleHandleA("User32.dll");
-	wndClass.lpszClassName = L"a";
-	ATOM atom = RegisterClassW(&wndClass);
+	//WNDCLASSW wndClass = {0};
+	//wndClass.lpfnWndProc = DefWindowProcW;
+	//wndClass.hInstance = GetModuleHandleA("User32.dll");
+	//wndClass.lpszClassName = L"a";
+	//ATOM atom = RegisterClassW(&wndClass);
 	//ATOM atom = RegisterClassExW(&wndClass);
-	error = GetLastError();
-	//CreateWindowW(L"a", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, NULL, NULL);
-	CreateWindowExW(0, L"Message", L"b", 0, 0, 0, 0, 0, NULL, NULL, NULL,
-			NULL);
-	//HMODULE a = GetModuleHandleW(NULL);
-	//CreateWindowExW(0, L"a", L"b", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandleW(NULL), NULL);
-	//CreateWindowExW
+	// use System registered class "Message"
+	// https://docs.microsoft.com/en-us/windows/win32/winmsg/about-window-classes#system
+	CreateWindowW(L"Message", L"", 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	error = GetLastError();
 	MSG Msg;
 	DWORD process_id;
 	DWORD thread_id = GetWindowThreadProcessId(s->song_hwnd, &process_id);
 	s->hHook = SetWinEventHook(EVENT_OBJECT_NAMECHANGE,
 				   EVENT_OBJECT_NAMECHANGE, NULL, Wineventproc,
-				   0, thread_id, WINEVENT_OUTOFCONTEXT);
+				   process_id, thread_id,
+				   WINEVENT_OUTOFCONTEXT);
 	while (GetMessage(&Msg, NULL, 0, 0))
 		;
 
@@ -1082,8 +1073,9 @@ void TextSource::Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
 		std::unique_ptr<wchar_t> title(new wchar_t[len + 1]);
 		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 			return;
-		wchar_t* song_name =
-			(TextSource::thread_owner->song_pfunc)(title.get(), len - TextSource::thread_owner->browser_suffix_len);
+		wchar_t *song_name = (TextSource::thread_owner->song_pfunc)(
+			title.get(),
+			len - TextSource::thread_owner->browser_suffix_len);
 		if (song_name == nullptr)
 			song_name = L"";
 		TextSource::thread_owner->set_song_name(song_name);
@@ -1104,9 +1096,9 @@ void TextSource::show_handler(void *data, [[maybe_unused]] calldata_t *cd)
 	if (TextSource::thread_owner != s) {
 		if (s->mode == TextSource::Mode::vnr) {
 			TextSource::VNR_close_thread();
-			TextSource::hVNR_thread =
+			TextSource::shm.hThread =
 				CreateThread(NULL, 0, VNR_thread, s, 0, NULL);
-			if (hVNR_thread != NULL)
+			if (shm.hThread != NULL)
 				TextSource::thread_owner = s;
 		}
 	}
@@ -1124,21 +1116,22 @@ void TextSource::hide_handler(void *data, calldata_t *cd)
 #pragma optimize("s", on)
 bool TextSource::VNR_initial()
 {
-	if (hVNR_thread == NULL) {
-		hMapFile = OpenFileMapping(
+	if (shm.hThread == NULL) {
+		shm.hMapFile = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS, // read/write access
 			FALSE,               // do not inherit the name
 			VNR_SHM);            // name of mapping object
-		if (hMapFile == NULL) {
-			hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
-						     PAGE_READWRITE, 0,
-						     VNR_SHM_SIZE, VNR_SHM);
-			if (hMapFile == NULL)
+		if (shm.hMapFile == NULL) {
+			shm.hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
+							 NULL, PAGE_READWRITE,
+							 0, VNR_SHM_SIZE,
+							 VNR_SHM);
+			if (shm.hMapFile == NULL)
 				goto SHM_fail;
 		}
 
 		TextSource::shm.data = static_cast<wchar_t *>(MapViewOfFile(
-			hMapFile,            // handle to map object
+			shm.hMapFile,        // handle to map object
 			FILE_MAP_ALL_ACCESS, // read/write permission
 			0, 0, VNR_SHM_SIZE));
 		if (TextSource::shm.data == nullptr)
@@ -1148,27 +1141,28 @@ bool TextSource::VNR_initial()
 		// The initial contents of the pages in a file mapping object backed by
 		// the operating system paging file are 0 (zero).
 
-		TextSource::hMutex =
+		TextSource::shm.hMutex =
 			OpenMutex(SYNCHRONIZE, FALSE, VNR_SHM_MUTEX);
-		if (hMutex == NULL) {
-			hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
-			if (hMutex == NULL)
+		if (shm.hMutex == NULL) {
+			shm.hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
+			if (shm.hMutex == NULL)
 				goto SHM_error_clean;
 		}
-		TextSource::hEvent = OpenEvent(SYNCHRONIZE | EVENT_MODIFY_STATE,
-					       FALSE, VNR_SHM_EVENT);
-		if (hEvent == NULL) {
-			hEvent = CreateEvent(NULL, true, false, VNR_SHM_EVENT);
-			if (hEvent == NULL)
+		TextSource::shm.hEvent = OpenEvent(
+			SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, VNR_SHM_EVENT);
+		if (shm.hEvent == NULL) {
+			shm.hEvent =
+				CreateEvent(NULL, true, false, VNR_SHM_EVENT);
+			if (shm.hEvent == NULL)
 				goto SHM_error_clean;
 		}
 		// don't use mutiple obs-text in vnr mode
 		// I am lazy
 		// void signal_handler_connect
 		// source_show (ptr source), source_hide (ptr source)
-		TextSource::hVNR_thread =
+		TextSource::shm.hThread =
 			CreateThread(NULL, 0, VNR_thread, this, 0, NULL);
-		if (hVNR_thread == NULL)
+		if (shm.hThread == NULL)
 			goto SHM_error_clean;
 		else
 			TextSource::thread_owner = this;
@@ -1192,38 +1186,38 @@ void TextSource::VNR_cleanup()
 	if (TextSource::vnr_count != 0)
 		return;
 
-	if (TextSource::hVNR_thread)
+	if (TextSource::shm.hThread)
 		goto close_thread;
-	if (TextSource::hEvent)
+	if (TextSource::shm.hEvent)
 		goto close_event;
-	if (TextSource::hMutex)
+	if (TextSource::shm.hMutex)
 		goto close_mutex;
 	if (TextSource::shm.data)
 		goto unmap_view;
-	if (TextSource::hMapFile)
+	if (TextSource::shm.hMapFile)
 		goto close_map;
 close_thread:
 	TextSource::VNR_close_thread();
 close_event:
-	CloseHandle(TextSource::hEvent);
-	TextSource::hEvent = NULL;
+	CloseHandle(TextSource::shm.hEvent);
+	TextSource::shm.hEvent = NULL;
 close_mutex:
-	CloseHandle(TextSource::hMutex);
-	TextSource::hMutex = NULL;
+	CloseHandle(TextSource::shm.hMutex);
+	TextSource::shm.hMutex = NULL;
 unmap_view:
 	UnmapViewOfFile(TextSource::shm.data);
 	TextSource::shm.data = nullptr;
 close_map:
-	CloseHandle(TextSource::hMapFile);
-	TextSource::hMapFile = NULL;
+	CloseHandle(TextSource::shm.hMapFile);
+	TextSource::shm.hMapFile = NULL;
 }
 
 void TextSource::VNR_close_thread()
 {
-	TerminateThread(TextSource::hVNR_thread, 0);
-	CloseHandle(TextSource::hVNR_thread);
+	TerminateThread(TextSource::shm.hThread, 0);
+	CloseHandle(TextSource::shm.hThread);
 	TextSource::thread_owner = nullptr;
-	TextSource::hVNR_thread = NULL;
+	TextSource::shm.hThread = NULL;
 }
 
 DWORD WINAPI TextSource::VNR_thread(LPVOID lpParam)
@@ -1246,16 +1240,16 @@ void TextSource::ReadFromVNR()
 		break;
 	}
 #endif
-	WaitForSingleObject(TextSource::hEvent, INFINITE);
-	if (WaitForSingleObject(TextSource::hMutex, INFINITE) ==
+	WaitForSingleObject(TextSource::shm.hEvent, INFINITE);
+	if (WaitForSingleObject(TextSource::shm.hMutex, INFINITE) ==
 	    WAIT_OBJECT_0) {
-		ResetEvent(TextSource::hEvent);
+		ResetEvent(TextSource::shm.hEvent);
 		text = TextSource::shm.data;
 		// text always not empty? better let vnr add '\n'
 		//text.push_back('\n');
 		RenderText();
 	}
-	ReleaseMutex(TextSource::hMutex);
+	ReleaseMutex(TextSource::shm.hMutex);
 }
 
 /* ------------------------------------------------------------------------- */
