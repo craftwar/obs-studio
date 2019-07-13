@@ -222,10 +222,12 @@ struct TextSource {
 	time_t file_timestamp = 0;
 	float update_time_elapsed = 0.0f;
 
-	HWND song_hwnd = NULL;
-	unsigned char browser_suffix_len = 0;
-	typedef wchar_t *(*song_pfn)(wchar_t *const, size_t);
-	song_pfn song_pfunc = nullptr;
+	static struct SONG {
+		HWND hWnd;
+		unsigned char browser_suffix_len;
+		typedef wchar_t *(*pFn)(wchar_t *const, size_t);
+		pFn pFunc;
+	} song;
 	enum class Mode : unsigned char {
 		text,
 		file,
@@ -348,6 +350,7 @@ struct TextSource {
 	void ReadFromVNR();
 };
 HANDLE TextSource::hSong_thread = NULL;
+struct TextSource::SONG TextSource::song = {};
 unsigned char TextSource::vnr_count = 0;
 TextSource *TextSource::thread_owner = nullptr;
 struct TextSource::SHM TextSource::shm = {};
@@ -824,7 +827,7 @@ inline void TextSource::Update(obs_data_t *s)
 			LoadFileText();
 		} else if (obs_data_get_bool(s, S_USE_SONG)) {
 			mode = Mode::song;
-			get_song_name(song_hwnd);
+			get_song_name(song.hWnd);
 		} else {
 		fallback_to_text_mode:
 			mode = Mode::text;
@@ -874,7 +877,7 @@ inline void TextSource::Tick(float seconds)
 	case Mode::song:
 		if (hSong_thread)
 			return;
-		if (!get_song_name(song_hwnd)) {
+		if (!get_song_name(song.hWnd)) {
 			::EnumWindows(&TextSource::find_target,
 				      reinterpret_cast<LPARAM>(this));
 		}
@@ -921,12 +924,12 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 		return FALSE;
 
-	if (len > browser_suffix_len && song_pfunc) {
-		wchar_t *const song_name =
-			(*song_pfunc)(title.get(), len - browser_suffix_len);
+	if (len > song.browser_suffix_len && song.pFunc) {
+		wchar_t *const song_name = (*song.pFunc)(
+			title.get(), len - song.browser_suffix_len);
 		if (!song_name) {
-			song_hwnd = NULL;
-			song_pfunc = nullptr;
+			song.hWnd = NULL;
+			song.pFunc = nullptr;
 			text = L"";
 			RenderText();
 		} else {
@@ -936,36 +939,36 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	}
 
 	// Using "else if"s produces bigger binary (why?)
-	browser_suffix_len = isBrowser(title.get(), len);
+	song.browser_suffix_len = isBrowser(title.get(), len);
 	wchar_t *song_name =
-		browser_suffix_len
-			? get_song_browser_youtube(title.get(),
-						   len - browser_suffix_len)
+		song.browser_suffix_len
+			? get_song_browser_youtube(
+				  title.get(), len - song.browser_suffix_len)
 			: nullptr;
 	if (song_name) {
-		song_pfunc = &TextSource::get_song_browser_youtube;
+		song.pFunc = &TextSource::get_song_browser_youtube;
 		goto song_found;
 	}
 	song_name = get_song_foobar2000(title.get(), len);
 	if (song_name) {
-		song_pfunc = &TextSource::get_song_foobar2000;
+		song.pFunc = &TextSource::get_song_foobar2000;
 		goto song_found;
 	}
 	song_name = get_song_osu(title.get(), len);
 	if (song_name)
-		song_pfunc = &TextSource::get_song_osu;
+		song.pFunc = &TextSource::get_song_osu;
 	else
 		goto song_not_found;
 
 song_found:
 	set_song_name(song_name);
-	if (song_hwnd != hwnd) {
-		song_hwnd = hwnd;
+	if (song.hWnd != hwnd) {
+		song.hWnd = hwnd;
 		TextSource::hSong_thread =
 			CreateThread(NULL, 0, song_thread, this, 0, NULL);
 		TextSource::thread_owner = this;
 	}
-	song_hwnd = hwnd;
+	song.hWnd = hwnd;
 song_not_found:
 	return !!song_name;
 }
@@ -1050,7 +1053,7 @@ DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
 	error = GetLastError();
 	MSG Msg;
 	DWORD process_id;
-	DWORD thread_id = GetWindowThreadProcessId(s->song_hwnd, &process_id);
+	DWORD thread_id = GetWindowThreadProcessId(s->song.hWnd, &process_id);
 	s->hHook = SetWinEventHook(EVENT_OBJECT_NAMECHANGE,
 				   EVENT_OBJECT_NAMECHANGE, NULL, Wineventproc,
 				   process_id, thread_id,
@@ -1073,9 +1076,9 @@ void TextSource::Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
 		std::unique_ptr<wchar_t> title(new wchar_t[len + 1]);
 		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 			return;
-		wchar_t *song_name = (TextSource::thread_owner->song_pfunc)(
+		wchar_t *song_name = (TextSource::thread_owner->song.pFunc)(
 			title.get(),
-			len - TextSource::thread_owner->browser_suffix_len);
+			len - TextSource::thread_owner->song.browser_suffix_len);
 		if (song_name == nullptr)
 			song_name = L"";
 		TextSource::thread_owner->set_song_name(song_name);
