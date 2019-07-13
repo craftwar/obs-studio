@@ -222,20 +222,20 @@ struct TextSource {
 	time_t file_timestamp = 0;
 	float update_time_elapsed = 0.0f;
 
-	static struct SONG {
-		HWND hWnd;
-		unsigned char browser_suffix_len;
-		typedef wchar_t *(*pFn)(wchar_t *const, size_t);
-		pFn pFunc;
-	} song;
 	enum class Mode : unsigned char {
 		text,
 		file,
 		song,
 		vnr
 	} mode = Mode::text;
-	static HANDLE hSong_thread;
-	HWINEVENTHOOK hHook = NULL;
+
+	static struct SONG {
+		HWND hWnd;
+		unsigned char browser_suffix_len;
+		typedef wchar_t *(*pFn)(wchar_t *const, size_t);
+		pFn pFunc;
+		HANDLE hThread;
+	} song;
 
 	static unsigned char vnr_count;
 	static TextSource *thread_owner;
@@ -349,7 +349,6 @@ struct TextSource {
 	static DWORD WINAPI VNR_thread(LPVOID lpParam);
 	void ReadFromVNR();
 };
-HANDLE TextSource::hSong_thread = NULL;
 struct TextSource::SONG TextSource::song = {};
 unsigned char TextSource::vnr_count = 0;
 TextSource *TextSource::thread_owner = nullptr;
@@ -875,7 +874,7 @@ inline void TextSource::Tick(float seconds)
 		}
 	} break;
 	case Mode::song:
-		if (hSong_thread)
+		if (song.hThread)
 			return;
 		if (!get_song_name(song.hWnd)) {
 			::EnumWindows(&TextSource::find_target,
@@ -962,13 +961,13 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 song_found:
 	set_song_name(song_name);
-	if (song.hWnd != hwnd) {
-		song.hWnd = hwnd;
-		TextSource::hSong_thread =
-			CreateThread(NULL, 0, song_thread, this, 0, NULL);
-		TextSource::thread_owner = this;
-	}
+	//if (song.hWnd != hwnd) {
 	song.hWnd = hwnd;
+	TextSource::song.hThread =
+		CreateThread(NULL, 0, song_thread, this, 0, NULL);
+	TextSource::thread_owner = this;
+	//}
+	//song.hWnd = hwnd;
 song_not_found:
 	return !!song_name;
 }
@@ -1053,13 +1052,15 @@ DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
 	error = GetLastError();
 	MSG Msg;
 	DWORD process_id;
-	DWORD thread_id = GetWindowThreadProcessId(s->song.hWnd, &process_id);
-	s->hHook = SetWinEventHook(EVENT_OBJECT_NAMECHANGE,
-				   EVENT_OBJECT_NAMECHANGE, NULL, Wineventproc,
-				   process_id, thread_id,
-				   WINEVENT_OUTOFCONTEXT);
+	DWORD thread_id = GetWindowThreadProcessId(song.hWnd, &process_id);
+	HWINEVENTHOOK hHook = SetWinEventHook(EVENT_OBJECT_NAMECHANGE,
+					      EVENT_OBJECT_NAMECHANGE, NULL,
+					      Wineventproc, process_id,
+					      thread_id, WINEVENT_OUTOFCONTEXT);
 	while (GetMessage(&Msg, NULL, 0, 0))
 		;
+	UnhookWinEvent(hHook);
+	song.hThread = NULL;
 
 	return 0;
 }
@@ -1103,7 +1104,9 @@ void TextSource::show_handler(void *data, [[maybe_unused]] calldata_t *cd)
 				CreateThread(NULL, 0, VNR_thread, s, 0, NULL);
 			if (shm.hThread != NULL)
 				TextSource::thread_owner = s;
-		}
+		} else if (s->mode == TextSource::Mode::song)
+			PostThreadMessageW(GetThreadId(song.hThread), WM_QUIT,
+					   0, 0);
 	}
 }
 
@@ -1113,6 +1116,9 @@ void TextSource::hide_handler(void *data, calldata_t *cd)
 	if (TextSource::thread_owner == s) {
 		if (s->mode == TextSource::Mode::vnr)
 			TextSource::VNR_close_thread();
+		else if (s->mode == TextSource::Mode::song)
+			PostThreadMessageW(GetThreadId(song.hThread), WM_QUIT,
+					   0, 0);
 	}
 }
 
