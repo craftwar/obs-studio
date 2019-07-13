@@ -961,13 +961,12 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 song_found:
 	set_song_name(song_name);
-	//if (song.hWnd != hwnd) {
 	song.hWnd = hwnd;
-	TextSource::song.hThread =
-		CreateThread(NULL, 0, song_thread, this, 0, NULL);
-	TextSource::thread_owner = this;
-	//}
-	//song.hWnd = hwnd;
+	if (song.hThread == NULL) {
+		TextSource::song.hThread =
+			CreateThread(NULL, 0, song_thread, this, 0, NULL);
+		TextSource::thread_owner = this;
+	}
 song_not_found:
 	return !!song_name;
 }
@@ -1028,11 +1027,12 @@ wchar_t *TextSource::get_song_osu(wchar_t *const title, size_t str_len)
 
 void TextSource::set_song_name(const wchar_t *const name)
 {
-	if (text.compare(name)) {
-		text = name;
-		text.push_back('\n');
-		RenderText();
-	}
+	// unnecessary in song_thread version
+	//if (text.compare(name)) {
+	text = name;
+	text.push_back('\n');
+	RenderText();
+	//}
 }
 
 DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
