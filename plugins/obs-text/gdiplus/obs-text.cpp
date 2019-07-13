@@ -237,6 +237,7 @@ struct TextSource {
 	static HANDLE hMapFile;
 	static HANDLE hMutex;
 	static HANDLE hEvent;
+	static TextSource *thread_owner;
 	static HANDLE hVNR_thread;
 	static struct SHM {
 		wchar_t *data;
@@ -284,6 +285,7 @@ struct TextSource {
 		  graphics(hdc)
 	{
 		obs_source_update(source, settings);
+		connect_signal_handler();
 	}
 
 	inline ~TextSource()
@@ -328,9 +330,13 @@ struct TextSource {
 					    size_t str_len);
 	static wchar_t *get_song_osu(wchar_t *const title, size_t str_len);
 	void set_song_name(const wchar_t *const name);
+	void connect_signal_handler();
+	static void show_handler(void *data, calldata_t *cd);
+	static void hide_handler(void *data, calldata_t *cd);
 
 	inline bool VNR_initial();
 	static void VNR_cleanup();
+	static void VNR_close_thread();
 	static DWORD WINAPI VNR_thread(LPVOID lpParam);
 	void ReadFromVNR();
 };
@@ -338,6 +344,7 @@ unsigned char TextSource::vnr_count = 0;
 HANDLE TextSource::hMapFile = NULL;
 HANDLE TextSource::hMutex = NULL;
 HANDLE TextSource::hEvent = NULL;
+TextSource *TextSource::thread_owner = nullptr;
 HANDLE TextSource::hVNR_thread = NULL;
 struct TextSource::SHM TextSource::shm = {};
 
@@ -1014,6 +1021,37 @@ void TextSource::set_song_name(const wchar_t *const name)
 	}
 }
 
+void TextSource::connect_signal_handler()
+{
+	signal_handler_t *handler = obs_source_get_signal_handler(this->source);
+	signal_handler_connect(handler, "hide", hide_handler, this);
+	signal_handler_connect(handler, "show", show_handler, this);
+}
+
+void TextSource::show_handler(void *data, [[maybe_unused]] calldata_t *cd)
+{
+	//void *a = calldata_ptr(cd, "source");
+	TextSource *const s = reinterpret_cast<TextSource *>(data);
+	if (TextSource::thread_owner != s) {
+		if (s->mode == TextSource::Mode::vnr) {
+			TextSource::VNR_close_thread();
+			TextSource::hVNR_thread =
+				CreateThread(NULL, 0, VNR_thread, s, 0, NULL);
+			if (hVNR_thread != NULL)
+				TextSource::thread_owner = s;
+		}
+	}
+}
+
+void TextSource::hide_handler(void *data, calldata_t *cd)
+{
+	TextSource *const s = reinterpret_cast<TextSource *>(data);
+	if (TextSource::thread_owner == s) {
+		if (s->mode == TextSource::Mode::vnr)
+			TextSource::VNR_close_thread();
+	}
+}
+
 #pragma optimize("s", on)
 bool TextSource::VNR_initial()
 {
@@ -1063,6 +1101,8 @@ bool TextSource::VNR_initial()
 			CreateThread(NULL, 0, VNR_thread, this, 0, NULL);
 		if (hVNR_thread == NULL)
 			goto SHM_error_clean;
+		else
+			TextSource::thread_owner = this;
 	}
 	return true;
 
@@ -1094,9 +1134,7 @@ void TextSource::VNR_cleanup()
 	if (TextSource::hMapFile)
 		goto close_map;
 close_thread:
-	TerminateThread(TextSource::hVNR_thread, 0);
-	CloseHandle(TextSource::hVNR_thread);
-	TextSource::hVNR_thread = NULL;
+	TextSource::VNR_close_thread();
 close_event:
 	CloseHandle(TextSource::hEvent);
 	TextSource::hEvent = NULL;
@@ -1109,6 +1147,14 @@ unmap_view:
 close_map:
 	CloseHandle(TextSource::hMapFile);
 	TextSource::hMapFile = NULL;
+}
+
+void TextSource::VNR_close_thread()
+{
+	TerminateThread(TextSource::hVNR_thread, 0);
+	CloseHandle(TextSource::hVNR_thread);
+	TextSource::thread_owner = nullptr;
+	TextSource::hVNR_thread = NULL;
 }
 
 DWORD WINAPI TextSource::VNR_thread(LPVOID lpParam)
@@ -1132,7 +1178,8 @@ void TextSource::ReadFromVNR()
 	}
 #endif
 	WaitForSingleObject(TextSource::hEvent, INFINITE);
-	if (WaitForSingleObject(TextSource::hMutex, INFINITE) == WAIT_OBJECT_0) {
+	if (WaitForSingleObject(TextSource::hMutex, INFINITE) ==
+	    WAIT_OBJECT_0) {
 		ResetEvent(TextSource::hEvent);
 		text = TextSource::shm.data;
 		// text always not empty? better let vnr add '\n'
