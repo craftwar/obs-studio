@@ -232,6 +232,8 @@ struct TextSource {
 		song,
 		vnr
 	} mode = Mode::text;
+	static HANDLE hSong_thread;
+	HWINEVENTHOOK hHook = NULL;
 
 	static unsigned char vnr_count;
 	static HANDLE hMapFile;
@@ -330,6 +332,11 @@ struct TextSource {
 					    size_t str_len);
 	static wchar_t *get_song_osu(wchar_t *const title, size_t str_len);
 	void set_song_name(const wchar_t *const name);
+	static DWORD WINAPI song_thread(LPVOID lpParam);
+	static void Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
+				 HWND hwnd, LONG idObject, LONG idChild,
+				 DWORD idEventThread, DWORD dwmsEventTime);
+
 	void connect_signal_handler();
 	static void show_handler(void *data, calldata_t *cd);
 	static void hide_handler(void *data, calldata_t *cd);
@@ -340,6 +347,7 @@ struct TextSource {
 	static DWORD WINAPI VNR_thread(LPVOID lpParam);
 	void ReadFromVNR();
 };
+HANDLE TextSource::hSong_thread = NULL;
 unsigned char TextSource::vnr_count = 0;
 HANDLE TextSource::hMapFile = NULL;
 HANDLE TextSource::hMutex = NULL;
@@ -868,6 +876,8 @@ inline void TextSource::Tick(float seconds)
 		}
 	} break;
 	case Mode::song:
+		if (hSong_thread)
+			return;
 		if (!get_song_name(song_hwnd)) {
 			::EnumWindows(&TextSource::find_target,
 				      reinterpret_cast<LPARAM>(this));
@@ -953,6 +963,12 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 song_found:
 	set_song_name(song_name);
+	if (song_hwnd != hwnd) {
+		song_hwnd = hwnd;
+		TextSource::hSong_thread =
+			CreateThread(NULL, 0, song_thread, this, 0, NULL);
+		TextSource::thread_owner = this;
+	}
 	song_hwnd = hwnd;
 song_not_found:
 	return !!song_name;
@@ -1018,6 +1034,59 @@ void TextSource::set_song_name(const wchar_t *const name)
 		text = name;
 		text.push_back('\n');
 		RenderText();
+	}
+}
+
+DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
+{
+	TextSource *s = reinterpret_cast<TextSource *>(lpParam);
+
+	DWORD error;
+	WNDCLASSW wndClass = {0};
+	//WNDCLASSEXW wndClass = { 0 };
+	//wndClass.cbSize = sizeof(wndClass);
+	wndClass.lpfnWndProc = DefWindowProcW;
+	wndClass.hInstance = GetModuleHandleA("User32.dll");
+	wndClass.lpszClassName = L"a";
+	ATOM atom = RegisterClassW(&wndClass);
+	//ATOM atom = RegisterClassExW(&wndClass);
+	error = GetLastError();
+	//CreateWindowW(L"a", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, NULL, NULL);
+	CreateWindowExW(0, L"Message", L"b", 0, 0, 0, 0, 0, NULL, NULL, NULL,
+			NULL);
+	//HMODULE a = GetModuleHandleW(NULL);
+	//CreateWindowExW(0, L"a", L"b", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandleW(NULL), NULL);
+	//CreateWindowExW
+	error = GetLastError();
+	MSG Msg;
+	DWORD process_id;
+	DWORD thread_id = GetWindowThreadProcessId(s->song_hwnd, &process_id);
+	s->hHook = SetWinEventHook(EVENT_OBJECT_NAMECHANGE,
+				   EVENT_OBJECT_NAMECHANGE, NULL, Wineventproc,
+				   0, thread_id, WINEVENT_OUTOFCONTEXT);
+	while (GetMessage(&Msg, NULL, 0, 0))
+		;
+
+	return 0;
+}
+
+void TextSource::Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
+			      HWND hwnd, LONG idObject, LONG idChild,
+			      DWORD idEventThread, DWORD dwmsEventTime)
+{
+	if (idObject == OBJID_WINDOW) {
+
+		const int len = GetWindowTextLengthW(hwnd);
+		if (!len)
+			return;
+		std::unique_ptr<wchar_t> title(new wchar_t[len + 1]);
+		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
+			return;
+		wchar_t* song_name =
+			(TextSource::thread_owner->song_pfunc)(title.get(), len - TextSource::thread_owner->browser_suffix_len);
+		if (song_name == nullptr)
+			song_name = L"";
+		TextSource::thread_owner->set_song_name(song_name);
 	}
 }
 
