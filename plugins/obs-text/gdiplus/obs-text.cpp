@@ -809,9 +809,10 @@ inline void TextSource::Update(obs_data_t *s)
 	else
 		valign = VAlign::Top;
 
+	TextSource::Mode old_mode = mode;
 	if (obs_data_get_bool(s, S_USE_VNR)) {
 		if (VNR_initial()) {
-			if (mode != Mode::vnr) {
+			if (old_mode != Mode::vnr) {
 				++TextSource::vnr_count;
 				mode = Mode::vnr;
 			}
@@ -819,32 +820,33 @@ inline void TextSource::Update(obs_data_t *s)
 			obs_data_set_bool(s, S_USE_VNR, false);
 			goto fallback_to_text_mode;
 		}
+	} else if (obs_data_get_bool(s, S_USE_SONG)) {
+		mode = Mode::song;
+		get_song_name(song.hWnd);
+	} else if (obs_data_get_bool(s, S_USE_FILE)) {
+		mode = Mode::file;
+		file_timestamp = get_modified_timestamp(file);
+		LoadFileText();
 	} else {
-		if (mode == Mode::vnr) { // change from vnr mode
-			--TextSource::vnr_count;
-			TextSource::VNR_cleanup();
-		}
+	fallback_to_text_mode:
+		mode = Mode::text;
+		const char *const new_text = obs_data_get_string(s, S_TEXT);
+		text = to_wide(GetMainString(new_text));
 
-		if (obs_data_get_bool(s, S_USE_FILE)) {
-			mode = Mode::file;
-			file_timestamp = get_modified_timestamp(file);
-			LoadFileText();
-		} else if (obs_data_get_bool(s, S_USE_SONG)) {
-			mode = Mode::song;
-			get_song_name(song.hWnd);
-		} else {
-		fallback_to_text_mode:
-			mode = Mode::text;
-			const char *const new_text =
-				obs_data_get_string(s, S_TEXT);
-			text = to_wide(GetMainString(new_text));
-
-			/* all text should end with newlines due to the fact that GDI+
+		/* all text should end with newlines due to the fact that GDI+
 			* treats strings without newlines differently in terms of
 			* render size */
-			if (!text.empty())
-				text.push_back('\n');
-			RenderText();
+		if (!text.empty())
+			text.push_back('\n');
+		RenderText();
+	}
+	// close resource if mode is unused
+	if (old_mode != mode) {
+		if (old_mode == Mode::vnr) { // change from vnr mode
+			--TextSource::vnr_count;
+			TextSource::VNR_cleanup();
+		} else if (old_mode == Mode::song) {
+			song_close_thread();
 		}
 	}
 
@@ -968,15 +970,19 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 song_found:
 	set_song_name(song_name);
-	song.hWnd = hwnd;
-	if (song.thread_owner == NULL) {
-		TextSource::song.hThread = CreateThread(
-			NULL, 0, song_thread, this, 0, &song.thread_id);
-		if (TextSource::song.hThread) {
-			// I don't need this handle, close it early
-			CloseHandle(song.hThread);
-			song.thread_owner = this;
-		}
+	// To trigger this when you wana switch player, change mode then change mode back to song
+	if (song.hWnd != hwnd) {
+		song.hWnd = hwnd;
+		if (song.thread_owner == NULL) {
+			TextSource::song.hThread = CreateThread(
+				NULL, 0, song_thread, this, 0, &song.thread_id);
+			if (TextSource::song.hThread) {
+				// I don't need this handle, close it early
+				CloseHandle(song.hThread);
+				song.thread_owner = this;
+			}
+		} else
+			song_close_thread();
 	}
 song_not_found:
 	return !!song_name;
@@ -1072,6 +1078,7 @@ DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
 		;
 	UnhookWinEvent(hHook);
 	//CloseHandle(song.hThread);
+	song.hWnd = NULL;
 	song.hThread = NULL;
 	song.thread_owner = nullptr;
 
@@ -1093,6 +1100,8 @@ void TextSource::Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
 		wchar_t *song_name = (song.thread_owner->song.pFunc)(
 			title.get(),
 			len - song.thread_owner->song.browser_suffix_len);
+		// if not found, close thread?
+		// can't handle window close
 		if (song_name == nullptr)
 			song_name = L"";
 		song.thread_owner->set_song_name(song_name);
