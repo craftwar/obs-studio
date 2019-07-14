@@ -43,6 +43,7 @@ using namespace Gdiplus;
 #define VNR_SHM_MUTEX TEXT("Local\\VNR_SHM_MUTEX")
 #define VNR_SHM_EVENT TEXT("Local\\VNR_SHM_EVENT")
 #define VNR_kyob1010_MultipleStream 0
+#define song_thread_version
 
 /* ------------------------------------------------------------------------- */
 
@@ -235,15 +236,17 @@ struct TextSource {
 		typedef wchar_t *(*pFn)(wchar_t *const, size_t);
 		pFn pFunc;
 		HANDLE hThread;
+		DWORD thread_id;
+		TextSource *thread_owner;
 	} song;
 
 	static unsigned char vnr_count;
-	static TextSource *thread_owner;
 	static struct SHM {
 		HANDLE hMapFile;
 		HANDLE hMutex;
 		HANDLE hEvent;
 		HANDLE hThread;
+		TextSource *thread_owner;
 		wchar_t *data;
 	} shm;
 
@@ -302,6 +305,8 @@ struct TextSource {
 		if (mode == Mode::vnr) {
 			--TextSource::vnr_count;
 			TextSource::VNR_cleanup();
+		} else if (mode == Mode::vnr && song.thread_owner != nullptr) {
+			TextSource::song_close_thread();
 		}
 	}
 
@@ -338,6 +343,7 @@ struct TextSource {
 	static void Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
 				 HWND hwnd, LONG idObject, LONG idChild,
 				 DWORD idEventThread, DWORD dwmsEventTime);
+	static void song_close_thread();
 
 	void connect_signal_handler();
 	static void show_handler(void *data, calldata_t *cd);
@@ -351,7 +357,6 @@ struct TextSource {
 };
 struct TextSource::SONG TextSource::song = {};
 unsigned char TextSource::vnr_count = 0;
-TextSource *TextSource::thread_owner = nullptr;
 struct TextSource::SHM TextSource::shm = {};
 
 static time_t get_modified_timestamp(const char *filename)
@@ -874,7 +879,7 @@ inline void TextSource::Tick(float seconds)
 		}
 	} break;
 	case Mode::song:
-		if (song.hThread)
+		if (song.thread_owner)
 			return;
 		if (!get_song_name(song.hWnd)) {
 			::EnumWindows(&TextSource::find_target,
@@ -923,6 +928,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 		return FALSE;
 
+#ifndef song_thread_version
 	if (len > song.browser_suffix_len && song.pFunc) {
 		wchar_t *const song_name = (*song.pFunc)(
 			title.get(), len - song.browser_suffix_len);
@@ -936,6 +942,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 			return TRUE;
 		}
 	}
+#endif
 
 	// Using "else if"s produces bigger binary (why?)
 	song.browser_suffix_len = isBrowser(title.get(), len);
@@ -962,10 +969,14 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 song_found:
 	set_song_name(song_name);
 	song.hWnd = hwnd;
-	if (song.hThread == NULL) {
-		TextSource::song.hThread =
-			CreateThread(NULL, 0, song_thread, this, 0, NULL);
-		TextSource::thread_owner = this;
+	if (song.thread_owner == NULL) {
+		TextSource::song.hThread = CreateThread(
+			NULL, 0, song_thread, this, 0, &song.thread_id);
+		if (TextSource::song.hThread) {
+			// I don't need this handle, close it early
+			CloseHandle(song.hThread);
+			song.thread_owner = this;
+		}
 	}
 song_not_found:
 	return !!song_name;
@@ -1060,7 +1071,9 @@ DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
 	while (GetMessage(&Msg, NULL, 0, 0))
 		;
 	UnhookWinEvent(hHook);
+	//CloseHandle(song.hThread);
 	song.hThread = NULL;
+	song.thread_owner = nullptr;
 
 	return 0;
 }
@@ -1077,13 +1090,18 @@ void TextSource::Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
 		std::unique_ptr<wchar_t> title(new wchar_t[len + 1]);
 		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 			return;
-		wchar_t *song_name = (TextSource::thread_owner->song.pFunc)(
+		wchar_t *song_name = (song.thread_owner->song.pFunc)(
 			title.get(),
-			len - TextSource::thread_owner->song.browser_suffix_len);
+			len - song.thread_owner->song.browser_suffix_len);
 		if (song_name == nullptr)
 			song_name = L"";
-		TextSource::thread_owner->set_song_name(song_name);
+		song.thread_owner->set_song_name(song_name);
 	}
+}
+
+void TextSource::song_close_thread()
+{
+	PostThreadMessageW(song.thread_id, WM_QUIT, 0, 0);
 }
 
 void TextSource::connect_signal_handler()
@@ -1097,28 +1115,39 @@ void TextSource::show_handler(void *data, [[maybe_unused]] calldata_t *cd)
 {
 	//void *a = calldata_ptr(cd, "source");
 	TextSource *const s = reinterpret_cast<TextSource *>(data);
-	if (TextSource::thread_owner != s) {
-		if (s->mode == TextSource::Mode::vnr) {
+	switch (s->mode) {
+	case TextSource::Mode::vnr:
+		if (shm.thread_owner != s) {
 			TextSource::VNR_close_thread();
 			TextSource::shm.hThread =
 				CreateThread(NULL, 0, VNR_thread, s, 0, NULL);
-			if (shm.hThread != NULL)
-				TextSource::thread_owner = s;
-		} else if (s->mode == TextSource::Mode::song)
-			PostThreadMessageW(GetThreadId(song.hThread), WM_QUIT,
-					   0, 0);
+			if (shm.hThread)
+				shm.thread_owner = s;
+		}
+		break;
+	case TextSource::Mode::song:
+		if (song.thread_owner != s)
+			TextSource::song_close_thread();
+		break;
+	default:
+		break;
 	}
 }
 
 void TextSource::hide_handler(void *data, calldata_t *cd)
 {
 	TextSource *const s = reinterpret_cast<TextSource *>(data);
-	if (TextSource::thread_owner == s) {
-		if (s->mode == TextSource::Mode::vnr)
+	switch (s->mode) {
+	case TextSource::Mode::vnr:
+		if (shm.thread_owner == s)
 			TextSource::VNR_close_thread();
-		else if (s->mode == TextSource::Mode::song)
-			PostThreadMessageW(GetThreadId(song.hThread), WM_QUIT,
-					   0, 0);
+		break;
+	case TextSource::Mode::song:
+		if (song.thread_owner == s)
+			TextSource::song_close_thread();
+		break;
+	default:
+		break;
 	}
 }
 
@@ -1174,7 +1203,7 @@ bool TextSource::VNR_initial()
 		if (shm.hThread == NULL)
 			goto SHM_error_clean;
 		else
-			TextSource::thread_owner = this;
+			shm.thread_owner = this;
 	}
 	return true;
 
@@ -1225,8 +1254,8 @@ void TextSource::VNR_close_thread()
 {
 	TerminateThread(TextSource::shm.hThread, 0);
 	CloseHandle(TextSource::shm.hThread);
-	TextSource::thread_owner = nullptr;
 	TextSource::shm.hThread = NULL;
+	TextSource::shm.thread_owner = nullptr;
 }
 
 DWORD WINAPI TextSource::VNR_thread(LPVOID lpParam)
