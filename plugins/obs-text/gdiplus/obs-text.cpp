@@ -970,20 +970,19 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 song_found:
 	set_song_name(song_name);
-	// To trigger this when you wana switch player, change mode then change mode back to song
-	if (song.hWnd != hwnd) {
-		song.hWnd = hwnd;
-		if (song.thread_owner == NULL) {
-			TextSource::song.hThread = CreateThread(
-				NULL, 0, song_thread, this, 0, &song.thread_id);
-			if (TextSource::song.hThread) {
-				// I don't need this handle, close it early
-				CloseHandle(song.hThread);
-				song.thread_owner = this;
-			}
-		} else
-			song_close_thread();
-	}
+	// If you wana switch player, disable then enable song mode again
+	song.hWnd = hwnd;
+	if (song.thread_owner == NULL) {
+		TextSource::song.hThread = CreateThread(
+			NULL, 0, song_thread, this, 0, &song.thread_id);
+		if (TextSource::song.hThread) {
+			// I don't need this handle, close it early
+			CloseHandle(song.hThread);
+			song.thread_owner = this;
+		}
+	} else
+		song_close_thread();
+
 song_not_found:
 	return !!song_name;
 }
@@ -1115,6 +1114,7 @@ void TextSource::song_close_thread()
 
 void TextSource::connect_signal_handler()
 {
+	// trigger oder: show, hide (fixed, not random, defined in OBS internal)
 	signal_handler_t *handler = obs_source_get_signal_handler(this->source);
 	signal_handler_connect(handler, "hide", hide_handler, this);
 	signal_handler_connect(handler, "show", show_handler, this);
@@ -1146,6 +1146,14 @@ void TextSource::show_handler(void *data, [[maybe_unused]] calldata_t *cd)
 void TextSource::hide_handler(void *data, calldata_t *cd)
 {
 	TextSource *const s = reinterpret_cast<TextSource *>(data);
+
+	// maybe if can be deleted, use switch is faster (use if for safty)
+	if (shm.thread_owner == s)
+		TextSource::VNR_close_thread();
+	else if (song.thread_owner == s)
+		TextSource::song_close_thread();
+
+	/* 
 	switch (s->mode) {
 	case TextSource::Mode::vnr:
 		if (shm.thread_owner == s)
@@ -1158,6 +1166,7 @@ void TextSource::hide_handler(void *data, calldata_t *cd)
 	default:
 		break;
 	}
+	*/
 }
 
 #pragma optimize("s", on)
