@@ -59,27 +59,37 @@ using namespace DShow;
 #define TEXT_FORMAT_UNKNOWN obs_module_text("VideoFormat.Unknown")
 #define TEXT_BUFFERING obs_module_text("Buffering")
 #define TEXT_BUFFERING_AUTO obs_module_text("Buffering.AutoDetect")
-#define TEXT_BUFFERING_ON obs_module_text("Buffering.Enable")
-#define TEXT_BUFFERING_OFF obs_module_text("Buffering.Disable")
-#define TEXT_FLIP_IMAGE obs_module_text("FlipVertically")
-#define TEXT_AUDIO_MODE obs_module_text("AudioOutputMode")
-#define TEXT_MODE_CAPTURE obs_module_text("AudioOutputMode.Capture")
-#define TEXT_MODE_DSOUND obs_module_text("AudioOutputMode.DirectSound")
-#define TEXT_MODE_WAVEOUT obs_module_text("AudioOutputMode.WaveOut")
-#define TEXT_CUSTOM_AUDIO obs_module_text("UseCustomAudioDevice")
-#define TEXT_AUDIO_DEVICE obs_module_text("AudioDevice")
-#define TEXT_ACTIVATE obs_module_text("Activate")
-#define TEXT_DEACTIVATE obs_module_text("Deactivate")
-#define TEXT_COLOR_SPACE obs_module_text("ColorSpace")
-#define TEXT_COLOR_DEFAULT obs_module_text("ColorSpace.Default")
-#define TEXT_COLOR_RANGE obs_module_text("ColorRange")
-#define TEXT_RANGE_PARTIAL obs_module_text("ColorRange.Partial")
-#define TEXT_RANGE_FULL obs_module_text("ColorRange.Full")
-#define TEXT_DWNS obs_module_text("DeactivateWhenNotShowing")
+#define TEXT_BUFFERING_ON   obs_module_text("Buffering.Enable")
+#define TEXT_BUFFERING_OFF  obs_module_text("Buffering.Disable")
+#define TEXT_FLIP_IMAGE     obs_module_text("FlipVertically")
+#define TEXT_AUDIO_MODE     obs_module_text("AudioOutputMode")
+#define TEXT_MODE_CAPTURE   obs_module_text("AudioOutputMode.Capture")
+#define TEXT_MODE_DSOUND    obs_module_text("AudioOutputMode.DirectSound")
+#define TEXT_MODE_WAVEOUT   obs_module_text("AudioOutputMode.WaveOut")
+#define TEXT_CUSTOM_AUDIO   obs_module_text("UseCustomAudioDevice")
+#define TEXT_AUDIO_DEVICE   obs_module_text("AudioDevice")
+#define TEXT_ACTIVATE       obs_module_text("Activate")
+#define TEXT_DEACTIVATE     obs_module_text("Deactivate")
+#define TEXT_COLOR_SPACE    obs_module_text("ColorSpace")
+#define TEXT_COLOR_DEFAULT  obs_module_text("ColorSpace.Default")
+#define TEXT_COLOR_RANGE    obs_module_text("ColorRange")
+#define TEXT_RANGE_DEFAULT  obs_module_text("ColorRange.Default")
+#define TEXT_RANGE_PARTIAL  obs_module_text("ColorRange.Partial")
+#define TEXT_RANGE_FULL     obs_module_text("ColorRange.Full")
+#define TEXT_DWNS           obs_module_text("DeactivateWhenNotShowing")
 
-enum ResType { ResType_Preferred, ResType_Custom };
+/* clang-format on */
 
-enum class BufferingType : int64_t { Auto, On, Off };
+enum ResType {
+	ResType_Preferred,
+	ResType_Custom,
+};
+
+enum class BufferingType : int64_t {
+	Auto,
+	On,
+	Off,
+};
 
 void ffmpeg_log(void *bla, int level, const char *msg, va_list args)
 {
@@ -1038,8 +1048,11 @@ DShowInput::GetColorRange(obs_data_t *settings) const
 {
 	const char *range = obs_data_get_string(settings, COLOR_RANGE);
 
-	return astrcmpi(range, "full") == 0 ? VIDEO_RANGE_FULL
-					    : VIDEO_RANGE_PARTIAL;
+	if (astrcmpi(range, "full") == 0)
+		return VIDEO_RANGE_FULL;
+	if (astrcmpi(range, "partial") == 0)
+		return VIDEO_RANGE_PARTIAL;
+	return VIDEO_RANGE_DEFAULT;
 }
 
 inline bool DShowInput::Activate(obs_data_t *settings)
@@ -1128,7 +1141,7 @@ static void GetDShowDefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, VIDEO_FORMAT, (int)VideoFormat::Any);
 	obs_data_set_default_bool(settings, "active", true);
 	obs_data_set_default_string(settings, COLOR_SPACE, "default");
-	obs_data_set_default_string(settings, COLOR_RANGE, "partial");
+	obs_data_set_default_string(settings, COLOR_RANGE, "default");
 	obs_data_set_default_int(settings, AUDIO_OUTPUT_MODE,
 				 (int)AudioMode::Capture);
 }
@@ -1862,6 +1875,7 @@ static obs_properties_t *GetDShowProperties(void *obj)
 	p = obs_properties_add_list(ppts, COLOR_RANGE, TEXT_COLOR_RANGE,
 				    OBS_COMBO_TYPE_LIST,
 				    OBS_COMBO_FORMAT_STRING);
+	obs_property_list_add_string(p, TEXT_RANGE_DEFAULT, "default");
 	obs_property_list_add_string(p, TEXT_RANGE_PARTIAL, "partial");
 	obs_property_list_add_string(p, TEXT_RANGE_FULL, "full");
 
