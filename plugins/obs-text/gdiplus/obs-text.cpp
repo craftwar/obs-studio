@@ -302,11 +302,17 @@ struct TextSource {
 			gs_texture_destroy(tex);
 			obs_leave_graphics();
 		}
-		if (mode == Mode::vnr) {
+		switch (mode) {
+		case Mode::vnr:
 			--TextSource::vnr_count;
 			TextSource::VNR_cleanup();
-		} else if (mode == Mode::vnr && song.thread_owner != nullptr) {
-			TextSource::song_close_thread();
+			break;
+		case Mode::song:
+			if (song.thread_owner == this)
+				TextSource::song_close_thread();
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -331,7 +337,7 @@ struct TextSource {
 	// song players
 	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
 						L" - Google Chrome"};
-	inline static unsigned char isBrowser(wchar_t *const title,
+	static unsigned char isBrowser(wchar_t *const title,
 					      size_t str_len);
 	static wchar_t *get_song_browser_youtube(wchar_t *const title,
 						 size_t str_len);
@@ -349,7 +355,7 @@ struct TextSource {
 	static void show_handler(void *data, calldata_t *cd);
 	static void hide_handler(void *data, calldata_t *cd);
 
-	inline bool VNR_initial();
+	bool VNR_initial();
 	static void VNR_cleanup();
 	static void VNR_close_thread();
 	static DWORD WINAPI VNR_thread(LPVOID lpParam);
@@ -842,11 +848,16 @@ inline void TextSource::Update(obs_data_t *s)
 	}
 	// close resource if mode is unused
 	if (old_mode != mode) {
-		if (old_mode == Mode::vnr) { // change from vnr mode
+		switch (old_mode) {
+		case Mode::song:
+			song_close_thread();
+			break;
+		case Mode::vnr: // change from vnr mode
 			--TextSource::vnr_count;
 			TextSource::VNR_cleanup();
-		} else if (old_mode == Mode::song) {
-			song_close_thread();
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -881,9 +892,7 @@ inline void TextSource::Tick(float seconds)
 		}
 	} break;
 	case Mode::song:
-		if (song.thread_owner)
-			return;
-		if (!get_song_name(song.hWnd)) {
+		if (!song.thread_owner && !get_song_name(song.hWnd)) {
 			::EnumWindows(&TextSource::find_target,
 				      reinterpret_cast<LPARAM>(this));
 		}
@@ -1051,21 +1060,21 @@ void TextSource::set_song_name(const wchar_t *const name)
 	//}
 }
 
-DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
+DWORD __stdcall TextSource::song_thread([[maybe_unused]] LPVOID lpParam)
 {
-	TextSource *s = reinterpret_cast<TextSource *>(lpParam);
-
-	DWORD error;
+	//DWORD error;
 	//WNDCLASSW wndClass = {0};
 	//wndClass.lpfnWndProc = DefWindowProcW;
 	//wndClass.hInstance = GetModuleHandleA("User32.dll");
 	//wndClass.lpszClassName = L"a";
 	//ATOM atom = RegisterClassW(&wndClass);
 	//ATOM atom = RegisterClassExW(&wndClass);
+
 	// use System registered class "Message"
 	// https://docs.microsoft.com/en-us/windows/win32/winmsg/about-window-classes#system
 	CreateWindowW(L"Message", L"", 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
-	error = GetLastError();
+	//error = GetLastError();
+
 	MSG Msg;
 	DWORD process_id;
 	DWORD thread_id = GetWindowThreadProcessId(song.hWnd, &process_id);
@@ -1084,12 +1093,14 @@ DWORD __stdcall TextSource::song_thread(LPVOID lpParam)
 	return 0;
 }
 
-void TextSource::Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
-			      HWND hwnd, LONG idObject, LONG idChild,
-			      DWORD idEventThread, DWORD dwmsEventTime)
+void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
+			      [[maybe_unused]] DWORD event,
+			      [[maybe_unused]] HWND hwnd, LONG idObject,
+			      [[maybe_unused]] LONG idChild,
+			      [[maybe_unused]] DWORD idEventThread,
+			      [[maybe_unused]] DWORD dwmsEventTime)
 {
 	if (idObject == OBJID_WINDOW) {
-
 		const int len = GetWindowTextLengthW(hwnd);
 		if (!len)
 			return;
@@ -1116,8 +1127,8 @@ void TextSource::connect_signal_handler()
 {
 	// trigger oder: show, hide (fixed, not random, defined in OBS internal)
 	signal_handler_t *handler = obs_source_get_signal_handler(this->source);
-	signal_handler_connect(handler, "hide", hide_handler, this);
 	signal_handler_connect(handler, "show", show_handler, this);
+	signal_handler_connect(handler, "hide", hide_handler, this);
 }
 
 void TextSource::show_handler(void *data, [[maybe_unused]] calldata_t *cd)
@@ -1143,7 +1154,7 @@ void TextSource::show_handler(void *data, [[maybe_unused]] calldata_t *cd)
 	}
 }
 
-void TextSource::hide_handler(void *data, calldata_t *cd)
+void TextSource::hide_handler(void *data, [[maybe_unused]] calldata_t *cd)
 {
 	TextSource *const s = reinterpret_cast<TextSource *>(data);
 
