@@ -935,7 +935,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	const int len = GetWindowTextLengthW(hwnd);
 	if (!len)
 		return FALSE;
-	std::unique_ptr<wchar_t> title(new wchar_t[len + 1]);
+	const std::unique_ptr<wchar_t[]> title(new wchar_t[len + 1]);
 	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 		return FALSE;
 
@@ -1104,7 +1104,7 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 		const int len = GetWindowTextLengthW(hwnd);
 		if (!len)
 			return;
-		std::unique_ptr<wchar_t> title(new wchar_t[len + 1]);
+		const std::unique_ptr<wchar_t[]> title(new wchar_t[len + 1]);
 		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 			return;
 		wchar_t *song_name = (song.thread_owner->song.pFunc)(
