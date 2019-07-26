@@ -138,7 +138,7 @@
          <item>
           <widget class="QScrollArea" name="scrollArea_2">
            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+            <enum>QFrame::NoFrame</enum>
            </property>
            <property name="frameShadow">
             <enum>QFrame::Plain</enum>
@@ -151,8 +151,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>808</width>
-              <height>989</height>
+              <width>806</width>
+              <height>1225</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_19">
@@ -291,13 +291,20 @@
                     </widget>
                    </item>
                    <item row="2" column="1">
+                    <widget class="QCheckBox" name="warnBeforeRecordStop">
+                     <property name="text">
+                      <string>Basic.Settings.General.WarnBeforeStoppingRecord</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="3" column="1">
                     <widget class="QCheckBox" name="recordWhenStreaming">
                      <property name="text">
                       <string>Basic.Settings.General.RecordWhenStreaming</string>
                      </property>
                     </widget>
                    </item>
-                   <item row="3" column="1">
+                   <item row="4" column="1">
                     <widget class="QCheckBox" name="keepRecordStreamStops">
                      <property name="enabled">
                       <bool>false</bool>
@@ -307,14 +314,14 @@
                      </property>
                     </widget>
                    </item>
-                   <item row="4" column="1">
+                   <item row="5" column="1">
                     <widget class="QCheckBox" name="replayWhileStreaming">
                      <property name="text">
                       <string>Basic.Settings.General.ReplayBufferWhileStreaming</string>
                      </property>
                     </widget>
                    </item>
-                   <item row="5" column="1">
+                   <item row="6" column="1">
                     <widget class="QCheckBox" name="keepReplayStreamStops">
                      <property name="enabled">
                       <bool>false</bool>
@@ -1159,22 +1166,22 @@
          </property>
          <item>
           <widget class="QScrollArea" name="scrollArea_3">
-           <property name="widgetResizable">
-            <bool>true</bool>
-           </property>
            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+            <enum>QFrame::NoFrame</enum>
            </property>
            <property name="frameShadow">
             <enum>QFrame::Plain</enum>
+           </property>
+           <property name="widgetResizable">
+            <bool>true</bool>
            </property>
            <widget class="QWidget" name="scrollAreaWidgetContents_3">
             <property name="geometry">
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>747</width>
-              <height>808</height>
+              <width>813</width>
+              <height>761</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_21">
@@ -3511,7 +3518,7 @@
                         <item row="0" column="1">
                          <widget class="QSpinBox" name="advRBSecMax">
                           <property name="suffix">
-                           <string notr="true"> sec</string>
+                           <string notr="true"> s</string>
                           </property>
                           <property name="minimum">
                            <number>5</number>
@@ -3608,21 +3615,7 @@
          <item>
           <widget class="QScrollArea" name="scrollArea_50">
            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Plain</enum>
-           </property>
-           <property name="widgetResizable">
-            <bool>true</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>594</width>
-             <height>807</height>
-            </rect>
+            <enum>QFrame::NoFrame</enum>
            </property>
            <property name="frameShadow">
             <enum>QFrame::Plain</enum>
@@ -3635,8 +3628,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>594</width>
-              <height>807</height>
+              <width>767</width>
+              <height>582</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_50">
@@ -4064,7 +4057,7 @@
            </widget>
           </widget>
          </item>
-         <item row="11" column="1">
+         <item>
           <widget class="QLabel" name="audioMsg">
            <property name="text">
             <string notr="true"/>
@@ -4077,7 +4070,7 @@
            </property>
           </widget>
          </item>
-         <item row="12" column="1">
+         <item>
           <widget class="QLabel" name="audioMsg_2">
            <property name="text">
             <string notr="true"/>
@@ -4451,8 +4444,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>765</width>
-              <height>993</height>
+              <width>806</width>
+              <height>933</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_23">
@@ -4895,7 +4888,7 @@
                          </size>
                         </property>
                         <property name="suffix">
-                         <string notr="true">s</string>
+                         <string notr="true"> s</string>
                         </property>
                         <property name="minimum">
                          <number>1</number>
@@ -4989,6 +4982,9 @@
                      </property>
                      <item>
                       <widget class="QSpinBox" name="reconnectRetryDelay">
+                       <property name="suffix">
+                        <string> s</string>
+                       </property>
                        <property name="maximum">
                         <number>30</number>
                        </property>
@@ -5246,6 +5242,7 @@
   <tabstop>openStatsOnStartup</tabstop>
   <tabstop>warnBeforeStreamStart</tabstop>
   <tabstop>warnBeforeStreamStop</tabstop>
+  <tabstop>warnBeforeRecordStop</tabstop>
   <tabstop>recordWhenStreaming</tabstop>
   <tabstop>keepRecordStreamStops</tabstop>
   <tabstop>replayWhileStreaming</tabstop>

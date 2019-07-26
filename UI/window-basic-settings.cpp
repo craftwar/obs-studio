@@ -297,49 +297,51 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 	ui->listWidget->setAttribute(Qt::WA_MacShowFocusRect, false);
 
-	HookWidget(ui->language, COMBO_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->theme, COMBO_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->enableAutoUpdates, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->openStatsOnStartup, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->warnBeforeStreamStart, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->warnBeforeStreamStop, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->hideProjectorCursor, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->projectorAlwaysOnTop, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->recordWhenStreaming, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->keepRecordStreamStops, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->replayWhileStreaming, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->keepReplayStreamStops, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->systemTrayEnabled, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->systemTrayWhenStarted, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->systemTrayAlways, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->saveProjectors, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->snappingEnabled, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->screenSnapping, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->centerSnapping, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->sourceSnapping, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->snapDistance, DSCROLL_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->overflowHide, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->overflowAlwaysVisible, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->overflowSelectionHide, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->doubleClickSwitch, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->studioPortraitLayout, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->prevProgLabelToggle, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->multiviewMouseSwitch, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->multiviewDrawNames, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->multiviewDrawAreas, CHECK_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->multiviewLayout, COMBO_CHANGED, GENERAL_CHANGED);
-	HookWidget(ui->service, COMBO_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->server, COMBO_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->customServer, EDIT_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->key, EDIT_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->bandwidthTestEnable, CHECK_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->useAuth, CHECK_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->authUsername, EDIT_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->authPw, EDIT_CHANGED, STREAM1_CHANGED);
-	HookWidget(ui->outputMode, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutputPath, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleNoSpace, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutRecFormat, COMBO_CHANGED, OUTPUTS_CHANGED);
+	/* clang-format off */
+	HookWidget(ui->language,             COMBO_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->theme, 		     COMBO_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->enableAutoUpdates,    CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->openStatsOnStartup,   CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->warnBeforeStreamStart,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->warnBeforeStreamStop, CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->warnBeforeRecordStop, CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->hideProjectorCursor,  CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->projectorAlwaysOnTop, CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->recordWhenStreaming,  CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->keepRecordStreamStops,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->replayWhileStreaming, CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->keepReplayStreamStops,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->systemTrayEnabled,    CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->systemTrayWhenStarted,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->systemTrayAlways,     CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->saveProjectors,       CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->snappingEnabled,      CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->screenSnapping,       CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->centerSnapping,       CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->sourceSnapping,       CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->snapDistance,         DSCROLL_CHANGED,GENERAL_CHANGED);
+	HookWidget(ui->overflowHide,         CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->overflowAlwaysVisible,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->overflowSelectionHide,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->doubleClickSwitch,    CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->studioPortraitLayout, CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->prevProgLabelToggle,  CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->multiviewMouseSwitch, CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->multiviewDrawNames,   CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->multiviewDrawAreas,   CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->multiviewLayout,      COMBO_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->service,              COMBO_CHANGED,  STREAM1_CHANGED);
+	HookWidget(ui->server,               COMBO_CHANGED,  STREAM1_CHANGED);
+	HookWidget(ui->customServer,         EDIT_CHANGED,   STREAM1_CHANGED);
+	HookWidget(ui->key,                  EDIT_CHANGED,   STREAM1_CHANGED);
+	HookWidget(ui->bandwidthTestEnable,  CHECK_CHANGED,  STREAM1_CHANGED);
+	HookWidget(ui->useAuth,              CHECK_CHANGED,  STREAM1_CHANGED);
+	HookWidget(ui->authUsername,         EDIT_CHANGED,   STREAM1_CHANGED);
+	HookWidget(ui->authPw,               EDIT_CHANGED,   STREAM1_CHANGED);
+	HookWidget(ui->outputMode,           COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutputPath,     EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->simpleNoSpace,        CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutRecFormat,   COMBO_CHANGED,  OUTPUTS_CHANGED);
 	HookWidget(ui->simpleOutputVBitrate, SCROLL_CHANGED, OUTPUTS_CHANGED);
 	HookWidget(ui->simpleOutStrEncoder, COMBO_CHANGED, OUTPUTS_CHANGED);
 	HookWidget(ui->simpleOutputABitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
@@ -1116,6 +1118,10 @@ void OBSBasicSettings::LoadGeneralSettings()
 	bool warnBeforeStreamStop = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "WarnBeforeStoppingStream");
 	ui->warnBeforeStreamStop->setChecked(warnBeforeStreamStop);
+
+	bool warnBeforeRecordStop = config_get_bool(
+		GetGlobalConfig(), "BasicWindow", "WarnBeforeStoppingRecord");
+	ui->warnBeforeRecordStop->setChecked(warnBeforeRecordStop);
 
 	bool hideProjectorCursor = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "HideProjectorCursor");
@@ -2756,6 +2762,9 @@ void OBSBasicSettings::SaveGeneralSettings()
 	config_set_bool(GetGlobalConfig(), "BasicWindow",
 			"WarnBeforeStoppingStream",
 			ui->warnBeforeStreamStop->isChecked());
+	config_set_bool(GetGlobalConfig(), "BasicWindow",
+			"WarnBeforeStoppingRecord",
+			ui->warnBeforeRecordStop->isChecked());
 
 	config_set_bool(GetGlobalConfig(), "BasicWindow", "HideProjectorCursor",
 			ui->hideProjectorCursor->isChecked());

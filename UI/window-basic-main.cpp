@@ -5677,6 +5677,20 @@ void OBSBasic::on_streamButton_clicked()
 void OBSBasic::on_recordButton_clicked()
 {
 	if (outputHandler->RecordingActive()) {
+		bool confirm = config_get_bool(GetGlobalConfig(), "BasicWindow",
+					       "WarnBeforeStoppingRecord");
+
+		if (confirm && isVisible()) {
+			QMessageBox::StandardButton button =
+				OBSMessageBox::question(
+					this, QTStr("ConfirmStopRecord.Title"),
+					QTStr("ConfirmStopRecord.Text"));
+
+			if (button == QMessageBox::No) {
+				ui->recordButton->setChecked(true);
+				return;
+			}
+		}
 		StopRecording();
 	} else {
 		if (!NoSourcesConfirmation()) {
@@ -7232,8 +7246,7 @@ void OBSBasic::on_actionShowAbout_triggered()
 
 void OBSBasic::ResizeOutputSizeOfSource()
 {
-	if (ui->streamButton->isChecked() || ui->recordButton->isChecked() ||
-	    (replayBufferButton && replayBufferButton->isChecked()))
+	if (obs_video_active())
 		return;
 
 	QMessageBox resize_output(this);
