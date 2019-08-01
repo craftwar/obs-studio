@@ -31,6 +31,8 @@ using namespace Gdiplus;
 		val = max_val;
 #endif
 
+#define STRCMP_CONST(str, const_str) memcmp(str, const_str, sizeof(const_str))
+
 #define MIN_SIZE_CX 2
 #define MIN_SIZE_CY 2
 #define MAX_SIZE_CX 16384
@@ -337,8 +339,7 @@ struct TextSource {
 	// song players
 	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
 						L" - Google Chrome"};
-	static unsigned char isBrowser(wchar_t *const title,
-					      size_t str_len);
+	static unsigned char isBrowser(wchar_t *const title, size_t str_len);
 	static wchar_t *get_song_browser_youtube(wchar_t *const title,
 						 size_t str_len);
 	static wchar_t *get_song_foobar2000(wchar_t *const title,
@@ -801,16 +802,16 @@ inline void TextSource::Update(obs_data_t *s)
 		opacity2 = opacity;
 	}
 
-	if (strcmp(align_str, S_ALIGN_CENTER) == 0)
+	if (STRCMP_CONST(align_str, S_ALIGN_CENTER) == 0)
 		align = Align::Center;
-	else if (strcmp(align_str, S_ALIGN_RIGHT) == 0)
+	else if (STRCMP_CONST(align_str, S_ALIGN_RIGHT) == 0)
 		align = Align::Right;
 	else
 		align = Align::Left;
 
-	if (strcmp(valign_str, S_VALIGN_CENTER) == 0)
+	if (STRCMP_CONST(valign_str, S_VALIGN_CENTER) == 0)
 		valign = VAlign::Center;
-	else if (strcmp(valign_str, S_VALIGN_BOTTOM) == 0)
+	else if (STRCMP_CONST(valign_str, S_VALIGN_BOTTOM) == 0)
 		valign = VAlign::Bottom;
 	else
 		valign = VAlign::Top;
@@ -1042,6 +1043,7 @@ wchar_t *TextSource::get_song_foobar2000(wchar_t *const title, size_t str_len)
 
 wchar_t *TextSource::get_song_osu(wchar_t *const title, size_t str_len)
 {
+	// E0144 if I give 7 elements only. compile pass? no null or overflow?
 	static constexpr wchar_t app[] = L"osu!  -";
 	constexpr unsigned char app_len = sizeof(app) / sizeof(*app) - 1;
 	if (str_len > app_len && (wmemcmp(title, app, app_len) == 0))
@@ -1052,12 +1054,10 @@ wchar_t *TextSource::get_song_osu(wchar_t *const title, size_t str_len)
 
 void TextSource::set_song_name(const wchar_t *const name)
 {
-	// unnecessary in song_thread version
-	//if (text.compare(name)) {
+	// no cmp in song_thread version
 	text = name;
 	text.push_back('\n');
 	RenderText();
-	//}
 }
 
 DWORD __stdcall TextSource::song_thread([[maybe_unused]] LPVOID lpParam)
