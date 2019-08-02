@@ -130,7 +130,7 @@ void get_window_class(struct dstr *class, HWND hwnd)
 static const char *internal_microsoft_exes[] = {
 	"applicationframehost",
 	"shellexperiencehost",
-	"windowsInternal",
+	"windowsinternal",
 	"winstore.app",
 	"searchui",
 	"lockapp",

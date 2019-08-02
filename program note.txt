@@ -1,0 +1,40 @@
+***This is not for user reading
+
+	autoupdate
+locale string => Basic.Settings.General.EnableAutoUpdates
+	to disable autoupdate
+UI/window-basic-main.cpp
+don't let ui call TimedCheckForUpdates();
+
+	disable update more
+void OBSBasic::CheckForUpdates(bool manualUpdate)
+
+	libobs
+		util
+			base.c
+
+astrcmpi_n
+
+cmake
+-DDISABLE_DECKLINK=true
+-DBUILDER_CA_ENCODER=false會被無視，只能直接改
+\plugins
+\UI 拿掉frontend-plugins
+
+
+\obs-studio\plugins\win-capture\
+window-helpers.c
+PSAPI_VERSION=1拿掉，用新版PSAPI要win7以後系統才能用 (改用kernel function，效能較好)
+雖然新版OS只是jump到kernel function?
+
+game-capture.c
+static const char *blacklisted_exes[]  拿掉firefox黑名單 (抓firefox會出事嗎?)
+chrome無法用game capture，放回黑名單 (win7 ok, win10 fail)
+
+
+CMakeLists.txt加入Windows target參數 (已移除官方沒用，我也不用了，應該會自動抓build system用latest?)
+
+obs-studio\UI\obs-app.cpp 版本加入craftwar識別
+
+disable intro startup page(要把updater加回去，太麻煩，custom build應該也不需要)
+https://github.com/obsproject/obs-studio/commit/a032bcc798272f65dd01acb2235685346dc18628
