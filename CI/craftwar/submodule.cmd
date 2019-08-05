@@ -1,4 +1,4 @@
-if "%favor_arch%"=="blend" (
+if "%vc_inc_arch%"=="SSE2" (
 	cd ..
 	mv obs-studio obs-studio-craftwar
 	git clone -q --branch=master https://github.com/obsproject/obs-studio.git C:\projects\obs-studio
@@ -20,7 +20,7 @@ if "%favor_arch%"=="blend" (
 	move /Y C:\projects\obs-studio-craftwar\plugins\obs-text\gdiplus\obs-text.cpp C:\projects\obs-studio\plugins\obs-text\gdiplus\obs-text.cpp
 	move /Y C:\projects\obs-studio-craftwar\UI\obs-app.* C:\projects\obs-studio\UI
 :: -r, --regexp-extended, basic re (BRE) treat () as plain text, use \( if you want grouping
-	"C:\Program Files\Git\usr\bin\sed.exe" -i "s/(by craftwar)/(blend, by craftwar)/" /C/projects/obs-studio/UI/obs-app.cpp
+	"C:\Program Files\Git\usr\bin\sed.exe" -i "s/(by craftwar)/(%favor_arch:~0,-2%, by craftwar)/" /C/projects/obs-studio/UI/obs-app.cpp
 	"C:\Program Files\Git\usr\bin\sed.exe" -i "/TimedCheckForUpdates();/d" /C/projects/obs-studio/UI/window-basic-main.cpp
 	move /Y C:\projects\obs-studio-craftwar\CI\craftwar C:\projects\obs-studio\CI\craftwar
 	move /Y C:\projects\obs-studio-craftwar\CI\before-deploy-win.cmd C:\projects\obs-studio\CI\before-deploy-win.cmd

@@ -4,7 +4,7 @@ set cdn_root=https://cdn-fastly.obsproject.com/update_studio
 set gc_dir=data/obs-plugins/win-capture
 set cdn_gc_url=%cdn_root%/core/%gc_dir%
 
-if "%favor_arch%"=="blend" (
+if "%vc_inc_arch%"=="SSE2" (
 	mkdir Jim_OBS\data\obs-plugins\win-capture\
 	pushd Jim_OBS\data\obs-plugins\win-capture\
 

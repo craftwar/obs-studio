@@ -1,4 +1,4 @@
-if "%favor_arch%"=="blend" (
+if "%vc_inc_arch%"=="SSE2" (
 	vcpkg install speexdsp:x64-windows-static
 :: delete ffmpeg dlls
 ::	del /Q C:\projects\obs-studio\old_dep\win64\bin\av*.*

@@ -28,7 +28,9 @@ environment:
   matrix:
     - favor_arch: AMD64
     - favor_arch: INTEL64
-    - favor_arch: blend
+    - favor_arch: AMD64
+      vc_inc_arch: SSE2
+    - favor_arch: INTEL64
       vc_inc_arch: SSE2
 #      D3D12_HOOK: true
 # setting rdp passoword never works
@@ -43,12 +45,13 @@ install:
   - git fetch --tags --prune https://github.com/obsproject/obs-studio.git # get tags from official obs
   - if exist dependencies2017.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
   #- set VCdeps_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps-blend.7z?job=Environment%3A%20favor_arch%3D%favor_arch%
-  - set VCdeps_url=https://github.com/craftwar/obs-deps/releases/download/git/VCdeps-%favor_arch%.7z
-  - if exist VCdeps-%favor_arch%.7z (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -z VCdeps-%favor_arch%.7z) else (curl -kLo VCdeps-%favor_arch%.7z %VCdeps_url% -f --retry 5 -C -)
+  - set VCdeps_file=VCdeps-%favor_arch%-%vc_inc_arch%.7z
+  - set VCdeps_url=https://github.com/craftwar/obs-deps/releases/download/git/%VCdeps_file%
+  - if exist %VCdeps_file% (curl -kLo %VCdeps_file% %VCdeps_url% -f --retry 5 -z %VCdeps_file%) else (curl -kLo %VCdeps_file% %VCdeps_url% -f --retry 5 -C -)
 
 # for 32bit cmake run
   - 7z x dependencies2017.zip -oold_dep
-  - 7z x VCdeps-%favor_arch%.7z -odependencies2017
+  - 7z x %VCdeps_file% -odependencies2017
 # update nvenc related headers
   - move /Y dependencies2017\Win64\include\ffnvcodec\*.h "C:\projects\\%APPVEYOR_PROJECT_NAME%\plugins\obs-ffmpeg"
   - set DepsPath32=%CD%\old_dep\win32
@@ -74,7 +77,7 @@ install:
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
   - '"C:\Program Files\Git\usr\bin\sed.exe" -i "s/CRT_LINKAGE static/CRT_LINKAGE dynamic/" /c/tools/vcpkg/triplets/x64-windows-static.cmake' #patch to dynamic crt
   - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows-static.cmake
-  - if NOT "%favor_arch%"=="blend" vcpkg install jansson:x64-windows-static
+  - if NOT "%vc_inc_arch%"=="SSE2" vcpkg install jansson:x64-windows-static
   - vcpkg install zlib:x64-windows
   - copy /Y dependencies2017\win64\lib\zlib.lib C:\tools\vcpkg\installed\x64-windows\lib\
   - copy /Y dependencies2017\win64\bin\zlib.dll C:\tools\vcpkg\installed\x64-windows\bin\
@@ -100,10 +103,10 @@ build_script:
 # back to project root
   - cd ..
   - C:\projects\obs-studio\CI\before-deploy-win.cmd
-  - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-${env:favor_arch}.7z"
-  - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text-${env:favor_arch}.dll"
+  - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-${env:favor_arch}-${env:vc_inc_arch}.7z"
+  - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text-${env:favor_arch}-${env:vc_inc_arch}.dll"
   - set release=%APPVEYOR_REPO_COMMIT:~0,7%
-#  - C:\projects\obs-studio\CI\craftwar\obs-text-blend.cmd
+  - if "%vc_inc_arch%"=="AVX2" C:\projects\obs-studio\CI\craftwar\obs-text-blend.cmd
 
 deploy:
   - provider: GitHub
@@ -121,8 +124,8 @@ test: off
 cache:
   - C:\tools\vcpkg\installed\ -> appveyor.yml
   - dependencies2017.zip
-  - 'VCdeps-%favor_arch%.7z'
-# for blend  
+  - '%VCdeps_file%'
+# for SSE2
   - vlc.zip
   - 'cef_binary_%CEF_VERSION%_windows64.zip'
   - Jim_OBS
