@@ -32,6 +32,8 @@ using namespace Gdiplus;
 #endif
 
 #define STRCMP_CONST(str, const_str) memcmp(str, const_str, sizeof(const_str))
+// this applys to L"12345" too
+#define WSTRLEN_CONST(str) (sizeof(str) / sizeof(*str) - 1)
 
 #define MIN_SIZE_CX 2
 #define MIN_SIZE_CY 2
@@ -339,7 +341,7 @@ struct TextSource {
 	// song players
 	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
 						L" - Google Chrome"};
-	static unsigned char isBrowser(wchar_t *const title, size_t str_len);
+	static unsigned char isBrowser(wchar_t *const title, size_t title_len);
 	static wchar_t *get_song_browser_youtube(wchar_t *const title,
 						 size_t str_len);
 	static wchar_t *get_song_foobar2000(wchar_t *const title,
@@ -997,23 +999,19 @@ song_not_found:
 	return !!song_name;
 }
 
-// reutrn endString length or 0
-unsigned char wcs_endWith(wchar_t *str, wchar_t *strSearch, size_t str_len)
+bool wcs_endWith(wchar_t *str, wchar_t *suffixStr, size_t str_len,
+		 size_t suffix_len)
 {
-	const size_t suffix_len = wcslen(strSearch);
-	if ((str_len > suffix_len) &&
-	    (wmemcmp(str + str_len - suffix_len, strSearch, suffix_len) == 0))
-		return suffix_len;
-
-	return 0;
+	return (str_len > suffix_len) && (wmemcmp(str + str_len - suffix_len,
+						  suffixStr, suffix_len) == 0);
 }
 
-unsigned char TextSource::isBrowser(wchar_t *const title, size_t str_len)
+unsigned char TextSource::isBrowser(wchar_t *const title, size_t title_len)
 {
 	for (auto &brower : TextSource::browsers) {
-		const unsigned char len = wcs_endWith(title, brower, str_len);
-		if (len)
-			return len;
+		const size_t suffix_len = wcslen(brower);
+		if (wcs_endWith(title, brower, title_len, suffix_len))
+			return suffix_len;
 	}
 	return 0;
 }
@@ -1021,9 +1019,10 @@ unsigned char TextSource::isBrowser(wchar_t *const title, size_t str_len)
 wchar_t *TextSource::get_song_browser_youtube(wchar_t *const title,
 					      size_t str_len)
 {
-	const unsigned char len = wcs_endWith(title, L"- YouTube", str_len);
-	if (len) {
-		*(title + str_len - len - 1) =
+	static wchar_t app[] = L"- YouTube";
+	constexpr unsigned char app_len = WSTRLEN_CONST(app);
+	if (wcs_endWith(title, app, str_len, app_len)) {
+		title[str_len - app_len - 1] =
 			'\0'; // remove 1 space before suffix
 		return title;
 	}
@@ -1032,20 +1031,22 @@ wchar_t *TextSource::get_song_browser_youtube(wchar_t *const title,
 
 wchar_t *TextSource::get_song_foobar2000(wchar_t *const title, size_t str_len)
 {
-	const unsigned char len = wcs_endWith(title, L"[foobar2000]", str_len);
-	if (len) {
-		*(title + str_len - len - 1) =
+	static wchar_t app[] = L"[foobar2000]";
+	constexpr unsigned char app_len = WSTRLEN_CONST(app);
+	if (wcs_endWith(title, app, str_len, app_len)) {
+		title[str_len - app_len - 1] =
 			'\0'; // remove 1 space before suffix
 		return title;
 	}
 	return nullptr;
 }
 
+// startWith case
 wchar_t *TextSource::get_song_osu(wchar_t *const title, size_t str_len)
 {
 	// E0144 if I give 7 elements only. compile pass? no null or overflow?
 	static constexpr wchar_t app[] = L"osu!  -";
-	constexpr unsigned char app_len = sizeof(app) / sizeof(*app) - 1;
+	constexpr unsigned char app_len = WSTRLEN_CONST(app);
 	if (str_len > app_len && (wmemcmp(title, app, app_len) == 0))
 		return title + app_len + 1; // skip 1 space after prefix
 
