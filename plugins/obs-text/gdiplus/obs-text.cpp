@@ -329,6 +329,7 @@ struct TextSource {
 			       const Brush &brush);
 	void RenderText();
 	void LoadFileText();
+	void TransformText();
 
 	const char *GetMainString(const char *str);
 
@@ -615,11 +616,6 @@ void TextSource::RenderOutlineText(Graphics &graphics, const GraphicsPath &path,
 
 void TextSource::RenderText()
 {
-	if (text_transform == S_TRANSFORM_UPPERCASE)
-		transform(text.begin(), text.end(), text.begin(), towupper);
-	else if (text_transform == S_TRANSFORM_LOWERCASE)
-		transform(text.begin(), text.end(), text.begin(), towlower);
-
 	StringFormat format(StringFormat::GenericTypographic());
 	Status stat;
 
@@ -737,6 +733,14 @@ void TextSource::LoadFileText()
 	if (!text.empty() && text.back() != '\n')
 		text.push_back('\n');
 	RenderText();
+}
+
+void TextSource::TransformText()
+{
+	if (text_transform == S_TRANSFORM_UPPERCASE)
+		transform(text.begin(), text.end(), text.begin(), towupper);
+	else if (text_transform == S_TRANSFORM_LOWERCASE)
+		transform(text.begin(), text.end(), text.begin(), towlower);
 }
 
 #define obs_data_get_uint32 (uint32_t) obs_data_get_int
@@ -863,6 +867,7 @@ inline void TextSource::Update(obs_data_t *s)
 			break;
 		}
 	}
+	TransformText();
 
 	update_time_elapsed = 0.0f;
 
@@ -892,6 +897,7 @@ inline void TextSource::Tick(float seconds)
 		if (file_timestamp != t) {
 			file_timestamp = t;
 			LoadFileText();
+			TransformText();
 		}
 	} break;
 	case Mode::song:

@@ -1330,6 +1330,9 @@ void OBSBasicSettings::LoadDownscaleFilters()
 	ui->downscaleFilter->addItem(
 		QTStr("Basic.Settings.Video.DownscaleFilter.Lanczos"),
 		QT_UTF8("lanczos"));
+	ui->downscaleFilter->addItem(
+		QTStr("Basic.Settings.Video.DownscaleFilter.Area"),
+		QT_UTF8("area"));
 
 	const char *scaleType =
 		config_get_string(main->Config(), "Video", "ScaleType");
@@ -1338,6 +1341,8 @@ void OBSBasicSettings::LoadDownscaleFilters()
 		ui->downscaleFilter->setCurrentIndex(0);
 	else if (astrcmpi(scaleType, "lanczos") == 0)
 		ui->downscaleFilter->setCurrentIndex(2);
+	else if (astrcmpi(scaleType, "area") == 0)
+		ui->downscaleFilter->setCurrentIndex(3);
 	else
 		ui->downscaleFilter->setCurrentIndex(1);
 }
