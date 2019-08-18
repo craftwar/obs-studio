@@ -198,6 +198,9 @@ if(MSVC)
 		../deps/libff/libff/ff-util.c
 		PROPERTIES COMPILE_FLAGS -Dinline=__inline
 		)
+	set(obs_PLATFORM_LIBRARIES
+		${obs_PLATFORM_LIBRARIES}
+		w32-pthreads)
 endif()
 
 set(obs_SOURCES

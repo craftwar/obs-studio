@@ -78,7 +78,7 @@ void VolControl::updateText()
 	float db = obs_fader_get_db(obs_fader);
 
 	if (db < -96.0f)
-		text = "-" + QT_UTF8("\u221E") + " dB";
+		text = "-inf dB";
 	else
 		text = QString::number(db, 'f', 1).append(" dB");
 
@@ -514,6 +514,7 @@ void VolumeMeter::setPeakMeterType(enum obs_peak_meter_type peakMeterType)
 void VolumeMeter::mousePressEvent(QMouseEvent *event)
 {
 	setFocus(Qt::MouseFocusReason);
+	event->accept();
 }
 
 void VolumeMeter::wheelEvent(QWheelEvent *event)
