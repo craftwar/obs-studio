@@ -756,17 +756,19 @@ static bool obs_qsv_encode(void *data, struct encoder_frame *frame,
 	return true;
 }
 
-struct obs_encoder_info obs_qsv_encoder = {.id = "obs_qsv11",
-					   .type = OBS_ENCODER_VIDEO,
-					   .codec = "h264",
-					   .get_name = obs_qsv_getname,
-					   .create = obs_qsv_create,
-					   .destroy = obs_qsv_destroy,
-					   .encode = obs_qsv_encode,
-					   .update = obs_qsv_update,
-					   .get_properties = obs_qsv_props,
-					   .get_defaults = obs_qsv_defaults,
-					   .get_extra_data = obs_qsv_extra_data,
-					   .get_sei_data = obs_qsv_sei,
-					   .get_video_info =
-						   obs_qsv_video_info};
+struct obs_encoder_info obs_qsv_encoder = {
+	.id = "obs_qsv11",
+	.type = OBS_ENCODER_VIDEO,
+	.codec = "h264",
+	.get_name = obs_qsv_getname,
+	.create = obs_qsv_create,
+	.destroy = obs_qsv_destroy,
+	.encode = obs_qsv_encode,
+	.update = obs_qsv_update,
+	.get_properties = obs_qsv_props,
+	.get_defaults = obs_qsv_defaults,
+	.get_extra_data = obs_qsv_extra_data,
+	.get_sei_data = obs_qsv_sei,
+	.get_video_info = obs_qsv_video_info,
+	.caps = OBS_ENCODER_CAP_DYN_BITRATE,
+};

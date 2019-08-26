@@ -464,6 +464,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->enableLowLatencyMode, CHECK_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->hotkeyFocusType,      COMBO_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->autoRemux,            CHECK_CHANGED,  ADV_CHANGED);
+	HookWidget(ui->dynBitrate,           CHECK_CHANGED,  ADV_CHANGED);
 	/* clang-format on */
 
 #define ADD_HOTKEY_FOCUS_TYPE(s)      \
@@ -1335,14 +1336,14 @@ void OBSBasicSettings::LoadDownscaleFilters()
 		QTStr("Basic.Settings.Video.DownscaleFilter.Bilinear"),
 		QT_UTF8("bilinear"));
 	ui->downscaleFilter->addItem(
+		QTStr("Basic.Settings.Video.DownscaleFilter.Area"),
+		QT_UTF8("area"));
+	ui->downscaleFilter->addItem(
 		QTStr("Basic.Settings.Video.DownscaleFilter.Bicubic"),
 		QT_UTF8("bicubic"));
 	ui->downscaleFilter->addItem(
 		QTStr("Basic.Settings.Video.DownscaleFilter.Lanczos"),
 		QT_UTF8("lanczos"));
-	ui->downscaleFilter->addItem(
-		QTStr("Basic.Settings.Video.DownscaleFilter.Area"),
-		QT_UTF8("area"));
 
 	const char *scaleType =
 		config_get_string(main->Config(), "Video", "ScaleType");
@@ -1350,11 +1351,11 @@ void OBSBasicSettings::LoadDownscaleFilters()
 	if (astrcmpi(scaleType, "bilinear") == 0)
 		ui->downscaleFilter->setCurrentIndex(0);
 	else if (astrcmpi(scaleType, "lanczos") == 0)
-		ui->downscaleFilter->setCurrentIndex(2);
-	else if (astrcmpi(scaleType, "area") == 0)
 		ui->downscaleFilter->setCurrentIndex(3);
-	else
+	else if (astrcmpi(scaleType, "area") == 0)
 		ui->downscaleFilter->setCurrentIndex(1);
+	else
+		ui->downscaleFilter->setCurrentIndex(2);
 }
 
 void OBSBasicSettings::LoadResolutionLists()
@@ -2262,6 +2263,8 @@ void OBSBasicSettings::LoadAdvancedSettings()
 	bool autoRemux = config_get_bool(main->Config(), "Video", "AutoRemux");
 	const char *hotkeyFocusType = config_get_string(
 		App()->GlobalConfig(), "General", "HotkeyFocusType");
+	bool dynBitrate =
+		config_get_bool(main->Config(), "Output", "DynamicBitrate");
 
 	loading = true;
 
@@ -2289,6 +2292,7 @@ void OBSBasicSettings::LoadAdvancedSettings()
 	ui->streamDelayPreserve->setChecked(preserveDelay);
 	ui->streamDelayEnable->setChecked(enableDelay);
 	ui->autoRemux->setChecked(autoRemux);
+	ui->dynBitrate->setChecked(dynBitrate);
 
 	SetComboByName(ui->colorFormat, videoColorFormat);
 	SetComboByName(ui->colorSpace, videoColorSpace);
@@ -2985,6 +2989,7 @@ void OBSBasicSettings::SaveAdvancedSettings()
 	SaveSpinBox(ui->reconnectMaxRetries, "Output", "MaxRetries");
 	SaveComboData(ui->bindToIP, "Output", "BindIP");
 	SaveCheckBox(ui->autoRemux, "Video", "AutoRemux");
+	SaveCheckBox(ui->dynBitrate, "Output", "DynamicBitrate");
 
 #if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
 	QString newDevice = ui->monitoringDevice->currentData().toString();

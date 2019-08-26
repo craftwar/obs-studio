@@ -942,15 +942,18 @@ void encoder_list_destroy()
 
 void register_encoders()
 {
-	struct obs_encoder_info info = {.type = OBS_ENCODER_VIDEO,
-					.codec = "h264",
-					.destroy = vt_h264_destroy,
-					.encode = vt_h264_encode,
-					.update = vt_h264_update,
-					.get_properties = vt_h264_properties,
-					.get_defaults = vt_h264_defaults,
-					.get_video_info = vt_h264_video_info,
-					.get_extra_data = vt_h264_extra_data};
+	struct obs_encoder_info info = {
+		.type = OBS_ENCODER_VIDEO,
+		.codec = "h264",
+		.destroy = vt_h264_destroy,
+		.encode = vt_h264_encode,
+		.update = vt_h264_update,
+		.get_properties = vt_h264_properties,
+		.get_defaults = vt_h264_defaults,
+		.get_video_info = vt_h264_video_info,
+		.get_extra_data = vt_h264_extra_data,
+		.caps = OBS_ENCODER_CAP_DYN_BITRATE,
+	};
 
 	for (size_t i = 0; i < vt_encoders.num; i++) {
 		if (strcmp(vt_encoders.array[i].id, APPLE_H264_ENC_ID_HW) ==
