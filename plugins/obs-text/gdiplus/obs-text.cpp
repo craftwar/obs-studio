@@ -34,6 +34,7 @@ using namespace Gdiplus;
 #define STRCMP_CONST(str, const_str) memcmp(str, const_str, sizeof(const_str))
 // this applys to L"12345" too
 #define WSTRLEN_CONST(str) (sizeof(str) / sizeof(*str) - 1)
+#define WCSCPY_CONST(str, const_str) wmemcpy(str, const_str, sizeof(const_str)/sizeof(*const_str))
 
 #define MIN_SIZE_CX 2
 #define MIN_SIZE_CY 2
@@ -42,10 +43,10 @@ using namespace Gdiplus;
 
 #define MAX_AREA (4096LL * 4096LL)
 
-#define VNR_SHM_SIZE 1024
-#define VNR_SHM TEXT("Local\\VNR_PlotText")
-#define VNR_SHM_MUTEX TEXT("Local\\VNR_SHM_MUTEX")
-#define VNR_SHM_EVENT TEXT("Local\\VNR_SHM_EVENT")
+static const DWORD VNR_SHM_SIZE = 1024;
+static const char VNR_SHM[] = "Local\\VNR_PlotText";
+static const char VNR_SHM_MUTEX[] = "Local\\VNR_SHM_MUTEX";
+static const char VNR_SHM_EVENT[] = "Local\\VNR_SHM_EVENT";
 #define VNR_kyob1010_MultipleStream 0
 #define song_thread_version
 
@@ -320,7 +321,7 @@ struct TextSource {
 		}
 	}
 
-	void UpdateFont();
+	inline void UpdateFont();
 	void GetStringFormat(StringFormat &format);
 	void RemoveNewlinePadding(const StringFormat &format, RectF &box);
 	void CalculateTextSizes(const StringFormat &format, RectF &bounding_box,
@@ -377,7 +378,7 @@ static time_t get_modified_timestamp(const char *filename)
 	return stats.st_mtime;
 }
 
-void TextSource::UpdateFont()
+inline void TextSource::UpdateFont()
 {
 	hfont = nullptr;
 	font.reset(nullptr);
@@ -400,7 +401,7 @@ void TextSource::UpdateFont()
 	}
 
 	if (!hfont) {
-		wcscpy(lf.lfFaceName, L"Arial");
+		WCSCPY_CONST(lf.lfFaceName, L"Arial");
 		hfont = CreateFontIndirect(&lf);
 	}
 
@@ -1005,7 +1006,7 @@ song_not_found:
 	return !!song_name;
 }
 
-bool wcs_endWith(wchar_t *str, wchar_t *suffixStr, size_t str_len,
+static bool wcs_endWith(wchar_t *str, wchar_t *suffixStr, size_t str_len,
 		 size_t suffix_len)
 {
 	return (str_len > suffix_len) && (wmemcmp(str + str_len - suffix_len,
@@ -1191,12 +1192,12 @@ void TextSource::hide_handler(void *data, [[maybe_unused]] calldata_t *cd)
 bool TextSource::VNR_initial()
 {
 	if (shm.hThread == NULL) {
-		shm.hMapFile = OpenFileMapping(
+		shm.hMapFile = OpenFileMappingA(
 			FILE_MAP_ALL_ACCESS, // read/write access
 			FALSE,               // do not inherit the name
 			VNR_SHM);            // name of mapping object
 		if (shm.hMapFile == NULL) {
-			shm.hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE,
+			shm.hMapFile = CreateFileMappingA(INVALID_HANDLE_VALUE,
 							 NULL, PAGE_READWRITE,
 							 0, VNR_SHM_SIZE,
 							 VNR_SHM);
@@ -1216,17 +1217,17 @@ bool TextSource::VNR_initial()
 		// the operating system paging file are 0 (zero).
 
 		TextSource::shm.hMutex =
-			OpenMutex(SYNCHRONIZE, FALSE, VNR_SHM_MUTEX);
+			OpenMutexA(SYNCHRONIZE, FALSE, VNR_SHM_MUTEX);
 		if (shm.hMutex == NULL) {
-			shm.hMutex = CreateMutex(NULL, false, VNR_SHM_MUTEX);
+			shm.hMutex = CreateMutexA(NULL, false, VNR_SHM_MUTEX);
 			if (shm.hMutex == NULL)
 				goto SHM_error_clean;
 		}
-		TextSource::shm.hEvent = OpenEvent(
+		TextSource::shm.hEvent = OpenEventA(
 			SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, VNR_SHM_EVENT);
 		if (shm.hEvent == NULL) {
 			shm.hEvent =
-				CreateEvent(NULL, true, false, VNR_SHM_EVENT);
+				CreateEventA(NULL, true, false, VNR_SHM_EVENT);
 			if (shm.hEvent == NULL)
 				goto SHM_error_clean;
 		}
