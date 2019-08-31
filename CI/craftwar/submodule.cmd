@@ -5,11 +5,11 @@ if "%vc_inc_arch%"=="SSE2" (
 	cd obs-studio
 	git submodule update --init --recursive
 	if exist vlc.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/vlc.zip -f --retry 5 -z vlc.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/vlc.zip -f --retry 5 -C -)
-	if exist cef_binary_%CEF_VERSION%_windows64.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/cef_binary_%CEF_VERSION%_windows64.zip -f --retry 5 -z cef_binary_%CEF_VERSION%_windows64.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/cef_binary_%CEF_VERSION%_windows64.zip -f --retry 5 -C -)
+	if exist cef_binary_%CEF_VERSION%_windows64_minimal.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/cef_binary_%CEF_VERSION%_windows64_minimal.zip -f --retry 5 -z cef_binary_%CEF_VERSION%_windows64_minimal.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/cef_binary_%CEF_VERSION%_windows64_minimal.zip -f --retry 5 -C -)
 	7z x vlc.zip -ovlc
-	7z x cef_binary_%CEF_VERSION%_windows64.zip -oCEF_64
+	7z x cef_binary_%CEF_VERSION%_windows64_minimal.zip -oCEF_64
 	set VLCPath=%CD%\vlc
-	set CEF_64=%CD%\CEF_64\cef_binary_%CEF_VERSION%_windows64
+	set CEF_64=%CD%\CEF_64\cef_binary_%CEF_VERSION%_windows64_minimal
 ::	curl -kLo C:\projects\obs-studio\UI\win-update\win-update.hpp -f --retry 5 https://github.com/obsproject/obs-studio/raw/master/UI\win-update\win-update.hpp
 ::	curl -kLo C:\projects\obs-studio\UI\win-update\win-update.hpp -f --retry 5 https://raw.githubusercontent.com/obsproject/obs-studio/master/UI/win-update/win-update.hpp
 ::	curl -kLo C:\projects\obs-studio\UI\win-update\win-update.cpp -f --retry 5 https://raw.githubusercontent.com/obsproject/obs-studio/master/UI/win-update/win-update.cpp
