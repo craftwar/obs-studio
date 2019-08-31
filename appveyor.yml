@@ -12,7 +12,7 @@ image: Visual Studio 2017
 init:
   - ps: if (0) { iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1')) } #rdp debug
 environment:
-  CEF_VERSION: 3.3440.1805.gbe070f9
+  CEF_VERSION: 75.1.16+g16a67c4+chromium-75.0.3770.100
   vc_inc_arch: AVX2
 #  D3D12_HOOK: false
   APPVEYOR_YML_DISABLE_PS_LINUX: true
@@ -128,7 +128,7 @@ cache:
   - '%VCdeps_file%'
 # for SSE2
   - vlc.zip
-  - 'cef_binary_%CEF_VERSION%_windows64.zip'
+  - 'cef_binary_%CEF_VERSION%_windows64_minimal.zip'
   - Jim_OBS
 
 #notifications:
