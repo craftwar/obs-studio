@@ -1486,7 +1486,7 @@ void OBSBasic::ResetOutputs()
 				QTStr("Basic.Main.StartReplayBuffer"), this);
 			replayBufferButton->setCheckable(true);
 			connect(replayBufferButton.data(),
-				&QPushButton::toggled, this,
+				&QPushButton::clicked, this,
 				&OBSBasic::ReplayBufferClicked);
 
 			replayBufferButton->setProperty("themeID",
@@ -7420,7 +7420,9 @@ void OBSBasic::PauseRecording()
 	if (obs_output_pause(output, true)) {
 		pause->setAccessibleName(QTStr("Basic.Main.UnpauseRecording"));
 		pause->setToolTip(QTStr("Basic.Main.UnpauseRecording"));
+		pause->blockSignals(true);
 		pause->setChecked(true);
+		pause->blockSignals(false);
 		os_atomic_set_bool(&recording_paused, true);
 
 		if (api)
@@ -7441,7 +7443,9 @@ void OBSBasic::UnpauseRecording()
 	if (obs_output_pause(output, false)) {
 		pause->setAccessibleName(QTStr("Basic.Main.PauseRecording"));
 		pause->setToolTip(QTStr("Basic.Main.PauseRecording"));
+		pause->blockSignals(true);
 		pause->setChecked(false);
+		pause->blockSignals(false);
 		os_atomic_set_bool(&recording_paused, false);
 
 		if (api)
@@ -7500,7 +7504,7 @@ void OBSBasic::UpdatePause(bool activate)
 		pause->setChecked(false);
 		pause->setProperty("themeID",
 				   QVariant(QStringLiteral("pauseIconSmall")));
-		connect(pause.data(), &QAbstractButton::toggled, this,
+		connect(pause.data(), &QAbstractButton::clicked, this,
 			&OBSBasic::PauseToggled);
 		ui->recordingLayout->addWidget(pause.data());
 	} else {
