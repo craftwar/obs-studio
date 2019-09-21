@@ -703,6 +703,8 @@ static const char *obs_signals[] = {
 	"void source_deactivate(ptr source)",
 	"void source_show(ptr source)",
 	"void source_hide(ptr source)",
+	"void source_audio_activate(ptr source)",
+	"void source_audio_deactivate(ptr source)",
 	"void source_rename(ptr source, string new_name, string prev_name)",
 	"void source_volume(ptr source, in out float volume)",
 	"void source_volume_level(ptr source, float level, float magnitude, "
@@ -1772,11 +1774,13 @@ static obs_source_t *obs_load_source_type(obs_data_t *source_data)
 	int di_mode;
 	int monitoring_type;
 
-	source = obs_source_create(id, name, settings, hotkeys);
+	prev_ver = (uint32_t)obs_data_get_int(source_data, "prev_ver");
+
+	source = obs_source_create_set_last_ver(id, name, settings, hotkeys,
+						prev_ver);
 
 	obs_data_release(hotkeys);
 
-	prev_ver = (uint32_t)obs_data_get_int(source_data, "prev_ver");
 	caps = obs_source_get_output_flags(source);
 
 	obs_data_set_default_double(source_data, "volume", 1.0);

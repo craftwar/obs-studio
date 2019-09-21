@@ -72,6 +72,8 @@ static const char *source_signals[] = {
 	"void update_flags(ptr source, int flags)",
 	"void audio_sync(ptr source, int out int offset)",
 	"void audio_mixers(ptr source, in out int mixers)",
+	"void audio_activate(ptr source)",
+	"void audio_deactivate(ptr source)",
 	"void filter_add(ptr source, ptr filter)",
 	"void filter_remove(ptr source, ptr filter)",
 	"void reorder_filters(ptr source)",
@@ -151,6 +153,7 @@ static bool obs_source_init(struct obs_source *source)
 	source->volume = 1.0f;
 	source->sync_offset = 0;
 	source->balance = 0.5f;
+	source->audio_active = true;
 	pthread_mutex_init_value(&source->filter_mutex);
 	pthread_mutex_init_value(&source->async_mutex);
 	pthread_mutex_init_value(&source->audio_mutex);
@@ -303,11 +306,10 @@ static void obs_source_init_audio_hotkeys(struct obs_source *source)
 		obs_source_hotkey_push_to_talk, source);
 }
 
-static obs_source_t *obs_source_create_internal(const char *id,
-						const char *name,
-						obs_data_t *settings,
-						obs_data_t *hotkey_data,
-						bool private)
+static obs_source_t *
+obs_source_create_internal(const char *id, const char *name,
+			   obs_data_t *settings, obs_data_t *hotkey_data,
+			   bool private, uint32_t last_obs_ver)
 {
 	struct obs_source *source = bzalloc(sizeof(struct obs_source));
 
@@ -332,6 +334,7 @@ static obs_source_t *obs_source_create_internal(const char *id,
 	source->mute_unmute_key = OBS_INVALID_HOTKEY_PAIR_ID;
 	source->push_to_mute_key = OBS_INVALID_HOTKEY_ID;
 	source->push_to_talk_key = OBS_INVALID_HOTKEY_ID;
+	source->last_obs_ver = last_obs_ver;
 
 	if (!obs_source_init_context(source, settings, name, hotkey_data,
 				     private))
@@ -384,13 +387,23 @@ obs_source_t *obs_source_create(const char *id, const char *name,
 				obs_data_t *settings, obs_data_t *hotkey_data)
 {
 	return obs_source_create_internal(id, name, settings, hotkey_data,
-					  false);
+					  false, LIBOBS_API_VER);
 }
 
 obs_source_t *obs_source_create_private(const char *id, const char *name,
 					obs_data_t *settings)
 {
-	return obs_source_create_internal(id, name, settings, NULL, true);
+	return obs_source_create_internal(id, name, settings, NULL, true,
+					  LIBOBS_API_VER);
+}
+
+obs_source_t *obs_source_create_set_last_ver(const char *id, const char *name,
+					     obs_data_t *settings,
+					     obs_data_t *hotkey_data,
+					     uint32_t last_obs_ver)
+{
+	return obs_source_create_internal(id, name, settings, hotkey_data,
+					  false, last_obs_ver);
 }
 
 static char *get_new_filter_name(obs_source_t *dst, const char *name)
@@ -4667,4 +4680,34 @@ float obs_source_get_balance_value(const obs_source_t *source)
 	return obs_source_valid(source, "obs_source_get_balance_value")
 		       ? source->balance
 		       : 0.5f;
+}
+
+void obs_source_set_audio_active(obs_source_t *source, bool active)
+{
+	if (!obs_source_valid(source, "obs_source_set_audio_active"))
+		return;
+
+	if (os_atomic_set_bool(&source->audio_active, active) == active)
+		return;
+
+	if (active)
+		obs_source_dosignal(source, "source_audio_activate",
+				    "audio_activate");
+	else
+		obs_source_dosignal(source, "source_audio_deactivate",
+				    "audio_deactivate");
+}
+
+bool obs_source_audio_active(const obs_source_t *source)
+{
+	return obs_source_valid(source, "obs_source_audio_active")
+		       ? os_atomic_load_bool(&source->audio_active)
+		       : false;
+}
+
+uint32_t obs_source_get_last_obs_version(const obs_source_t *source)
+{
+	return obs_source_valid(source, "obs_source_get_last_obs_version")
+		       ? source->last_obs_ver
+		       : 0;
 }
