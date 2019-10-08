@@ -8,7 +8,7 @@ skip_commits:
     - .travis.yml
     - 'docs/*'
     - '.*'
-image: Visual Studio 2017
+image: Visual Studio 2019
 init:
   - ps: if (0) { iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1')) } #rdp debug
 environment:
@@ -59,8 +59,8 @@ install:
 #  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
 # latest
 # use 5.11 to prevent 5.12 issue
-  - set QT_VERSION=5.11
-  - set QTDIR32=C:\Qt\%QT_VERSION%\msvc2015
+  - set QT_VERSION=5.12.5
+  - set QTDIR32=C:\Qt\%QT_VERSION%\msvc2017
   - set QTDIR64=C:\Qt\%QT_VERSION%\msvc2017_64
   - set build_config=Release
 #  -Zc:inline is disabled when -GL is on
@@ -94,7 +94,7 @@ build_script:
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
   - cd ../build32
-  - cmake -E env CFLAGS="%cl_options%"  CXXFLAGS="%cl_options%" LDFLAGS="-LTCG" cmake -G "Visual Studio 15 2017" -A Win32 -DCMAKE_EXE_LINKER_FLAGS_INIT=/LTCG -DCMAKE_SHARED_LINKER_FLAGS_INIT=/LTCG -DCMAKE_STATIC_LINKER_FLAGS_INIT=/LTCG -DCMAKE_MODULE_LINKER_FLAGS_INIT=/LTCG -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=true -DENABLE_SCRIPTING=false ..
+  - cmake -E env CFLAGS="%cl_options%"  CXXFLAGS="%cl_options%" LDFLAGS="-LTCG" cmake -G "Visual Studio 16 2019" -A Win32 -DCMAKE_EXE_LINKER_FLAGS_INIT=/LTCG -DCMAKE_SHARED_LINKER_FLAGS_INIT=/LTCG -DCMAKE_STATIC_LINKER_FLAGS_INIT=/LTCG -DCMAKE_MODULE_LINKER_FLAGS_INIT=/LTCG -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=true -DENABLE_SCRIPTING=false ..
 # build 32bit game capture plugin
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/get-graphics-offsets/get-graphics-offsets.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\plugins/win-capture/graphics-hook/graphics-hook.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
