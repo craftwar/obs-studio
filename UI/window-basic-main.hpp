@@ -559,6 +559,9 @@ private slots:
 
 	void CheckDiskSpaceRemaining();
 
+	void ScenesReordered(const QModelIndex &parent, int start, int end,
+			     const QModelIndex &destination, int row);
+
 private:
 	/* OBS Callbacks */
 	static void SceneReordered(void *data, calldata_t *params);
@@ -679,6 +682,8 @@ public:
 	QAction *AddDockWidget(QDockWidget *dock);
 
 	static OBSBasic *Get();
+
+	const char *GetCurrentOutputPath();
 
 protected:
 	virtual void closeEvent(QCloseEvent *event) override;

@@ -93,9 +93,6 @@ static void ffmpeg_source_defaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, "looping", false);
 	obs_data_set_default_bool(settings, "clear_on_media_end", true);
 	obs_data_set_default_bool(settings, "restart_on_activate", true);
-#if defined(_WIN32)
-	obs_data_set_default_bool(settings, "hw_decode", true);
-#endif
 	obs_data_set_default_int(settings, "buffering_mb", 2);
 	obs_data_set_default_int(settings, "speed_percent", 100);
 }
@@ -321,16 +318,12 @@ static void ffmpeg_source_update(void *data, obs_data_t *settings)
 		s->is_looping = obs_data_get_bool(settings, "looping");
 		s->close_when_inactive =
 			obs_data_get_bool(settings, "close_when_inactive");
-
-		obs_source_set_async_unbuffered(s->source, true);
 	} else {
 		input = (char *)obs_data_get_string(settings, "input");
 		input_format =
 			(char *)obs_data_get_string(settings, "input_format");
 		s->is_looping = false;
 		s->close_when_inactive = true;
-
-		obs_source_set_async_unbuffered(s->source, false);
 	}
 
 	s->input = input ? bstrdup(input) : NULL;

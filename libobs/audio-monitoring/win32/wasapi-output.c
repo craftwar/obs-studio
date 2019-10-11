@@ -10,6 +10,14 @@
 	EXTERN_C const GUID DECLSPEC_SELECTANY name = {                       \
 		l, w1, w2, {b1, b2, b3, b4, b5, b6, b7, b8}}
 
+#define do_log(level, format, ...)                      \
+	blog(level, "[audio monitoring: '%s'] " format, \
+	     obs_source_get_name(monitor->source), ##__VA_ARGS__)
+
+#define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
+#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
+#define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
+
 ACTUALLY_DEFINE_GUID(CLSID_MMDeviceEnumerator, 0xBCDE0395, 0xE52F, 0x467C, 0x8E,
 		     0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E);
 ACTUALLY_DEFINE_GUID(IID_IMMDeviceEnumerator, 0xA95664D2, 0x9614, 0x4F35, 0xA7,
@@ -33,6 +41,8 @@ struct audio_monitor {
 	uint32_t channels;
 	bool source_has_video;
 	bool ignore;
+	bool initialized;
+	bool failure;
 
 	int64_t lowest_audio_offset;
 	struct circlebuf delay_buffer;
@@ -131,11 +141,13 @@ static bool process_audio_delay(struct audio_monitor *monitor, float **data,
 	return false;
 }
 
+static void audio_monitor_start_device(struct audio_monitor *monitor);
+
 static void on_audio_playback(void *param, obs_source_t *source,
 			      const struct audio_data *audio_data, bool muted)
 {
 	struct audio_monitor *monitor = param;
-	IAudioRenderClient *render = monitor->render;
+	IAudioRenderClient *render;
 	uint8_t *resample_data[MAX_AV_PLANES];
 	float vol = source->user_volume;
 	uint32_t resample_frames;
@@ -149,6 +161,14 @@ static void on_audio_playback(void *param, obs_source_t *source,
 	if (os_atomic_load_long(&source->activate_refs) == 0) {
 		goto unlock;
 	}
+	if (!monitor->failure && !monitor->initialized) {
+		audio_monitor_start_device(monitor);
+	}
+	if (monitor->failure) {
+		goto unlock;
+	}
+
+	render = monitor->render;
 
 	success = audio_resampler_resample(
 		monitor->resampler, resample_data, &resample_frames, &ts_offset,
@@ -239,10 +259,7 @@ static enum speaker_layout convert_speaker_layout(DWORD layout, WORD channels)
 	return (enum speaker_layout)channels;
 }
 
-extern bool devices_match(const char *id1, const char *id2);
-
-static bool audio_monitor_init(struct audio_monitor *monitor,
-			       obs_source_t *source)
+static void audio_monitor_start_device(struct audio_monitor *monitor)
 {
 	IMMDeviceEnumerator *immde = NULL;
 	WAVEFORMATEX *wfex = NULL;
@@ -250,25 +267,10 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	UINT32 frames;
 	HRESULT hr;
 
-	pthread_mutex_init_value(&monitor->playback_mutex);
-
-	monitor->source = source;
-
 	const char *id = obs->audio.monitoring_device_id;
 	if (!id) {
-		return false;
-	}
-
-	if (source->info.output_flags & OBS_SOURCE_DO_NOT_SELF_MONITOR) {
-		obs_data_t *s = obs_source_get_settings(source);
-		const char *s_dev_id = obs_data_get_string(s, "device_id");
-		bool match = devices_match(s_dev_id, id);
-		obs_data_release(s);
-
-		if (match) {
-			monitor->ignore = true;
-			return true;
-		}
+		warn("%s: No device ID set", __FUNCTION__);
+		goto fail;
 	}
 
 	/* ------------------------------------------ *
@@ -277,7 +279,9 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL,
 			      &IID_IMMDeviceEnumerator, (void **)&immde);
 	if (FAILED(hr)) {
-		return false;
+		warn("%s: Failed to create IMMDeviceEnumerator: %08lX",
+		     __FUNCTION__, hr);
+		goto fail;
 	}
 
 	if (strcmp(id, "default") == 0) {
@@ -291,6 +295,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	}
 
 	if (FAILED(hr)) {
+		warn("%s: Failed to get device: %08lX", __FUNCTION__, hr);
 		goto fail;
 	}
 
@@ -301,11 +306,13 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 					       &IID_IAudioClient, CLSCTX_ALL,
 					       NULL, (void **)&monitor->client);
 	if (FAILED(hr)) {
+		warn("%s: Failed to activate device: %08lX", __FUNCTION__, hr);
 		goto fail;
 	}
 
 	hr = monitor->client->lpVtbl->GetMixFormat(monitor->client, &wfex);
 	if (FAILED(hr)) {
+		warn("%s: Failed to get mix format: %08lX", __FUNCTION__, hr);
 		goto fail;
 	}
 
@@ -313,6 +320,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 						 AUDCLNT_SHAREMODE_SHARED, 0,
 						 10000000, 0, wfex, NULL);
 	if (FAILED(hr)) {
+		warn("%s: Failed to initialize: %08lX", __FUNCTION__, hr);
 		goto fail;
 	}
 
@@ -346,6 +354,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 
 	hr = monitor->client->lpVtbl->GetBufferSize(monitor->client, &frames);
 	if (FAILED(hr)) {
+		warn("%s: Failed to get buffer size: %08lX", __FUNCTION__, hr);
 		goto fail;
 	}
 
@@ -353,25 +362,61 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 						 &IID_IAudioRenderClient,
 						 (void **)&monitor->render);
 	if (FAILED(hr)) {
-		goto fail;
-	}
-
-	if (pthread_mutex_init(&monitor->playback_mutex, NULL) != 0) {
+		warn("%s: Failed to get IAudioRenderClient: %08lX",
+		     __FUNCTION__, hr);
 		goto fail;
 	}
 
 	hr = monitor->client->lpVtbl->Start(monitor->client);
 	if (FAILED(hr)) {
+		warn("%s: Failed to start audio: %08lX", __FUNCTION__, hr);
 		goto fail;
 	}
 
 	success = true;
+	monitor->initialized = true;
 
 fail:
+	if (!success)
+		monitor->failure = true;
+
 	safe_release(immde);
 	if (wfex)
 		CoTaskMemFree(wfex);
-	return success;
+}
+
+extern bool devices_match(const char *id1, const char *id2);
+
+static bool audio_monitor_init(struct audio_monitor *monitor,
+			       obs_source_t *source)
+{
+	pthread_mutex_init_value(&monitor->playback_mutex);
+
+	monitor->source = source;
+
+	const char *id = obs->audio.monitoring_device_id;
+	if (!id) {
+		warn("%s: No device ID set", __FUNCTION__);
+		return false;
+	}
+
+	if (pthread_mutex_init(&monitor->playback_mutex, NULL) != 0) {
+		warn("%s: Failed to initialize mutex", __FUNCTION__);
+		return false;
+	}
+
+	if (source->info.output_flags & OBS_SOURCE_DO_NOT_SELF_MONITOR) {
+		obs_data_t *s = obs_source_get_settings(source);
+		const char *s_dev_id = obs_data_get_string(s, "device_id");
+		bool match = devices_match(s_dev_id, id);
+		obs_data_release(s);
+
+		if (match) {
+			monitor->ignore = true;
+		}
+	}
+
+	return true;
 }
 
 static void audio_monitor_init_final(struct audio_monitor *monitor)

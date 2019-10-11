@@ -392,6 +392,12 @@ OBSBasic::OBSBasic(QWidget *parent)
 		SLOT(PreviewDisabledMenu(const QPoint &)));
 	connect(ui->enablePreviewButton, SIGNAL(clicked()), this,
 		SLOT(TogglePreview()));
+
+	connect(ui->scenes->model(),
+		SIGNAL(rowsMoved(QModelIndex, int, int, QModelIndex, int)),
+		this,
+		SLOT(ScenesReordered(const QModelIndex &, int, int,
+				     const QModelIndex &, int)));
 }
 
 static void SaveAudioDevice(const char *name, int channel, obs_data_t *parent,
@@ -7542,6 +7548,29 @@ void OBSBasic::UpdatePause(bool activate)
 #define MBYTES_LEFT_STOP_REC 50ULL
 #define MAX_BYTES_LEFT (MBYTES_LEFT_STOP_REC * MBYTE)
 
+const char *OBSBasic::GetCurrentOutputPath()
+{
+	const char *path = nullptr;
+	const char *mode = config_get_string(Config(), "Output", "Mode");
+
+	if (strcmp(mode, "Advanced") == 0) {
+		const char *advanced_mode =
+			config_get_string(Config(), "AdvOut", "RecType");
+
+		if (strcmp(advanced_mode, "FFmpeg") == 0) {
+			path = config_get_string(Config(), "AdvOut",
+						 "FFFilePath");
+		} else {
+			path = config_get_string(Config(), "AdvOut",
+						 "RecFilePath");
+		}
+	} else {
+		path = config_get_string(Config(), "SimpleOutput", "FilePath");
+	}
+
+	return path;
+}
+
 void OBSBasic::DiskSpaceMessage()
 {
 	blog(LOG_ERROR, "Recording stopped because of low disk space");
@@ -7552,12 +7581,11 @@ void OBSBasic::DiskSpaceMessage()
 
 bool OBSBasic::LowDiskSpace()
 {
-	const char *mode = config_get_string(Config(), "Output", "Mode");
-	const char *path =
-		strcmp(mode, "Advanced")
-			? config_get_string(Config(), "SimpleOutput",
-					    "FilePath")
-			: config_get_string(Config(), "AdvOut", "RecFilePath");
+	const char *path;
+
+	path = GetCurrentOutputPath();
+	if (!path)
+		return false;
 
 	uint64_t num_bytes = os_get_free_disk_space(path);
 
@@ -7575,4 +7603,16 @@ void OBSBasic::CheckDiskSpaceRemaining()
 
 		DiskSpaceMessage();
 	}
+}
+
+void OBSBasic::ScenesReordered(const QModelIndex &parent, int start, int end,
+			       const QModelIndex &destination, int row)
+{
+	UNUSED_PARAMETER(parent);
+	UNUSED_PARAMETER(start);
+	UNUSED_PARAMETER(end);
+	UNUSED_PARAMETER(destination);
+	UNUSED_PARAMETER(row);
+
+	OBSProjector::UpdateMultiviewProjectors();
 }
