@@ -318,7 +318,7 @@ void OBSBasic::TransitionToScene(OBSSource source, bool force, bool direct,
 
 	if (usingPreviewProgram && sceneDuplicationMode) {
 		scene = obs_scene_duplicate(
-			scene, NULL,
+			scene, obs_source_get_name(obs_scene_get_source(scene)),
 			editPropertiesMode ? OBS_SCENE_DUP_PRIVATE_COPY
 					   : OBS_SCENE_DUP_PRIVATE_REFS);
 		source = obs_scene_get_source(scene);
@@ -614,6 +614,15 @@ void OBSBasic::on_transitionProps_clicked()
 	menu.addAction(action);
 
 	menu.exec(QCursor::pos());
+}
+
+void OBSBasic::on_transitionDuration_valueChanged(int value)
+{
+	if (api) {
+		api->on_event(OBS_FRONTEND_EVENT_TRANSITION_DURATION_CHANGED);
+	}
+
+	UNUSED_PARAMETER(value);
 }
 
 QuickTransition *OBSBasic::GetQuickTransition(int id)
@@ -1210,7 +1219,9 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 		obs_scene_t *dup;
 		if (sceneDuplicationMode) {
 			dup = obs_scene_duplicate(
-				curScene, nullptr,
+				curScene,
+				obs_source_get_name(
+					obs_scene_get_source(curScene)),
 				editPropertiesMode
 					? OBS_SCENE_DUP_PRIVATE_COPY
 					: OBS_SCENE_DUP_PRIVATE_REFS);
