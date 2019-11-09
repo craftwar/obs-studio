@@ -1351,7 +1351,14 @@ bool OBSApp::OBSInit()
 
 constexpr char *OBSApp::GetVersionString()
 {
-	return OBS_VERSION " (by craftwar)";
+#ifndef HAVE_OBSCONFIG_H
+#undef OBS_VERSION
+#define OBS_VERSION
+	STRINGIFY_(LIBOBS_API_MAJOR_VER)
+	"." STRINGIFY_(LIBOBS_API_MINOR_VER) "." STRINGIFY_(
+		LIBOBS_API_PATCH_VER)
+#endif
+		return OBS_VERSION " (by craftwar)";
 }
 
 bool OBSApp::IsPortableMode()
