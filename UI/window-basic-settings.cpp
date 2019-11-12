@@ -344,104 +344,110 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->simpleNoSpace,        CHECK_CHANGED,  OUTPUTS_CHANGED);
 	HookWidget(ui->simpleOutRecFormat,   COMBO_CHANGED,  OUTPUTS_CHANGED);
 	HookWidget(ui->simpleOutputVBitrate, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutStrEncoder, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutputABitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutAdvanced, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutEnforce, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutPreset, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutCustom, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutRecQuality, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutRecEncoder, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleOutMuxCustom, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleReplayBuf, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleRBSecMax, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->simpleRBMegsMax, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutEncoder, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutUseRescale, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRescale, CBEDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack1, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack2, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack3, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack4, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack5, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack6, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutApplyService, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecType, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecPath, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutNoSpace, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecFormat, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecEncoder, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecUseRescale, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecRescale, CBEDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutMuxCustom, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecTrack1, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecTrack2, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecTrack3, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecTrack4, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecTrack5, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutRecTrack6, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFType, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFRecPath, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFNoSpace, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFURL, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFFormat, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFMCfg, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFVBitrate, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFVGOPSize, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFUseRescale, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFIgnoreCompat, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFRescale, CBEDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFVEncoder, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFVCfg, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFABitrate, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFTrack1, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFTrack2, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFTrack3, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFTrack4, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFTrack5, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFTrack6, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFAEncoder, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutFFACfg, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack1Bitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack1Name, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack2Bitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack2Name, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack3Bitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack3Name, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack4Bitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack4Name, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack5Bitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack5Name, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack6Bitrate, COMBO_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advOutTrack6Name, EDIT_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advReplayBuf, CHECK_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advRBSecMax, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->advRBMegsMax, SCROLL_CHANGED, OUTPUTS_CHANGED);
-	HookWidget(ui->channelSetup, COMBO_CHANGED, AUDIO_RESTART);
-	HookWidget(ui->sampleRate, COMBO_CHANGED, AUDIO_RESTART);
-	HookWidget(ui->meterDecayRate, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->peakMeterType, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->desktopAudioDevice1, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->desktopAudioDevice2, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->auxAudioDevice1, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->auxAudioDevice2, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->auxAudioDevice3, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->auxAudioDevice4, COMBO_CHANGED, AUDIO_CHANGED);
-	HookWidget(ui->baseResolution, CBEDIT_CHANGED, VIDEO_RES);
-	HookWidget(ui->outputResolution, CBEDIT_CHANGED, VIDEO_RES);
-	HookWidget(ui->downscaleFilter, COMBO_CHANGED, VIDEO_CHANGED);
-	HookWidget(ui->fpsType, COMBO_CHANGED, VIDEO_CHANGED);
-	HookWidget(ui->fpsCommon, COMBO_CHANGED, VIDEO_CHANGED);
-	HookWidget(ui->fpsInteger, SCROLL_CHANGED, VIDEO_CHANGED);
-	HookWidget(ui->fpsNumerator, SCROLL_CHANGED, VIDEO_CHANGED);
-	HookWidget(ui->fpsDenominator, SCROLL_CHANGED, VIDEO_CHANGED);
-	HookWidget(ui->renderer, COMBO_CHANGED, ADV_RESTART);
-	HookWidget(ui->adapter, COMBO_CHANGED, ADV_RESTART);
-	HookWidget(ui->colorFormat, COMBO_CHANGED, ADV_CHANGED);
-	HookWidget(ui->colorSpace, COMBO_CHANGED, ADV_CHANGED);
-	HookWidget(ui->colorRange, COMBO_CHANGED, ADV_CHANGED);
-	HookWidget(ui->disableOSXVSync, CHECK_CHANGED, ADV_CHANGED);
-	HookWidget(ui->resetOSXVSync, CHECK_CHANGED, ADV_CHANGED);
+	HookWidget(ui->simpleOutStrEncoder,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutputABitrate, COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutAdvanced,    CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutEnforce,     CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutPreset,      COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutCustom,      EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutRecQuality,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutRecEncoder,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleOutMuxCustom,   EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->simpleReplayBuf,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->simpleRBSecMax,       SCROLL_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->simpleRBMegsMax,      SCROLL_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advOutEncoder,        COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutUseRescale,     CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRescale,        CBEDIT_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack1,         CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack2,         CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack3,         CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack4,         CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack5,         CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack6,         CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutApplyService,   CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecType,        COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecPath,        EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutNoSpace,        CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecFormat,      COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecEncoder,     COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecUseRescale,  CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecRescale,     CBEDIT_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advOutMuxCustom,      EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecTrack1,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecTrack2,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecTrack3,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecTrack4,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecTrack5,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutRecTrack6,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->flvTrack1,            CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->flvTrack2,            CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->flvTrack3,            CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->flvTrack4,            CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->flvTrack5,            CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->flvTrack6,            CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFType,         COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFRecPath,      EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFNoSpace,      CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFURL,          EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFFormat,       COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFMCfg,         EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFVBitrate,     SCROLL_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFVGOPSize,     SCROLL_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFUseRescale,   CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFIgnoreCompat, CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFRescale,      CBEDIT_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFVEncoder,     COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFVCfg,         EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFABitrate,     SCROLL_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFTrack1,       CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFTrack2,       CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFTrack3,       CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFTrack4,       CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFTrack5,       CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFTrack6,       CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFAEncoder,     COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutFFACfg,         EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack1Bitrate,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack1Name,     EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack2Bitrate,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack2Name,     EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack3Bitrate,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack3Name,     EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack4Bitrate,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack4Name,     EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack5Bitrate,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack5Name,     EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack6Bitrate,  COMBO_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advOutTrack6Name,     EDIT_CHANGED,   OUTPUTS_CHANGED);
+	HookWidget(ui->advReplayBuf,         CHECK_CHANGED,  OUTPUTS_CHANGED);
+	HookWidget(ui->advRBSecMax,          SCROLL_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->advRBMegsMax,         SCROLL_CHANGED, OUTPUTS_CHANGED);
+	HookWidget(ui->channelSetup,         COMBO_CHANGED,  AUDIO_RESTART);
+	HookWidget(ui->sampleRate,           COMBO_CHANGED,  AUDIO_RESTART);
+	HookWidget(ui->meterDecayRate,       COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->peakMeterType,        COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->desktopAudioDevice1,  COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->desktopAudioDevice2,  COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->auxAudioDevice1,      COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->auxAudioDevice2,      COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->auxAudioDevice3,      COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->auxAudioDevice4,      COMBO_CHANGED,  AUDIO_CHANGED);
+	HookWidget(ui->baseResolution,       CBEDIT_CHANGED, VIDEO_RES);
+	HookWidget(ui->outputResolution,     CBEDIT_CHANGED, VIDEO_RES);
+	HookWidget(ui->downscaleFilter,      COMBO_CHANGED,  VIDEO_CHANGED);
+	HookWidget(ui->fpsType,              COMBO_CHANGED,  VIDEO_CHANGED);
+	HookWidget(ui->fpsCommon,            COMBO_CHANGED,  VIDEO_CHANGED);
+	HookWidget(ui->fpsInteger,           SCROLL_CHANGED, VIDEO_CHANGED);
+	HookWidget(ui->fpsNumerator,         SCROLL_CHANGED, VIDEO_CHANGED);
+	HookWidget(ui->fpsDenominator,       SCROLL_CHANGED, VIDEO_CHANGED);
+	HookWidget(ui->renderer,             COMBO_CHANGED,  ADV_RESTART);
+	HookWidget(ui->adapter,              COMBO_CHANGED,  ADV_RESTART);
+	HookWidget(ui->colorFormat,          COMBO_CHANGED,  ADV_CHANGED);
+	HookWidget(ui->colorSpace,           COMBO_CHANGED,  ADV_CHANGED);
+	HookWidget(ui->colorRange,           COMBO_CHANGED,  ADV_CHANGED);
+	HookWidget(ui->disableOSXVSync,      CHECK_CHANGED,  ADV_CHANGED);
+	HookWidget(ui->resetOSXVSync,        CHECK_CHANGED,  ADV_CHANGED);
 #if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
 	HookWidget(ui->monitoringDevice, COMBO_CHANGED, ADV_CHANGED);
 #endif
@@ -1691,6 +1697,7 @@ void OBSBasicSettings::LoadAdvOutputRecordingSettings()
 	const char *muxCustom =
 		config_get_string(main->Config(), "AdvOut", "RecMuxerCustom");
 	int tracks = config_get_int(main->Config(), "AdvOut", "RecTracks");
+	int flvTrack = config_get_int(main->Config(), "AdvOut", "FLVTrack");
 
 	int typeIndex = (astrcmpi(type, "FFmpeg") == 0) ? 1 : 0;
 	ui->advOutRecType->setCurrentIndex(typeIndex);
@@ -1709,6 +1716,30 @@ void OBSBasicSettings::LoadAdvOutputRecordingSettings()
 	ui->advOutRecTrack4->setChecked(tracks & (1 << 3));
 	ui->advOutRecTrack5->setChecked(tracks & (1 << 4));
 	ui->advOutRecTrack6->setChecked(tracks & (1 << 5));
+
+	switch (flvTrack) {
+	case 1:
+		ui->flvTrack1->setChecked(true);
+		break;
+	case 2:
+		ui->flvTrack2->setChecked(true);
+		break;
+	case 3:
+		ui->flvTrack3->setChecked(true);
+		break;
+	case 4:
+		ui->flvTrack4->setChecked(true);
+		break;
+	case 5:
+		ui->flvTrack5->setChecked(true);
+		break;
+	case 6:
+		ui->flvTrack6->setChecked(true);
+		break;
+	default:
+		ui->flvTrack1->setChecked(true);
+		break;
+	}
 }
 
 void OBSBasicSettings::LoadAdvOutputRecordingEncoderProperties()
@@ -3170,6 +3201,8 @@ void OBSBasicSettings::SaveOutputSettings()
 			(ui->advOutRecTrack5->isChecked() ? (1 << 4) : 0) |
 			(ui->advOutRecTrack6->isChecked() ? (1 << 5) : 0));
 
+	config_set_int(main->Config(), "AdvOut", "FLVTrack", CurrentFLVTrack());
+
 	config_set_bool(main->Config(), "AdvOut", "FFOutputToFile",
 			ui->advOutFFType->currentIndex() == 0 ? true : false);
 	SaveEdit(ui->advOutFFRecPath, "AdvOut", "FFFilePath");
@@ -3952,18 +3985,20 @@ void OBSBasicSettings::AdvOutRecCheckWarnings()
 		Checked(ui->advOutRecTrack3) + Checked(ui->advOutRecTrack4) +
 		Checked(ui->advOutRecTrack5) + Checked(ui->advOutRecTrack6);
 
-	if (tracks == 0) {
-		errorMsg = QTStr("OutputWarnings.NoTracksSelected");
-
-	} else if (tracks > 1) {
-		warningMsg = QTStr("OutputWarnings.MultiTrackRecording");
-	}
-
 	bool useStreamEncoder = ui->advOutRecEncoder->currentIndex() == 0;
 	if (useStreamEncoder) {
 		if (!warningMsg.isEmpty())
 			warningMsg += "\n\n";
 		warningMsg += QTStr("OutputWarnings.CannotPause");
+	}
+
+	if (ui->advOutRecFormat->currentText().compare("flv") == 0) {
+		ui->advRecTrackWidget->setCurrentWidget(ui->flvTracks);
+	} else {
+		ui->advRecTrackWidget->setCurrentWidget(ui->recTracks);
+
+		if (tracks == 0)
+			errorMsg = QTStr("OutputWarnings.NoTracksSelected");
 	}
 
 	if (ui->advOutRecFormat->currentText().compare("mp4") == 0 ||
@@ -4607,4 +4642,22 @@ void OBSBasicSettings::SetHotkeysIcon(const QIcon &icon)
 void OBSBasicSettings::SetAdvancedIcon(const QIcon &icon)
 {
 	ui->listWidget->item(6)->setIcon(icon);
+}
+
+int OBSBasicSettings::CurrentFLVTrack()
+{
+	if (ui->flvTrack1->isChecked())
+		return 1;
+	else if (ui->flvTrack2->isChecked())
+		return 2;
+	else if (ui->flvTrack3->isChecked())
+		return 3;
+	else if (ui->flvTrack4->isChecked())
+		return 4;
+	else if (ui->flvTrack5->isChecked())
+		return 5;
+	else if (ui->flvTrack6->isChecked())
+		return 6;
+
+	return 0;
 }
