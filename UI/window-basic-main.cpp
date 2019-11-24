@@ -1053,7 +1053,7 @@ retryScene:
 		opt_start_replaybuffer = false;
 	}
 
-	copyString = nullptr;
+	copyStrings.clear();
 	copyFiltersString = nullptr;
 
 	LogScenes();
@@ -1195,6 +1195,15 @@ bool OBSBasic::InitBasicConfigDefaults()
 		track = 1ULL << (track - 1);
 		config_set_uint(basicConfig, "AdvOut", "RecTracks", track);
 		config_remove_value(basicConfig, "AdvOut", "RecTrackIndex");
+		changed = true;
+	}
+
+	/* ----------------------------------------------------- */
+	/* set twitch chat extensions to "both" if prev version  */
+	/* is under 24.1                                         */
+	if (config_get_bool(GetGlobalConfig(), "General", "Pre24.1Defaults") &&
+	    !config_has_user_value(basicConfig, "Twitch", "AddonChoice")) {
+		config_set_int(basicConfig, "Twitch", "AddonChoice", 3);
 		changed = true;
 	}
 
@@ -4559,12 +4568,8 @@ void OBSBasic::on_scenes_itemDoubleClicked(QListWidgetItem *witem)
 			config_get_bool(App()->GlobalConfig(), "BasicWindow",
 					"TransitionOnDoubleClick");
 
-		if (doubleClickSwitch) {
-			OBSScene scene = GetCurrentScene();
-
-			if (scene)
-				SetCurrentScene(scene, false, true);
-		}
+		if (doubleClickSwitch)
+			TransitionClicked();
 	}
 }
 
@@ -5080,6 +5085,9 @@ inline void OBSBasic::OnActivate()
 	}
 }
 
+extern volatile bool recording_paused;
+extern volatile bool replaybuf_active;
+
 inline void OBSBasic::OnDeactivate()
 {
 	if (!outputHandler->Active() && !ui->profileMenu->isEnabled()) {
@@ -5091,6 +5099,12 @@ inline void OBSBasic::OnDeactivate()
 		if (trayIcon)
 			trayIcon->setIcon(QIcon::fromTheme(
 				"obs-tray", QIcon(":/res/images/obs.png")));
+	} else if (trayIcon) {
+		if (os_atomic_load_bool(&recording_paused))
+			trayIcon->setIcon(QIcon(":/res/images/obs_paused.png"));
+		else
+			trayIcon->setIcon(
+				QIcon(":/res/images/tray_active.png"));
 	}
 }
 
@@ -5496,9 +5510,6 @@ void OBSBasic::RecordingStop(int code, QString last_error)
 #define RP_NO_HOTKEY_TITLE QTStr("Output.ReplayBuffer.NoHotkey.Title")
 #define RP_NO_HOTKEY_TEXT QTStr("Output.ReplayBuffer.NoHotkey.Msg")
 
-extern volatile bool recording_paused;
-extern volatile bool replaybuf_active;
-
 void OBSBasic::ShowReplayBufferPauseWarning()
 {
 	auto msgBox = []() {
@@ -5842,6 +5853,11 @@ int OBSBasic::GetTopSelectedSourceItem()
 	QModelIndexList selectedItems =
 		ui->sources->selectionModel()->selectedIndexes();
 	return selectedItems.count() ? selectedItems[0].row() : -1;
+}
+
+QModelIndexList OBSBasic::GetAllSelectedSourceItems()
+{
+	return ui->sources->selectionModel()->selectedIndexes();
 }
 
 void OBSBasic::on_preview_customContextMenuRequested(const QPoint &pos)
@@ -7021,41 +7037,52 @@ bool OBSBasic::sysTrayMinimizeToTray()
 
 void OBSBasic::on_actionCopySource_triggered()
 {
-	OBSSceneItem item = GetCurrentSceneItem();
-	if (!item)
-		return;
+	copyStrings.clear();
+	bool allowPastingDuplicate = true;
 
-	on_actionCopyTransform_triggered();
+	for (auto &selectedSource : GetAllSelectedSourceItems()) {
+		OBSSceneItem item = ui->sources->Get(selectedSource.row());
+		if (!item)
+			continue;
 
-	OBSSource source = obs_sceneitem_get_source(item);
+		on_actionCopyTransform_triggered();
 
-	copyString = obs_source_get_name(source);
-	copyVisible = obs_sceneitem_visible(item);
+		OBSSource source = obs_sceneitem_get_source(item);
+
+		copyStrings.push_front(obs_source_get_name(source));
+
+		copyVisible = obs_sceneitem_visible(item);
+
+		uint32_t output_flags = obs_source_get_output_flags(source);
+		if (!(output_flags & OBS_SOURCE_DO_NOT_DUPLICATE) == 0)
+			allowPastingDuplicate = false;
+	}
 
 	ui->actionPasteRef->setEnabled(true);
-
-	uint32_t output_flags = obs_source_get_output_flags(source);
-	if ((output_flags & OBS_SOURCE_DO_NOT_DUPLICATE) == 0)
-		ui->actionPasteDup->setEnabled(true);
-	else
-		ui->actionPasteDup->setEnabled(false);
+	ui->actionPasteDup->setEnabled(allowPastingDuplicate);
 }
 
 void OBSBasic::on_actionPasteRef_triggered()
 {
-	/* do not allow duplicate refs of the same group in the same scene */
-	OBSScene scene = GetCurrentScene();
-	if (!!obs_scene_get_group(scene, copyString))
-		return;
+	for (auto &copyString : copyStrings) {
+		/* do not allow duplicate refs of the same group in the same scene */
+		OBSScene scene = GetCurrentScene();
+		if (!!obs_scene_get_group(scene, copyString))
+			continue;
 
-	OBSBasicSourceSelect::SourcePaste(copyString, copyVisible, false);
-	on_actionPasteTransform_triggered();
+		OBSBasicSourceSelect::SourcePaste(copyString, copyVisible,
+						  false);
+		on_actionPasteTransform_triggered();
+	}
 }
 
 void OBSBasic::on_actionPasteDup_triggered()
 {
-	OBSBasicSourceSelect::SourcePaste(copyString, copyVisible, true);
-	on_actionPasteTransform_triggered();
+	for (auto &copyString : copyStrings) {
+		OBSBasicSourceSelect::SourcePaste(copyString, copyVisible,
+						  true);
+		on_actionPasteTransform_triggered();
+	}
 }
 
 void OBSBasic::AudioMixerCopyFilters()
@@ -7465,6 +7492,10 @@ void OBSBasic::PauseRecording()
 		pause->blockSignals(true);
 		pause->setChecked(true);
 		pause->blockSignals(false);
+
+		if (trayIcon)
+			trayIcon->setIcon(QIcon(":/res/images/obs_paused.png"));
+
 		os_atomic_set_bool(&recording_paused, true);
 
 		if (api)
@@ -7488,6 +7519,11 @@ void OBSBasic::UnpauseRecording()
 		pause->blockSignals(true);
 		pause->setChecked(false);
 		pause->blockSignals(false);
+
+		if (trayIcon)
+			trayIcon->setIcon(
+				QIcon(":/res/images/tray_active.png"));
+
 		os_atomic_set_bool(&recording_paused, false);
 
 		if (api)

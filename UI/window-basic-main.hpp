@@ -157,7 +157,7 @@ private:
 	bool projectChanged = false;
 	bool previewEnabled = true;
 
-	const char *copyString;
+	std::list<const char *> copyStrings;
 	const char *copyFiltersString = nullptr;
 	bool copyVisible = true;
 
@@ -332,6 +332,8 @@ private:
 
 	int GetTopSelectedSourceItem();
 
+	QModelIndexList GetAllSelectedSourceItems();
+
 	obs_hotkey_pair_id streamingHotkeys, recordingHotkeys, pauseHotkeys,
 		replayBufHotkeys, togglePreviewHotkeys;
 	obs_hotkey_id forceStreamingStopHotkey;
@@ -372,8 +374,7 @@ private:
 
 	void SetPreviewProgramMode(bool enabled);
 	void ResizeProgram(uint32_t cx, uint32_t cy);
-	void SetCurrentScene(obs_scene_t *scene, bool force = false,
-			     bool direct = false);
+	void SetCurrentScene(obs_scene_t *scene, bool force = false);
 	static void RenderProgram(void *data, uint32_t cx, uint32_t cy);
 
 	std::vector<QuickTransition> quickTransitions;
@@ -476,14 +477,11 @@ public slots:
 
 	void SetTransition(OBSSource transition);
 	void OverrideTransition(OBSSource transition);
-	void TransitionToScene(OBSScene scene, bool force = false,
-			       bool direct = false);
+	void TransitionToScene(OBSScene scene, bool force = false);
 	void TransitionToScene(OBSSource scene, bool force = false,
-			       bool direct = false,
 			       bool quickTransition = false,
 			       int quickDuration = 0, bool black = false);
-	void SetCurrentScene(OBSSource scene, bool force = false,
-			     bool direct = false);
+	void SetCurrentScene(OBSSource scene, bool force = false);
 
 	bool AddSceneCollection(bool create_new,
 				const QString &name = QString());
