@@ -34,7 +34,8 @@ using namespace Gdiplus;
 #define STRCMP_CONST(str, const_str) memcmp(str, const_str, sizeof(const_str))
 // this applys to L"12345" too
 #define WSTRLEN_CONST(str) (sizeof(str) / sizeof(*str) - 1)
-#define WCSCPY_CONST(str, const_str) wmemcpy(str, const_str, sizeof(const_str)/sizeof(*const_str))
+#define WCSCPY_CONST(str, const_str) \
+	wmemcpy(str, const_str, sizeof(const_str) / sizeof(*const_str))
 
 #define MIN_SIZE_CX 2
 #define MIN_SIZE_CY 2
@@ -242,7 +243,7 @@ struct TextSource {
 		pFn pFunc;
 		HANDLE hThread;
 		DWORD thread_id;
-		TextSource *thread_owner;
+		TextSource *__restrict thread_owner;
 	} song;
 
 	static unsigned char vnr_count;
@@ -251,8 +252,8 @@ struct TextSource {
 		HANDLE hMutex;
 		HANDLE hEvent;
 		HANDLE hThread;
-		TextSource *thread_owner;
-		wchar_t *data;
+		TextSource *__restrict thread_owner;
+		wchar_t *__restrict data;
 	} shm;
 
 	wstring text;
@@ -343,12 +344,15 @@ struct TextSource {
 	// song players
 	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
 						L" - Google Chrome"};
-	static unsigned char isBrowser(wchar_t *const title, size_t title_len);
-	static wchar_t *get_song_browser_youtube(wchar_t *const title,
-						 size_t str_len);
-	static wchar_t *get_song_foobar2000(wchar_t *const title,
+	static unsigned char isBrowser(wchar_t *const __restrict title,
+				       size_t title_len);
+	static wchar_t *
+	get_song_browser_youtube(wchar_t *const __restrict title,
+				 size_t str_len);
+	static wchar_t *get_song_foobar2000(wchar_t *const __restrict title,
 					    size_t str_len);
-	static wchar_t *get_song_osu(wchar_t *const title, size_t str_len);
+	static wchar_t *get_song_osu(wchar_t *const __restrict title,
+				     size_t str_len);
 	void set_song_name(const wchar_t *const name);
 	static DWORD WINAPI song_thread(LPVOID lpParam);
 	static void Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
@@ -1006,16 +1010,18 @@ song_not_found:
 	return !!song_name;
 }
 
-static bool wcs_endWith(wchar_t *str, wchar_t *suffixStr, size_t str_len,
-		 size_t suffix_len)
+static bool wcs_endWith(wchar_t *__restrict str,
+			const wchar_t *__restrict suffixStr, size_t str_len,
+			size_t suffix_len)
 {
 	return (str_len > suffix_len) && (wmemcmp(str + str_len - suffix_len,
 						  suffixStr, suffix_len) == 0);
 }
 
-unsigned char TextSource::isBrowser(wchar_t *const title, size_t title_len)
+unsigned char TextSource::isBrowser(wchar_t *const __restrict title,
+				    size_t title_len)
 {
-	for (auto &brower : TextSource::browsers) {
+	for (auto &__restrict brower : TextSource::browsers) {
 		const size_t suffix_len = wcslen(brower);
 		if (wcs_endWith(title, brower, title_len, suffix_len))
 			return suffix_len;
@@ -1023,10 +1029,10 @@ unsigned char TextSource::isBrowser(wchar_t *const title, size_t title_len)
 	return 0;
 }
 
-wchar_t *TextSource::get_song_browser_youtube(wchar_t *const title,
+wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 					      size_t str_len)
 {
-	static wchar_t app[] = L"- YouTube";
+	static constexpr wchar_t app[] = L"- YouTube";
 	constexpr unsigned char app_len = WSTRLEN_CONST(app);
 	if (wcs_endWith(title, app, str_len, app_len)) {
 		title[str_len - app_len - 1] =
@@ -1036,9 +1042,10 @@ wchar_t *TextSource::get_song_browser_youtube(wchar_t *const title,
 	return nullptr;
 }
 
-wchar_t *TextSource::get_song_foobar2000(wchar_t *const title, size_t str_len)
+wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
+					 size_t str_len)
 {
-	static wchar_t app[] = L"[foobar2000]";
+	static constexpr wchar_t app[] = L"[foobar2000]";
 	constexpr unsigned char app_len = WSTRLEN_CONST(app);
 	if (wcs_endWith(title, app, str_len, app_len)) {
 		title[str_len - app_len - 1] =
@@ -1049,7 +1056,8 @@ wchar_t *TextSource::get_song_foobar2000(wchar_t *const title, size_t str_len)
 }
 
 // startWith case
-wchar_t *TextSource::get_song_osu(wchar_t *const title, size_t str_len)
+wchar_t *TextSource::get_song_osu(wchar_t *const __restrict title,
+				  size_t str_len)
 {
 	// E0144 if I give 7 elements only. compile pass? no null or overflow?
 	static constexpr wchar_t app[] = L"osu!  -";
@@ -1167,12 +1175,12 @@ void TextSource::hide_handler(void *data, [[maybe_unused]] calldata_t *cd)
 	TextSource *const s = reinterpret_cast<TextSource *>(data);
 
 	// maybe if can be deleted, use switch is faster (use if for safty)
-	if (shm.thread_owner == s)
+	if (s == shm.thread_owner)
 		TextSource::VNR_close_thread();
-	else if (song.thread_owner == s)
+	else if (s == song.thread_owner)
 		TextSource::song_close_thread();
 
-	/* 
+	/*
 	switch (s->mode) {
 	case TextSource::Mode::vnr:
 		if (shm.thread_owner == s)
@@ -1198,9 +1206,9 @@ bool TextSource::VNR_initial()
 			VNR_SHM);            // name of mapping object
 		if (shm.hMapFile == NULL) {
 			shm.hMapFile = CreateFileMappingA(INVALID_HANDLE_VALUE,
-							 NULL, PAGE_READWRITE,
-							 0, VNR_SHM_SIZE,
-							 VNR_SHM);
+							  NULL, PAGE_READWRITE,
+							  0, VNR_SHM_SIZE,
+							  VNR_SHM);
 			if (shm.hMapFile == NULL)
 				goto SHM_fail;
 		}
