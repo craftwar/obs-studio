@@ -593,7 +593,9 @@ struct obs_source_info pulse_input_capture = {
 	.destroy = pulse_destroy,
 	.update = pulse_update,
 	.get_defaults = pulse_defaults,
-	.get_properties = pulse_input_properties};
+	.get_properties = pulse_input_properties,
+	.icon_type = OBS_ICON_TYPE_AUDIO_INPUT,
+};
 
 struct obs_source_info pulse_output_capture = {
 	.id = "pulse_output_capture",
@@ -605,4 +607,6 @@ struct obs_source_info pulse_output_capture = {
 	.destroy = pulse_destroy,
 	.update = pulse_update,
 	.get_defaults = pulse_defaults,
-	.get_properties = pulse_output_properties};
+	.get_properties = pulse_output_properties,
+	.icon_type = OBS_ICON_TYPE_AUDIO_OUTPUT,
+};

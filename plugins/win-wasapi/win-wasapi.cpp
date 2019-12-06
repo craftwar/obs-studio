@@ -386,7 +386,14 @@ DWORD WINAPI WASAPISource::ReconnectThread(LPVOID param)
 
 	os_set_thread_name("win-wasapi: reconnect thread");
 
-	CoInitializeEx(0, COINIT_MULTITHREADED);
+	const HRESULT hr = CoInitializeEx(0, COINIT_MULTITHREADED);
+	const bool com_initialized = SUCCEEDED(hr);
+	if (!com_initialized) {
+		blog(LOG_ERROR,
+		     "[WASAPISource::ReconnectThread]"
+		     " CoInitializeEx failed: 0x%08X",
+		     hr);
+	}
 
 	obs_monitoring_type type =
 		obs_source_get_monitoring_type(source->source);
@@ -399,6 +406,9 @@ DWORD WINAPI WASAPISource::ReconnectThread(LPVOID param)
 	}
 
 	obs_source_set_monitoring_type(source->source, type);
+
+	if (com_initialized)
+		CoUninitialize();
 
 	source->reconnectThread = nullptr;
 	source->reconnecting = false;
@@ -608,6 +618,7 @@ void RegisterWASAPIInput()
 	info.update = UpdateWASAPISource;
 	info.get_defaults = GetWASAPIDefaultsInput;
 	info.get_properties = GetWASAPIPropertiesInput;
+	info.icon_type = OBS_ICON_TYPE_AUDIO_INPUT;
 	obs_register_source(&info);
 }
 
@@ -624,5 +635,6 @@ void RegisterWASAPIOutput()
 	info.update = UpdateWASAPISource;
 	info.get_defaults = GetWASAPIDefaultsOutput;
 	info.get_properties = GetWASAPIPropertiesOutput;
+	info.icon_type = OBS_ICON_TYPE_AUDIO_OUTPUT;
 	obs_register_source(&info);
 }

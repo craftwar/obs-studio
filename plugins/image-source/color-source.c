@@ -118,4 +118,6 @@ struct obs_source_info color_source_info = {
 	.get_width = color_source_getwidth,
 	.get_height = color_source_getheight,
 	.video_render = color_source_render,
-	.get_properties = color_source_properties};
+	.get_properties = color_source_properties,
+	.icon_type = OBS_ICON_TYPE_COLOR,
+};

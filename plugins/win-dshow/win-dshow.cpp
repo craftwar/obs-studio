@@ -94,14 +94,24 @@ enum class BufferingType : int64_t {
 void ffmpeg_log(void *bla, int level, const char *msg, va_list args)
 {
 	DStr str;
-	if (level == AV_LOG_WARNING)
+	if (level == AV_LOG_WARNING) {
 		dstr_copy(str, "warning: ");
-	else if (level == AV_LOG_ERROR)
+	} else if (level == AV_LOG_ERROR) {
+		/* only print first of this message to avoid spam */
+		static bool suppress_app_field_spam = false;
+		if (strcmp(msg, "unable to decode APP fields: %s\n") == 0) {
+			if (suppress_app_field_spam)
+				return;
+
+			suppress_app_field_spam = true;
+		}
+
 		dstr_copy(str, "error:   ");
-	else if (level < AV_LOG_ERROR)
+	} else if (level < AV_LOG_ERROR) {
 		dstr_copy(str, "fatal:   ");
-	else
+	} else {
 		return;
+	}
 
 	dstr_cat(str, msg);
 	if (dstr_end(str) == '\n')
@@ -1997,5 +2007,6 @@ void RegisterDShowSource()
 	info.update = UpdateDShowInput;
 	info.get_defaults = GetDShowDefaults;
 	info.get_properties = GetDShowProperties;
+	info.icon_type = OBS_ICON_TYPE_CAMERA;
 	obs_register_source(&info);
 }

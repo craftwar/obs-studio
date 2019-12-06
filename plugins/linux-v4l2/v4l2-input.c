@@ -1004,4 +1004,6 @@ struct obs_source_info v4l2_input = {
 	.destroy = v4l2_destroy,
 	.update = v4l2_update,
 	.get_defaults = v4l2_defaults,
-	.get_properties = v4l2_properties};
+	.get_properties = v4l2_properties,
+	.icon_type = OBS_ICON_TYPE_CAMERA,
+};

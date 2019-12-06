@@ -146,4 +146,6 @@ struct obs_source_info jack_output_capture = {
 	.destroy = jack_destroy,
 	.update = jack_update,
 	.get_defaults = jack_input_defaults,
-	.get_properties = jack_input_properties};
+	.get_properties = jack_input_properties,
+	.icon_type = OBS_ICON_TYPE_AUDIO_OUTPUT,
+};

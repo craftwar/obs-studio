@@ -242,6 +242,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 	qRegisterMetaType<OBSSceneItem>("OBSSceneItem");
 	qRegisterMetaType<OBSSource>("OBSSource");
 	qRegisterMetaType<obs_hotkey_id>("obs_hotkey_id");
+	qRegisterMetaType<SavedProjectorInfo *>("SavedProjectorInfo *");
 
 	qRegisterMetaTypeStreamOperators<std::vector<std::shared_ptr<OBSSignal>>>(
 		"std::vector<std::shared_ptr<OBSSignal>>");
@@ -601,11 +602,8 @@ obs_data_array_t *OBSBasic::SaveProjectors()
 		obs_data_release(data);
 	};
 
-	for (QPointer<QWidget> &proj : projectors)
-		saveProjector(static_cast<OBSProjector *>(proj.data()));
-
-	for (QPointer<QWidget> &proj : windowProjectors)
-		saveProjector(static_cast<OBSProjector *>(proj.data()));
+	for (size_t i = 0; i < projectors.size(); i++)
+		saveProjector(static_cast<OBSProjector *>(projectors[i]));
 
 	return savedProjectors;
 }
@@ -1819,6 +1817,8 @@ void OBSBasic::OBSInit()
 	ui->viewMenu->addAction(QTStr("MultiviewWindowed"), this,
 				SLOT(OpenMultiviewWindow()));
 
+	ui->sources->UpdateIcons();
+
 #if !defined(_WIN32) && !defined(__APPLE__)
 	delete ui->actionShowCrashLogs;
 	delete ui->actionUploadLastCrashLog;
@@ -2685,7 +2685,10 @@ void OBSBasic::RenameSources(OBSSource source, QString newName,
 			volumes[i]->SetName(newName);
 	}
 
-	OBSProjector::RenameProjector(prevName, newName);
+	for (size_t i = 0; i < projectors.size(); i++) {
+		if (projectors[i]->GetSource() == source)
+			projectors[i]->RenameProjector(prevName, newName);
+	}
 
 	SaveProject();
 
@@ -3745,15 +3748,6 @@ void OBSBasic::CloseDialogs()
 		}
 	}
 
-	for (QPointer<QWidget> &projector : windowProjectors) {
-		delete projector;
-		projector.clear();
-	}
-	for (QPointer<QWidget> &projector : projectors) {
-		delete projector;
-		projector.clear();
-	}
-
 	if (!stats.isNull())
 		stats->close(); //call close to save Stats geometry
 	if (!remux.isNull())
@@ -3794,6 +3788,13 @@ void OBSBasic::ClearSceneData()
 	ui->sources->Clear();
 	ClearQuickTransitions();
 	ui->transitions->clear();
+
+	for (size_t i = 0; i < projectors.size(); i++) {
+		if (projectors[i])
+			delete projectors[i];
+	}
+
+	projectors.clear();
 
 	obs_set_output_source(0, nullptr);
 	obs_set_output_source(1, nullptr);
@@ -4022,8 +4023,8 @@ void OBSBasic::EditSceneName()
 	item->setFlags(flags);
 }
 
-static void AddProjectorMenuMonitors(QMenu *parent, QObject *target,
-				     const char *slot)
+void OBSBasic::AddProjectorMenuMonitors(QMenu *parent, QObject *target,
+					const char *slot)
 {
 	QAction *action;
 	QList<QScreen *> screens = QGuiApplication::screens();
@@ -4612,6 +4613,15 @@ QMenu *OBSBasic::CreateAddSourcePopupMenu()
 		connect(popupItem, SIGNAL(triggered(bool)), this,
 			SLOT(AddSourceFromAction()));
 
+		QIcon icon;
+
+		if (strcmp(type, "scene") == 0)
+			icon = GetSceneIcon();
+		else
+			icon = GetSourceIcon(type);
+
+		popupItem->setIcon(icon);
+
 		QAction *after = getActionAfter(popup, qname);
 		popup->insertAction(after, popupItem);
 	};
@@ -4637,6 +4647,7 @@ QMenu *OBSBasic::CreateAddSourcePopupMenu()
 	popup->addSeparator();
 	QAction *addGroup = new QAction(QTStr("Group"), this);
 	addGroup->setData(QT_UTF8("group"));
+	addGroup->setIcon(GetGroupIcon());
 	connect(addGroup, SIGNAL(triggered(bool)), this,
 		SLOT(AddSourceFromAction()));
 	popup->addAction(addGroup);
@@ -5729,7 +5740,9 @@ void OBSBasic::on_streamButton_clicked()
 			QMessageBox::StandardButton button =
 				OBSMessageBox::question(
 					this, QTStr("ConfirmStop.Title"),
-					QTStr("ConfirmStop.Text"));
+					QTStr("ConfirmStop.Text"),
+					QMessageBox::Yes | QMessageBox::No,
+					QMessageBox::No);
 
 			if (button == QMessageBox::No) {
 				ui->streamButton->setChecked(true);
@@ -5765,7 +5778,9 @@ void OBSBasic::on_streamButton_clicked()
 			QMessageBox::StandardButton button =
 				OBSMessageBox::question(
 					this, QTStr("ConfirmStart.Title"),
-					QTStr("ConfirmStart.Text"));
+					QTStr("ConfirmStart.Text"),
+					QMessageBox::Yes | QMessageBox::No,
+					QMessageBox::No);
 
 			if (button == QMessageBox::No) {
 				ui->streamButton->setChecked(false);
@@ -5787,7 +5802,9 @@ void OBSBasic::on_recordButton_clicked()
 			QMessageBox::StandardButton button =
 				OBSMessageBox::question(
 					this, QTStr("ConfirmStopRecord.Title"),
-					QTStr("ConfirmStopRecord.Text"));
+					QTStr("ConfirmStopRecord.Text"),
+					QMessageBox::Yes | QMessageBox::No,
+					QMessageBox::No);
 
 			if (button == QMessageBox::No) {
 				ui->recordButton->setChecked(true);
@@ -6446,32 +6463,29 @@ void OBSBasic::NudgeRight()
 	Nudge(1, MoveDir::Right);
 }
 
+void OBSBasic::DeleteProjector(OBSProjector *projector)
+{
+	for (size_t i = 0; i < projectors.size(); i++) {
+		if (projectors[i] == projector) {
+			projectors[i]->deleteLater();
+			projectors.erase(projectors.begin() + i);
+			break;
+		}
+	}
+}
+
 OBSProjector *OBSBasic::OpenProjector(obs_source_t *source, int monitor,
-				      QString title, ProjectorType type)
+				      ProjectorType type)
 {
 	/* seriously?  10 monitors? */
 	if (monitor > 9 || monitor > QGuiApplication::screens().size() - 1)
 		return nullptr;
 
 	OBSProjector *projector =
-		new OBSProjector(nullptr, source, monitor, title, type);
+		new OBSProjector(nullptr, source, monitor, type);
 
-	if (monitor < 0) {
-		for (auto &projPtr : windowProjectors) {
-			if (!projPtr) {
-				projPtr = projector;
-				projector = nullptr;
-			}
-		}
-
-		if (projector)
-			windowProjectors.push_back(projector);
-	} else {
-		delete projectors[monitor];
-		projectors[monitor].clear();
-
-		projectors[monitor] = projector;
-	}
+	if (projector)
+		projectors.emplace_back(projector);
 
 	return projector;
 }
@@ -6479,13 +6493,13 @@ OBSProjector *OBSBasic::OpenProjector(obs_source_t *source, int monitor,
 void OBSBasic::OpenStudioProgramProjector()
 {
 	int monitor = sender()->property("monitor").toInt();
-	OpenProjector(nullptr, monitor, nullptr, ProjectorType::StudioProgram);
+	OpenProjector(nullptr, monitor, ProjectorType::StudioProgram);
 }
 
 void OBSBasic::OpenPreviewProjector()
 {
 	int monitor = sender()->property("monitor").toInt();
-	OpenProjector(nullptr, monitor, nullptr, ProjectorType::Preview);
+	OpenProjector(nullptr, monitor, ProjectorType::Preview);
 }
 
 void OBSBasic::OpenSourceProjector()
@@ -6495,14 +6509,14 @@ void OBSBasic::OpenSourceProjector()
 	if (!item)
 		return;
 
-	OpenProjector(obs_sceneitem_get_source(item), monitor, nullptr,
+	OpenProjector(obs_sceneitem_get_source(item), monitor,
 		      ProjectorType::Source);
 }
 
 void OBSBasic::OpenMultiviewProjector()
 {
 	int monitor = sender()->property("monitor").toInt();
-	OpenProjector(nullptr, monitor, nullptr, ProjectorType::Multiview);
+	OpenProjector(nullptr, monitor, ProjectorType::Multiview);
 }
 
 void OBSBasic::OpenSceneProjector()
@@ -6512,20 +6526,18 @@ void OBSBasic::OpenSceneProjector()
 	if (!scene)
 		return;
 
-	OpenProjector(obs_scene_get_source(scene), monitor, nullptr,
+	OpenProjector(obs_scene_get_source(scene), monitor,
 		      ProjectorType::Scene);
 }
 
 void OBSBasic::OpenStudioProgramWindow()
 {
-	OpenProjector(nullptr, -1, QTStr("StudioProgramWindow"),
-		      ProjectorType::StudioProgram);
+	OpenProjector(nullptr, -1, ProjectorType::StudioProgram);
 }
 
 void OBSBasic::OpenPreviewWindow()
 {
-	OpenProjector(nullptr, -1, QTStr("PreviewWindow"),
-		      ProjectorType::Preview);
+	OpenProjector(nullptr, -1, ProjectorType::Preview);
 }
 
 void OBSBasic::OpenSourceWindow()
@@ -6535,16 +6547,14 @@ void OBSBasic::OpenSourceWindow()
 		return;
 
 	OBSSource source = obs_sceneitem_get_source(item);
-	QString title = QString::fromUtf8(obs_source_get_name(source));
 
-	OpenProjector(obs_sceneitem_get_source(item), -1, title,
+	OpenProjector(obs_sceneitem_get_source(item), -1,
 		      ProjectorType::Source);
 }
 
 void OBSBasic::OpenMultiviewWindow()
 {
-	OpenProjector(nullptr, -1, QTStr("MultiviewWindowed"),
-		      ProjectorType::Multiview);
+	OpenProjector(nullptr, -1, ProjectorType::Multiview);
 }
 
 void OBSBasic::OpenSceneWindow()
@@ -6554,15 +6564,20 @@ void OBSBasic::OpenSceneWindow()
 		return;
 
 	OBSSource source = obs_scene_get_source(scene);
-	QString title = QString::fromUtf8(obs_source_get_name(source));
 
-	OpenProjector(obs_scene_get_source(scene), -1, title,
-		      ProjectorType::Scene);
+	OpenProjector(obs_scene_get_source(scene), -1, ProjectorType::Scene);
 }
 
 void OBSBasic::OpenSavedProjectors()
 {
 	for (SavedProjectorInfo *info : savedProjectorsArray) {
+		OpenSavedProjector(info);
+	}
+}
+
+void OBSBasic::OpenSavedProjector(SavedProjectorInfo *info)
+{
+	if (info) {
 		OBSProjector *projector = nullptr;
 		switch (info->type) {
 		case ProjectorType::Source:
@@ -6570,35 +6585,17 @@ void OBSBasic::OpenSavedProjectors()
 			OBSSource source =
 				obs_get_source_by_name(info->name.c_str());
 			if (!source)
-				continue;
+				return;
 
-			QString title = nullptr;
-			if (info->monitor < 0)
-				title = QString::fromUtf8(
-					obs_source_get_name(source));
-
-			projector = OpenProjector(source, info->monitor, title,
+			projector = OpenProjector(source, info->monitor,
 						  info->type);
 
 			obs_source_release(source);
 			break;
 		}
-		case ProjectorType::Preview: {
+		default: {
 			projector = OpenProjector(nullptr, info->monitor,
-						  QTStr("PreviewWindow"),
-						  ProjectorType::Preview);
-			break;
-		}
-		case ProjectorType::StudioProgram: {
-			projector = OpenProjector(nullptr, info->monitor,
-						  QTStr("StudioProgramWindow"),
-						  ProjectorType::StudioProgram);
-			break;
-		}
-		case ProjectorType::Multiview: {
-			projector = OpenProjector(nullptr, info->monitor,
-						  QTStr("MultiviewWindowed"),
-						  ProjectorType::Multiview);
+						  info->type);
 			break;
 		}
 		}

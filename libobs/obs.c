@@ -870,8 +870,9 @@ static bool obs_init(const char *locale, const char *module_config_path,
 }
 
 #ifdef _WIN32
-extern void initialize_com(void);
+extern bool initialize_com(void);
 extern void uninitialize_com(void);
+static bool com_initialized = false;
 #endif
 
 /* Separate from actual context initialization
@@ -932,7 +933,7 @@ bool obs_startup(const char *locale, const char *module_config_path,
 	}
 
 #ifdef _WIN32
-	initialize_com();
+	com_initialized = initialize_com();
 #endif
 
 	success = obs_init(locale, module_config_path, store);
@@ -1047,7 +1048,8 @@ void obs_shutdown(void)
 	bfree(cmdline_args.argv);
 
 #ifdef _WIN32
-	uninitialize_com();
+	if (com_initialized)
+		uninitialize_com();
 #endif
 }
 

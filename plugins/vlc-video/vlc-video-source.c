@@ -956,4 +956,6 @@ struct obs_source_info vlc_source_info = {
 	.get_defaults = vlcs_defaults,
 	.get_properties = vlcs_properties,
 	.activate = vlcs_activate,
-	.deactivate = vlcs_deactivate};
+	.deactivate = vlcs_deactivate,
+	.icon_type = OBS_ICON_TYPE_MEDIA,
+};
