@@ -380,6 +380,25 @@ try {
 	return false;
 }
 
+static bool increase_maximum_frame_latency(ID3D11Device *device)
+{
+	ComQIPtr<IDXGIDevice1> dxgiDevice(device);
+	if (!dxgiDevice) {
+		blog(LOG_DEBUG, "%s: Failed to get IDXGIDevice1", __FUNCTION__);
+		return false;
+	}
+
+	const HRESULT hr = dxgiDevice->SetMaximumFrameLatency(16);
+	if (FAILED(hr)) {
+		blog(LOG_DEBUG, "%s: SetMaximumFrameLatency failed",
+		     __FUNCTION__);
+		return false;
+	}
+
+	blog(LOG_INFO, "DXGI increase maximum frame latency success");
+	return true;
+}
+
 #if USE_GPU_PRIORITY
 static bool set_priority(ID3D11Device *device)
 {
@@ -467,7 +486,12 @@ void gs_device::InitDevice(uint32_t adapterIdx)
 	blog(LOG_INFO, "D3D11 loaded successfully, feature level used: %x",
 	     (unsigned int)levelUsed);
 
-	/* adjust gpu thread priority on non-intel GPUs*/
+	/* prevent stalls sometimes seen in Present calls */
+	if (!increase_maximum_frame_latency(device)) {
+		blog(LOG_INFO, "DXGI increase maximum frame latency failed");
+	}
+
+	/* adjust gpu thread priority on non-intel GPUs */
 #if USE_GPU_PRIORITY
 	if (desc.VendorId != 0x8086 && !set_priority(device)) {
 		blog(LOG_INFO, "D3D11 GPU priority setup "
@@ -1145,19 +1169,23 @@ gs_texture_t *device_cubetexture_create(gs_device_t *device, uint32_t size,
 gs_texture_t *device_voltexture_create(gs_device_t *device, uint32_t width,
 				       uint32_t height, uint32_t depth,
 				       enum gs_color_format color_format,
-				       uint32_t levels, const uint8_t **data,
+				       uint32_t levels,
+				       const uint8_t *const *data,
 				       uint32_t flags)
 {
-	/* TODO */
-	UNUSED_PARAMETER(device);
-	UNUSED_PARAMETER(width);
-	UNUSED_PARAMETER(height);
-	UNUSED_PARAMETER(depth);
-	UNUSED_PARAMETER(color_format);
-	UNUSED_PARAMETER(levels);
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(flags);
-	return NULL;
+	gs_texture *texture = NULL;
+	try {
+		texture = new gs_texture_3d(device, width, height, depth,
+					    color_format, levels, data, flags);
+	} catch (const HRError &error) {
+		blog(LOG_ERROR, "device_voltexture_create (D3D11): %s (%08lX)",
+		     error.str, error.hr);
+		LogD3D11ErrorDetails(error, device);
+	} catch (const char *error) {
+		blog(LOG_ERROR, "device_voltexture_create (D3D11): %s", error);
+	}
+
+	return texture;
 }
 
 gs_zstencil_t *device_zstencil_create(gs_device_t *device, uint32_t width,

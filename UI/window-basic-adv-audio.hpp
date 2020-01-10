@@ -3,6 +3,8 @@
 #include <obs.hpp>
 #include <QDialog>
 #include <vector>
+#include <QCheckBox>
+#include <QPointer>
 
 class OBSAdvAudioCtrl;
 class QGridLayout;
@@ -15,8 +17,10 @@ class OBSBasicAdvAudio : public QDialog {
 private:
 	QWidget *controlArea;
 	QGridLayout *mainLayout;
+	QPointer<QCheckBox> activeOnly;
 	OBSSignal sourceAddedSignal;
 	OBSSignal sourceRemovedSignal;
+	bool showInactive;
 
 	std::vector<OBSAdvAudioCtrl *> controls;
 
@@ -31,7 +35,12 @@ public slots:
 	void SourceAdded(OBSSource source);
 	void SourceRemoved(OBSSource source);
 
+	void ShowContextMenu(const QPoint &pos);
+	void SetVolumeType();
+	void ActiveOnlyChanged(bool checked);
+
 public:
 	OBSBasicAdvAudio(QWidget *parent);
 	~OBSBasicAdvAudio();
+	void SetShowInactive(bool showInactive);
 };

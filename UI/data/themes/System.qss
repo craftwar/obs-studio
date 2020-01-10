@@ -229,14 +229,41 @@ OBSBasic {
     qproperty-defaultIcon: url(:res/images/sources/default.svg);
 }
 
-QListWidget::item,
-SourceTree::item {
-	height: 24px;
-}
-
 /* Scene Tree */
 
 SceneTree {
     qproperty-gridItemWidth: 150;
 	qproperty-gridItemHeight: 24;
+}
+
+/* Save icon */
+
+* [themeID="replayIconSmall"] {
+    qproperty-icon: url(:res/images/save.svg);
+}
+
+/* Studio Mode T-Bar */
+
+QSlider[themeID="tBarSlider"] {
+	height: 80px;
+}
+
+QSlider::groove:horizontal[themeID="tBarSlider"] {
+	border: 1px solid #4c4c4c;
+	height: 5px;
+	background: #DCD9D7;
+	margin: 0 12px;
+}
+
+QSlider::sub-page:horizontal[themeID="tBarSlider"] {
+	background: #DCD9D7;
+	border: 1px solid #4c4c4c;
+}
+
+QSlider::handle:horizontal[themeID="tBarSlider"] {
+	background-color: #f3f3f3;
+	border: 1px solid #4c4c4c;
+	width: 25px;
+	height: 80px;
+	margin: -24px -12px;
 }

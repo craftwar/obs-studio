@@ -157,6 +157,7 @@ class OBSBasic : public OBSMainWindow {
 	friend class AutoConfig;
 	friend class AutoConfigStreamPage;
 	friend class RecordButton;
+	friend class ReplayBufferButton;
 	friend class ExtraBrowsersModel;
 	friend class ExtraBrowsersDelegate;
 	friend struct OBSStudioAPI;
@@ -241,7 +242,9 @@ private:
 
 	QPointer<QPushButton> transitionButton;
 	QPointer<QPushButton> replayBufferButton;
+	QPointer<QHBoxLayout> replayLayout;
 	QScopedPointer<QPushButton> pause;
+	QScopedPointer<QPushButton> replay;
 
 	QScopedPointer<QSystemTrayIcon> trayIcon;
 	QPointer<QAction> sysTrayStream;
@@ -499,6 +502,11 @@ private:
 	QIcon GetBrowserIcon() const;
 	QIcon GetDefaultIcon() const;
 
+	QSlider *tBar;
+	bool tBarActive = false;
+	bool tBarDown = false;
+	void EnableTBar();
+
 public slots:
 	void DeferSaveBegin();
 	void DeferSaveEnd();
@@ -538,7 +546,8 @@ public slots:
 	void TransitionToScene(OBSScene scene, bool force = false);
 	void TransitionToScene(OBSSource scene, bool force = false,
 			       bool quickTransition = false,
-			       int quickDuration = 0, bool black = false);
+			       int quickDuration = 0, bool black = false,
+			       bool manual = false);
 	void SetCurrentScene(OBSSource scene, bool force = false);
 
 	bool AddSceneCollection(bool create_new,
@@ -642,6 +651,9 @@ private slots:
 	void SetSceneIcon(const QIcon &icon);
 	void SetDefaultIcon(const QIcon &icon);
 
+	void TBarChanged(int value);
+	void TBarReleased();
+
 private:
 	/* OBS Callbacks */
 	static void SceneReordered(void *data, calldata_t *params);
@@ -669,6 +681,10 @@ private:
 	void AutoRemux();
 
 	void UpdatePause(bool activate = true);
+	void UpdateReplayBuffer(bool activate = true);
+
+	bool OutputPathValid();
+	void OutputPathInvalidMessage();
 
 	bool LowDiskSpace();
 	void DiskSpaceMessage();

@@ -1501,18 +1501,22 @@ void OBSBasic::ResetOutputs()
 					   : CreateSimpleOutputHandler(this));
 
 		delete replayBufferButton;
+		delete replayLayout;
 
 		if (outputHandler->replayBuffer) {
-			replayBufferButton = new QPushButton(
+			replayBufferButton = new ReplayBufferButton(
 				QTStr("Basic.Main.StartReplayBuffer"), this);
 			replayBufferButton->setCheckable(true);
 			connect(replayBufferButton.data(),
 				&QPushButton::clicked, this,
 				&OBSBasic::ReplayBufferClicked);
 
+			replayLayout = new QHBoxLayout(this);
+			replayLayout->addWidget(replayBufferButton);
+
 			replayBufferButton->setProperty("themeID",
 							"replayBufferButton");
-			ui->buttonsVLayout->insertWidget(2, replayBufferButton);
+			ui->buttonsVLayout->insertLayout(2, replayLayout);
 		}
 
 		if (sysTrayReplayBuffer)
@@ -5410,6 +5414,12 @@ void OBSBasic::StartRecording()
 	if (disableOutputsRef)
 		return;
 
+	if (!OutputPathValid()) {
+		OutputPathInvalidMessage();
+		ui->recordButton->setChecked(false);
+		return;
+	}
+
 	if (LowDiskSpace()) {
 		DiskSpaceMessage();
 		ui->recordButton->setChecked(false);
@@ -5662,6 +5672,7 @@ void OBSBasic::ReplayBufferStart()
 		api->on_event(OBS_FRONTEND_EVENT_REPLAY_BUFFER_STARTED);
 
 	OnActivate();
+	UpdateReplayBuffer();
 
 	blog(LOG_INFO, REPLAY_BUFFER_START);
 }
@@ -5723,6 +5734,7 @@ void OBSBasic::ReplayBufferStop(int code)
 		api->on_event(OBS_FRONTEND_EVENT_REPLAY_BUFFER_STOPPED);
 
 	OnDeactivate();
+	UpdateReplayBuffer(false);
 }
 
 void OBSBasic::on_streamButton_clicked()
@@ -7596,6 +7608,26 @@ void OBSBasic::UpdatePause(bool activate)
 	}
 }
 
+void OBSBasic::UpdateReplayBuffer(bool activate)
+{
+	if (!activate || !outputHandler ||
+	    !outputHandler->ReplayBufferActive()) {
+		replay.reset();
+		return;
+	}
+
+	replay.reset(new QPushButton());
+	replay->setAccessibleName(QTStr("Basic.Main.SaveReplay"));
+	replay->setToolTip(QTStr("Basic.Main.SaveReplay"));
+	replay->setCheckable(true);
+	replay->setChecked(false);
+	replay->setProperty("themeID",
+			    QVariant(QStringLiteral("replayIconSmall")));
+	connect(replay.data(), &QAbstractButton::clicked, this,
+		&OBSBasic::ReplayBufferSave);
+	replayLayout->addWidget(replay.data());
+}
+
 #define MBYTE (1024ULL * 1024ULL)
 #define MBYTES_LEFT_STOP_REC 50ULL
 #define MAX_BYTES_LEFT (MBYTES_LEFT_STOP_REC * MBYTE)
@@ -7621,6 +7653,20 @@ const char *OBSBasic::GetCurrentOutputPath()
 	}
 
 	return path;
+}
+
+void OBSBasic::OutputPathInvalidMessage()
+{
+	blog(LOG_ERROR, "Recording stopped because of bad output path");
+
+	OBSMessageBox::critical(this, QTStr("Output.BadPath.Title"),
+				QTStr("Output.BadPath.Text"));
+}
+
+bool OBSBasic::OutputPathValid()
+{
+	const char *path = GetCurrentOutputPath();
+	return path && *path && QDir(path).exists();
 }
 
 void OBSBasic::DiskSpaceMessage()
