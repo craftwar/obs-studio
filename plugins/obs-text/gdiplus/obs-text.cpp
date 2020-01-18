@@ -1590,32 +1590,11 @@ static obs_properties_t *get_properties(void *data)
 	return props;
 }
 
-bool obs_module_load(void)
+static void defaults(obs_data_t *settings, int ver)
 {
-	obs_source_info si = {};
-	si.id = "text_gdiplus";
-	si.type = OBS_SOURCE_TYPE_INPUT;
-	si.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
-	si.get_properties = get_properties;
-	si.icon_type = OBS_ICON_TYPE_TEXT;
-
-	si.get_name = [](void *) { return obs_module_text("TextGDIPlus"); };
-	si.create = [](obs_data_t *settings, obs_source_t *source) {
-		return (void *)new TextSource(source, settings);
-	};
-	si.destroy = [](void *data) {
-		delete reinterpret_cast<TextSource *>(data);
-	};
-	si.get_width = [](void *data) {
-		return reinterpret_cast<TextSource *>(data)->cx;
-	};
-	si.get_height = [](void *data) {
-		return reinterpret_cast<TextSource *>(data)->cy;
-	};
-	si.get_defaults = [](obs_data_t *settings) {
 		obs_data_t *font_obj = obs_data_create();
 		obs_data_set_default_string(font_obj, "face", "Arial");
-		obs_data_set_default_int(font_obj, "size", 36);
+		obs_data_set_default_int(font_obj, "size", ver == 1 ? 36 : 256);
 
 		obs_data_set_default_obj(settings, S_FONT, font_obj);
 		obs_data_release(font_obj);
@@ -1638,9 +1617,33 @@ bool obs_module_load(void)
 		obs_data_set_default_bool(settings, S_EXTENTS_WRAP, true);
 		obs_data_set_default_int(settings, S_EXTENTS_CX, 100);
 		obs_data_set_default_int(settings, S_EXTENTS_CY, 100);
-		obs_data_set_default_int(settings, S_TRANSFORM,
-					 S_TRANSFORM_NONE);
+		obs_data_set_default_int(settings, S_TRANSFORM, S_TRANSFORM_NONE);
+};
+
+bool obs_module_load(void)
+{
+	obs_source_info si = {};
+	si.id = "text_gdiplus";
+	si.type = OBS_SOURCE_TYPE_INPUT;
+	si.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW |
+			  OBS_SOURCE_CAP_OBSOLETE;
+	si.get_properties = get_properties;
+	si.icon_type = OBS_ICON_TYPE_TEXT;
+
+	si.get_name = [](void *) { return obs_module_text("TextGDIPlus"); };
+	si.create = [](obs_data_t *settings, obs_source_t *source) {
+		return (void *)new TextSource(source, settings);
 	};
+	si.destroy = [](void *data) {
+		delete reinterpret_cast<TextSource *>(data);
+	};
+	si.get_width = [](void *data) {
+		return reinterpret_cast<TextSource *>(data)->cx;
+	};
+	si.get_height = [](void *data) {
+		return reinterpret_cast<TextSource *>(data)->cy;
+	};
+	si.get_defaults = [](obs_data_t *settings) { defaults(settings, 1); };
 	si.update = [](void *data, obs_data_t *settings) {
 		reinterpret_cast<TextSource *>(data)->Update(settings);
 	};
@@ -1651,7 +1654,15 @@ bool obs_module_load(void)
 		reinterpret_cast<TextSource *>(data)->Render();
 	};
 
+	obs_source_info si_v2 = si;
+	si_v2.id = "text_gdiplus_v2";
+	si_v2.output_flags &= ~OBS_SOURCE_CAP_OBSOLETE;
+	si_v2.get_defaults = [](obs_data_t *settings) {
+		defaults(settings, 2);
+	};
+
 	obs_register_source(&si);
+	obs_register_source(&si_v2);
 
 	const GdiplusStartupInput gdip_input;
 	GdiplusStartup(&gdip_token, &gdip_input, nullptr);
