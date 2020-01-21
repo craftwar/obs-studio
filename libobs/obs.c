@@ -1655,7 +1655,7 @@ gs_effect_t *obs_get_base_effect(enum obs_base_effect effect)
 	return NULL;
 }
 
-/* DEPRECATED */
+/* OBS_DEPRECATED */
 gs_effect_t *obs_get_default_rect_effect(void)
 {
 	if (!obs)
@@ -1677,6 +1677,7 @@ proc_handler_t *obs_get_proc_handler(void)
 	return obs->procs;
 }
 
+/* OBS_DEPRECATED */
 void obs_render_main_view(void)
 {
 	if (!obs)
