@@ -1317,6 +1317,19 @@ EXPORT bool obs_source_audio_active(const obs_source_t *source);
 
 EXPORT uint32_t obs_source_get_last_obs_version(const obs_source_t *source);
 
+/** Media controls */
+EXPORT void obs_source_media_play_pause(obs_source_t *source, bool pause);
+EXPORT void obs_source_media_restart(obs_source_t *source);
+EXPORT void obs_source_media_stop(obs_source_t *source);
+EXPORT void obs_source_media_next(obs_source_t *source);
+EXPORT void obs_source_media_previous(obs_source_t *source);
+EXPORT int64_t obs_source_media_get_duration(obs_source_t *source);
+EXPORT int64_t obs_source_media_get_time(obs_source_t *source);
+EXPORT void obs_source_media_set_time(obs_source_t *source, int64_t ms);
+EXPORT enum obs_media_state obs_source_media_get_state(obs_source_t *source);
+EXPORT void obs_source_media_started(obs_source_t *source);
+EXPORT void obs_source_media_ended(obs_source_t *source);
+
 /* ------------------------------------------------------------------------- */
 /* Transition-specific functions */
 enum obs_transition_target { OBS_TRANSITION_SOURCE_A, OBS_TRANSITION_SOURCE_B };
@@ -1446,6 +1459,9 @@ EXPORT obs_scene_t *obs_scene_from_source(const obs_source_t *source);
 /** Determines whether a source is within a scene */
 EXPORT obs_sceneitem_t *obs_scene_find_source(obs_scene_t *scene,
 					      const char *name);
+
+EXPORT obs_sceneitem_t *obs_scene_find_source_recursive(obs_scene_t *scene,
+							const char *name);
 
 EXPORT obs_sceneitem_t *obs_scene_find_sceneitem_by_id(obs_scene_t *scene,
 						       int64_t id);

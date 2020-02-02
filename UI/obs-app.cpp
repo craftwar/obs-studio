@@ -1988,7 +1988,7 @@ bool GetFileSafeName(const char *name, std::string &file)
 		return false;
 
 	wfile.resize(len);
-	os_utf8_to_wcs(name, base_len, &wfile[0], len);
+	os_utf8_to_wcs(name, base_len, &wfile[0], len + 1);
 
 	for (size_t i = wfile.size(); i > 0; i--) {
 		size_t im1 = i - 1;
@@ -2008,7 +2008,7 @@ bool GetFileSafeName(const char *name, std::string &file)
 		return false;
 
 	file.resize(len);
-	os_wcs_to_utf8(wfile.c_str(), wfile.size(), &file[0], len);
+	os_wcs_to_utf8(wfile.c_str(), wfile.size(), &file[0], len + 1);
 	return true;
 }
 

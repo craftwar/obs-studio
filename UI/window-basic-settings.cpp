@@ -95,6 +95,11 @@ struct CodecDesc {
 Q_DECLARE_METATYPE(FormatDesc)
 Q_DECLARE_METATYPE(CodecDesc)
 
+static inline bool ResTooHigh(uint32_t cx, uint32_t cy)
+{
+	return cx > 16384 || cy > 16384;
+}
+
 /* parses "[width]x[height]", string, i.e. 1024x768 */
 static bool ConvertResText(const char *res, uint32_t &cx, uint32_t &cy)
 {
@@ -128,6 +133,11 @@ static bool ConvertResText(const char *res, uint32_t &cx, uint32_t &cy)
 	/* shouldn't be any more tokens after this */
 	if (lexer_getbasetoken(lex, &token, IGNORE_WHITESPACE))
 		return false;
+
+	if (ResTooHigh(cx, cy)) {
+		cx = cy = 0;
+		return false;
+	}
 
 	return true;
 }
@@ -245,6 +255,25 @@ static void PopulateAACBitrates(initializer_list<QComboBox *> boxes)
 
 		box->setCurrentText(currentText);
 	}
+}
+
+static int gcd(int a, int b)
+{
+	return b == 0 ? a : gcd(b, a % b);
+}
+
+static std::tuple<int, int> aspect_ratio(int cx, int cy)
+{
+	int common = gcd(cx, cy);
+	int newCX = cx / common;
+	int newCY = cy / common;
+
+	if (newCX == 8 && newCY == 5) {
+		newCX = 16;
+		newCY = 10;
+	}
+
+	return std::make_tuple(newCX, newCY);
 }
 
 void RestrictResetBitrates(initializer_list<QComboBox *> boxes, int maxbitrate);
@@ -759,12 +788,15 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 	UpdateAutomaticReplayBufferCheckboxes();
 
-	on_baseResolution_editTextChanged(ui->baseResolution->currentText());
-
 	App()->DisableHotkeys();
 
 	channelIndex = ui->channelSetup->currentIndex();
 	sampleRateIndex = ui->sampleRate->currentIndex();
+
+	QRegExp rx("\\d{1,5}x\\d{1,5}");
+	QValidator *validator = new QRegExpValidator(rx, this);
+	ui->baseResolution->lineEdit()->setValidator(validator);
+	ui->outputResolution->lineEdit()->setValidator(validator);
 }
 
 OBSBasicSettings::~OBSBasicSettings()
@@ -1405,6 +1437,13 @@ void OBSBasicSettings::LoadResolutionLists()
 	ResetDownscales(cx, cy);
 
 	ui->outputResolution->lineEdit()->setText(outputResString.c_str());
+
+	std::tuple<int, int> aspect = aspect_ratio(cx, cy);
+
+	ui->baseAspect->setText(
+		QTStr("AspectRatio")
+			.arg(QString::number(std::get<0>(aspect)),
+			     QString::number(std::get<1>(aspect))));
 }
 
 static inline void LoadFPSCommon(OBSBasic *main, Ui::OBSBasicSettings *ui)
@@ -3750,25 +3789,6 @@ static bool ValidResolutions(Ui::OBSBasicSettings *ui)
 
 	ui->videoMsg->setText("");
 	return true;
-}
-
-static int gcd(int a, int b)
-{
-	return b == 0 ? a : gcd(b, a % b);
-}
-
-static std::tuple<int, int> aspect_ratio(int cx, int cy)
-{
-	int common = gcd(cx, cy);
-	int newCX = cx / common;
-	int newCY = cy / common;
-
-	if (newCX == 8 && newCY == 5) {
-		newCX = 16;
-		newCY = 10;
-	}
-
-	return std::make_tuple(newCX, newCY);
 }
 
 void OBSBasicSettings::RecalcOutputResPixels(const char *resText)
