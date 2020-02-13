@@ -48,6 +48,7 @@ static const char *obs_scene_signals[] = {
 	"void item_add(ptr scene, ptr item)",
 	"void item_remove(ptr scene, ptr item)",
 	"void reorder(ptr scene)",
+	"void refresh(ptr scene)",
 	"void item_visible(ptr scene, ptr item, bool visible)",
 	"void item_select(ptr scene, ptr item)",
 	"void item_deselect(ptr scene, ptr item)",
@@ -1918,6 +1919,18 @@ static inline void signal_reorder(struct obs_scene_item *item)
 	signal_parent(item->parent, command, &params);
 }
 
+static inline void signal_refresh(obs_scene_t *scene)
+{
+	const char *command = NULL;
+	struct calldata params;
+	uint8_t stack[128];
+
+	command = "refresh";
+
+	calldata_init_fixed(&params, stack, sizeof(stack));
+	signal_parent(scene, command, &params);
+}
+
 void obs_sceneitem_set_order(obs_sceneitem_t *item,
 			     enum obs_order_movement movement)
 {
@@ -2557,6 +2570,12 @@ obs_sceneitem_t *obs_scene_add_group(obs_scene_t *scene, const char *name)
 	return obs_scene_insert_group(scene, name, NULL, 0);
 }
 
+obs_sceneitem_t *obs_scene_add_group2(obs_scene_t *scene, const char *name,
+				      bool signal)
+{
+	return obs_scene_insert_group2(scene, name, NULL, 0, signal);
+}
+
 obs_sceneitem_t *obs_scene_insert_group(obs_scene_t *scene, const char *name,
 					obs_sceneitem_t **items, size_t count)
 {
@@ -2611,6 +2630,17 @@ obs_sceneitem_t *obs_scene_insert_group(obs_scene_t *scene, const char *name,
 
 	/* ------------------------- */
 
+	return item;
+}
+
+obs_sceneitem_t *obs_scene_insert_group2(obs_scene_t *scene, const char *name,
+					 obs_sceneitem_t **items, size_t count,
+					 bool signal)
+{
+	obs_sceneitem_t *item =
+		obs_scene_insert_group(scene, name, items, count);
+	if (signal && item)
+		signal_refresh(scene);
 	return item;
 }
 
@@ -2694,6 +2724,14 @@ void obs_sceneitem_group_ungroup(obs_sceneitem_t *item)
 	obs_sceneitem_release(item);
 }
 
+void obs_sceneitem_group_ungroup2(obs_sceneitem_t *item, bool signal)
+{
+	obs_scene_t *scene = item->parent;
+	obs_sceneitem_group_ungroup(item);
+	if (signal)
+		signal_refresh(scene);
+}
+
 void obs_sceneitem_group_add_item(obs_sceneitem_t *group, obs_sceneitem_t *item)
 {
 	if (!group || !group->is_group || !item)
@@ -2701,41 +2739,33 @@ void obs_sceneitem_group_add_item(obs_sceneitem_t *group, obs_sceneitem_t *item)
 
 	obs_scene_t *scene = group->parent;
 	obs_scene_t *groupscene = group->source->context.data;
-	obs_sceneitem_t *last;
 
 	if (item->parent != scene)
+		return;
+
+	if (item->parent == groupscene)
 		return;
 
 	/* ------------------------- */
 
 	full_lock(scene);
-	remove_group_transform(group, item);
-	detach_sceneitem(item);
-
-	/* ------------------------- */
-
 	full_lock(groupscene);
-	last = groupscene->first_item;
-	if (last) {
-		for (;;) {
-			if (!last->next)
-				break;
-			last = last->next;
-		}
-		last->next = item;
-		item->prev = last;
-	} else {
-		groupscene->first_item = item;
-	}
-	item->parent = groupscene;
-	item->next = NULL;
+
+	remove_group_transform(group, item);
+
+	detach_sceneitem(item);
+	attach_sceneitem(groupscene, item, NULL);
+
 	apply_group_transform(item, group);
+
 	resize_group(group);
+
 	full_unlock(groupscene);
+	full_unlock(scene);
 
 	/* ------------------------- */
 
-	full_unlock(scene);
+	signal_refresh(scene);
 }
 
 void obs_sceneitem_group_remove_item(obs_sceneitem_t *group,
@@ -2751,27 +2781,20 @@ void obs_sceneitem_group_remove_item(obs_sceneitem_t *group,
 
 	full_lock(scene);
 	full_lock(groupscene);
+
 	remove_group_transform(group, item);
+
 	detach_sceneitem(item);
-
-	/* ------------------------- */
-
-	if (group->prev) {
-		group->prev->next = item;
-		item->prev = group->prev;
-	} else {
-		scene->first_item = item;
-		item->prev = NULL;
-	}
-	group->prev = item;
-	item->next = group;
-	item->parent = scene;
-
-	/* ------------------------- */
+	attach_sceneitem(scene, item, NULL);
 
 	resize_group(group);
+
 	full_unlock(groupscene);
 	full_unlock(scene);
+
+	/* ------------------------- */
+
+	signal_refresh(scene);
 }
 
 static void

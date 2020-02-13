@@ -135,6 +135,11 @@ Scene Signals
 
    Called when scene items have been reoredered in the scene.
 
+**refresh** (ptr scene)
+
+   Called when the entire scene item list needs to be refreshed.
+   Usually this is only used when groups have changed.
+
 **item_visible** (ptr scene, ptr item, bool visible)
 
    Called when a scene item's visibility state changes.
@@ -473,7 +478,8 @@ Scene Item Group Functions
 
 .. function:: obs_sceneitem_t *obs_scene_add_group(obs_scene_t *scene, const char *name)
 
-   Adds a group with the specified name.
+   Adds a group with the specified name.  Does not signal the scene with
+   the *refresh* signal.
 
    :param scene: Scene to add the group to
    :param name:  Name of the group
@@ -481,15 +487,43 @@ Scene Item Group Functions
 
 ---------------------
 
+.. function:: obs_sceneitem_t *obs_scene_add_group2(obs_scene_t *scene, const char *name, bool signal)
+
+   Adds a group with the specified name.
+
+   :param scene:  Scene to add the group to
+   :param name:   Name of the group
+   :param signal: If *true*, signals the scene with the *refresh*
+                  signal
+   :return:       The new group's scene item
+
+---------------------
+
 .. function:: obs_sceneitem_t *obs_scene_insert_group(obs_scene_t *scene, const char *name, obs_sceneitem_t **items, size_t count)
 
    Creates a group out of the specified scene items.  The group will be
-   inserted at the top scene item.
+   inserted at the top scene item.  Does not signal the scene with the
+   *refresh* signal.
 
    :param scene: Scene to add the group to
    :param name:  Name of the group
    :param items: Array of scene items to put in a group
    :param count: Number of scene items in the array
+   :return:      The new group's scene item
+
+---------------------
+
+.. function:: obs_sceneitem_t *obs_scene_insert_group2(obs_scene_t *scene, const char *name, obs_sceneitem_t **items, size_t count, bool signal)
+
+   Creates a group out of the specified scene items.  The group will be
+   inserted at the top scene item.  Does not signal a refresh.
+
+   :param scene: Scene to add the group to
+   :param name:  Name of the group
+   :param items: Array of scene items to put in a group
+   :param count: Number of scene items in the array
+   :param signal: If *true*, signals the scene with the *refresh*
+                  signal
    :return:      The new group's scene item
 
 ---------------------
@@ -528,7 +562,19 @@ Scene Item Group Functions
 .. function:: void obs_sceneitem_group_ungroup(obs_sceneitem_t *group)
 
    Ungroups the specified group.  Scene items within the group will be
+   placed where the group was.  Does not signal the scene with the
+   *refresh* signal.
+
+---------------------
+
+.. function:: void obs_sceneitem_group_ungroup2(obs_sceneitem_t *group, bool signal)
+
+   Ungroups the specified group.  Scene items within the group will be
    placed where the group was.
+
+   :param group: Group scene item
+   :param signal: If *true*, signals the scene with the *refresh*
+                  signal
 
 ---------------------
 
@@ -540,8 +586,8 @@ Scene Item Group Functions
 
 .. function:: void obs_sceneitem_group_remove_item(obs_sceneitem_t *item)
 
-   Rmoves a scene item from a group.  The item will be placed before the
-   group in the main scene.
+   Removes a scene item from a group.  The item will be placed before
+   the group in the main scene.
 
 ---------------------
 
