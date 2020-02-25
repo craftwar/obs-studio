@@ -2141,7 +2141,7 @@ void OBSBasicSettings::LoadAudioSources()
 {
 	if (ui->audioSourceLayout->rowCount() > 0) {
 		QLayoutItem *forDeletion = ui->audioSourceLayout->takeAt(0);
-		delete forDeletion->widget();
+		forDeletion->widget()->deleteLater();
 		delete forDeletion;
 	}
 	auto layout = new QFormLayout();
