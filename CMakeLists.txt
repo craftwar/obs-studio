@@ -157,6 +157,9 @@ endif()
 
 if(MSVC)
 	add_compile_options(/MP /Qspectre-)
+	if ($ENV{favor_arch} MATCHES ^INTEL) # Intel CPU specific mitigations
+		add_compile_options("/QIntel-jcc-erratum") # avaliable in VS2019 16.5+
+	endif()
 	set(CMAKE_C_FLAGS_DEBUG "/DDEBUG=1 /D_DEBUG=1 ${CMAKE_C_FLAGS_DEBUG}")
 	set(CMAKE_CXX_FLAGS_DEBUG "/DDEBUG=1 /D_DEBUG=1 ${CMAKE_C_FLAGS_DEBUG}")
 
