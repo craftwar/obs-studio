@@ -77,6 +77,10 @@ struct graphics_offsets {
 };
 
 struct hook_info {
+	/* hook version */
+	uint32_t hook_ver_major;
+	uint32_t hook_ver_minor;
+
 	/* capture info */
 	enum capture_type type;
 	uint32_t window;
@@ -98,6 +102,8 @@ struct hook_info {
 
 	/* hook addresses */
 	struct graphics_offsets offsets;
+
+	uint32_t reserved[128];
 };
 
 #pragma pack(pop)

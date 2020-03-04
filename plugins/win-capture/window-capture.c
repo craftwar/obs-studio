@@ -87,11 +87,11 @@ static enum window_capture_method
 choose_method(enum window_capture_method method, bool wgc_supported,
 	      const char *current_class)
 {
-	if (method != METHOD_AUTO) {
-		if (method == METHOD_WGC && !wgc_supported)
-			method = METHOD_BITBLT;
+	if (!wgc_supported)
+		return METHOD_BITBLT;
+
+	if (method != METHOD_AUTO)
 		return method;
-	}
 
 	if (!current_class)
 		return METHOD_BITBLT;
@@ -321,7 +321,7 @@ static obs_properties_t *wc_properties(void *data)
 	obs_property_list_add_int(p, TEXT_METHOD_AUTO, METHOD_AUTO);
 	obs_property_list_add_int(p, TEXT_METHOD_BITBLT, METHOD_BITBLT);
 	obs_property_list_add_int(p, TEXT_METHOD_WGC, METHOD_WGC);
-	obs_property_list_item_disable(p, 1, !wc->wgc_supported);
+	obs_property_list_item_disable(p, 2, !wc->wgc_supported);
 	obs_property_set_modified_callback(p, wc_capture_method_changed);
 
 	p = obs_properties_add_list(ppts, "priority", TEXT_MATCH_PRIORITY,
