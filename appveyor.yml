@@ -112,6 +112,10 @@ build_script:
   - ps: Push-AppveyorArtifact "build.7z" -FileName "OBS-git-craftwar-${env:favor_arch}-${env:vc_inc_arch}.7z"
   - ps: Push-AppveyorArtifact "build64\plugins\obs-text\Release\obs-text.dll" -FileName "obs-text-${env:favor_arch}-${env:vc_inc_arch}.dll"
   - ps: Push-AppveyorArtifact "version.txt" -FileName "${env:favor_arch}-${env:vc_inc_arch}.txt"
+
+  - "%APPVEYOR_BUILD_FOLDER%\CI\craftwar\download game capture.cmd"
+  - ps: if (${env:vc_inc_arch} -eq "SSE2") Push-AppveyorArtifact "gc-${env:favor_arch}.7z"
+
   - set release=%APPVEYOR_REPO_COMMIT:~0,7%
   - if "%vc_inc_arch%"=="AVX2" C:\projects\obs-studio\CI\craftwar\obs-text-blend.cmd
 
