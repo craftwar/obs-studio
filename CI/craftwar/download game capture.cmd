@@ -1,8 +1,11 @@
-::@echo off
+@rem echo off
+@rem https://cdn-fastly.obsproject.com/update_studio/core/obs-plugins/64bit/win-capture.dll
 setlocal
 set cdn_root=https://cdn-fastly.obsproject.com/update_studio
 set gc_dir=data/obs-plugins/win-capture
 set cdn_gc_url=%cdn_root%/core/%gc_dir%
+set file_dir=obs-plugins/64bit
+set cdn_wc_url=%cdn_root%/core/%file_dir%/win-capture.dll
 if "%favor_arch%"=="INTEL64" (
 	if "%vc_inc_arch%"=="SSE2" (
 		mkdir Jim_OBS\data\obs-plugins\win-capture\
@@ -19,7 +22,10 @@ if "%favor_arch%"=="INTEL64" (
 		pushd Jim_OBS\obs-plugins\64bit
 		set file_dir=obs-plugins/64bit
 		set file_url=%cdn_root%/core/%file_dir%
-		if exist win-capture.dll (curl -kLO %file_url%/win-capture.dll -f --retry 5 -z win-capture.dll) else	(curl -kLO %file_url%/win-capture.dll -f --retry 5 -C -)
+		@rem if exist win-capture.dll (curl -kLO %file_url%/win-capture.dll -f --retry 5 -z win-capture.dll) else	(curl -kLO %file_url%/win-capture.dll -f --retry 5 -C -)
+		echo %file_dir%
+		echo %file_url%
+		if exist win-capture.dll (curl -kLO %cdn_wc_url% -f --retry 5 -z win-capture.dll) else	(curl -kLO %cdn_wc_url% -f --retry 5 -C -)
 		popd
 
 		7z a gc.7z -mx=9 -myx=9 %APPVEYOR_BUILD_FOLDER%\Jim_OBS\*
