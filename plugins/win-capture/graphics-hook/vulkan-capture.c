@@ -428,8 +428,8 @@ static inline bool vk_shtex_init_d3d11_tex(struct vk_data *data,
 	desc.MipLevels = 1;
 	desc.ArraySize = 1;
 
-	flog("OBS requesting %s texture format",
-	     vk_format_to_str(swap->format));
+	flog("OBS requesting %s texture format.  capture dimensions: %dx%d",
+	     vk_format_to_str(swap->format), (int)desc.Width, (int)desc.Height);
 
 	desc.Format = vk_format_to_dxgi(swap->format);
 	desc.SampleDesc.Count = 1;
@@ -935,6 +935,11 @@ static inline HWND get_swap_window(struct vk_swap_data *swap)
 	return NULL;
 }
 
+static inline bool valid_rect(struct vk_swap_data *swap)
+{
+	return !!swap->image_extent.width && !!swap->image_extent.height;
+}
+
 static void vk_capture(struct vk_data *data, VkQueue queue,
 		       const VkPresentInfoKHR *info)
 {
@@ -965,7 +970,7 @@ static void vk_capture(struct vk_data *data, VkQueue queue,
 		vk_shtex_free(data);
 	}
 	if (capture_should_init()) {
-		if (!vk_shtex_init(data, window, swap)) {
+		if (valid_rect(swap) && !vk_shtex_init(data, window, swap)) {
 			vk_shtex_free(data);
 			data->valid = false;
 		}
@@ -1046,6 +1051,8 @@ static VkResult VKAPI OBS_CreateInstance(const VkInstanceCreateInfo *cinfo,
 		ai.engineVersion = 0;
 		ai.apiVersion = VK_API_VERSION_1_1;
 	}
+
+	info.pApplicationInfo = &ai;
 
 	/* -------------------------------------------------------- */
 	/* create instance                                          */

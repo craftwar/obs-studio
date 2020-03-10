@@ -60,6 +60,7 @@
 
 #if defined(_WIN32) && defined(ENABLE_WIN_UPDATER)
 #include "win-update/win-update.hpp"
+#include "windows.h"
 #endif
 
 #include "ui_OBSBasic.h"
@@ -4129,10 +4130,33 @@ void OBSBasic::AddProjectorMenuMonitors(QMenu *parent, QObject *target,
 	QAction *action;
 	QList<QScreen *> screens = QGuiApplication::screens();
 	for (int i = 0; i < screens.size(); i++) {
-		QRect screenGeometry = screens[i]->geometry();
+		QScreen *screen = screens[i];
+		QRect screenGeometry = screen->geometry();
+		QString name = "";
+#ifdef _WIN32
+		DISPLAY_DEVICEA ddev;
+		ddev.cb = sizeof(ddev);
+		EnumDisplayDevicesA(screen->name().toStdString().c_str(), 0,
+				    &ddev, 1);
+		name = ddev.DeviceString;
+#elif defined(__APPLE__)
+		name = screen->name();
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
+		name = screen->model().simplified();
+
+		if (name.length() > 1 && name.endsWith("-"))
+			name.chop(1);
+#endif
+		name = name.simplified();
+
+		if (name.length() == 0) {
+			name = QString("%1 %2")
+				       .arg(QTStr("Display"))
+				       .arg(QString::number(i + 1));
+		}
 		QString str =
-			QString("%1 %2: %3x%4 @ %5,%6")
-				.arg(QTStr("Display"), QString::number(i + 1),
+			QString("%1: %2x%3 @ %4,%5")
+				.arg(name,
 				     QString::number(screenGeometry.width()),
 				     QString::number(screenGeometry.height()),
 				     QString::number(screenGeometry.x()),
@@ -4717,6 +4741,7 @@ void OBSBasic::AddSource(const char *id)
 
 QMenu *OBSBasic::CreateAddSourcePopupMenu()
 {
+	const char *unversioned_type;
 	const char *type;
 	bool foundValues = false;
 	bool foundDeprecated = false;
@@ -4757,7 +4782,7 @@ QMenu *OBSBasic::CreateAddSourcePopupMenu()
 		popup->insertAction(after, popupItem);
 	};
 
-	while (obs_enum_input_types(idx++, &type)) {
+	while (obs_enum_input_types2(idx++, &type, &unversioned_type)) {
 		const char *name = obs_source_get_display_name(type);
 		uint32_t caps = obs_get_source_output_flags(type);
 
@@ -4765,9 +4790,9 @@ QMenu *OBSBasic::CreateAddSourcePopupMenu()
 			continue;
 
 		if ((caps & OBS_SOURCE_DEPRECATED) == 0) {
-			addSource(popup, type, name);
+			addSource(popup, unversioned_type, name);
 		} else {
-			addSource(deprecated, type, name);
+			addSource(deprecated, unversioned_type, name);
 			foundDeprecated = true;
 		}
 		foundValues = true;
