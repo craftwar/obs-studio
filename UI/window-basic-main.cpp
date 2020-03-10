@@ -58,7 +58,7 @@
 #include <fstream>
 #include <sstream>
 
-#if defined(_WIN32) && defined(ENABLE_WIN_UPDATER)
+#if defined(_WIN32)
 #include "win-update/win-update.hpp"
 #include "windows.h"
 #endif
