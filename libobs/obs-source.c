@@ -974,9 +974,6 @@ static void deactivate_source(obs_source_t *source)
 
 static void show_source(obs_source_t *source)
 {
-	if (source->info.type == OBS_SOURCE_TYPE_INPUT)
-		obs_source_addref(source);
-
 	if (source->context.data && source->info.show)
 		source->info.show(source->context.data);
 	obs_source_dosignal(source, "source_show", "show");
@@ -987,9 +984,6 @@ static void hide_source(obs_source_t *source)
 	if (source->context.data && source->info.hide)
 		source->info.hide(source->context.data);
 	obs_source_dosignal(source, "source_hide", "hide");
-
-	if (source->info.type == OBS_SOURCE_TYPE_INPUT)
-		obs_source_release(source);
 }
 
 static void activate_tree(obs_source_t *parent, obs_source_t *child,
