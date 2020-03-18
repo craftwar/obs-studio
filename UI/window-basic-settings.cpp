@@ -2439,6 +2439,7 @@ void OBSBasicSettings::LoadAdvancedSettings()
 	bool browserHWAccel = config_get_bool(App()->GlobalConfig(), "General",
 					      "BrowserHWAccel");
 	ui->browserHWAccel->setChecked(browserHWAccel);
+	prevBrowserAccel = ui->browserHWAccel->isChecked();
 #endif
 
 	SetComboByValue(ui->hotkeyFocusType, hotkeyFocusType);
@@ -3533,8 +3534,10 @@ void OBSBasicSettings::SaveSettings()
 	bool langChanged = (ui->language->currentIndex() != prevLangIndex);
 	bool audioRestart = (ui->channelSetup->currentIndex() != channelIndex ||
 			     ui->sampleRate->currentIndex() != sampleRateIndex);
+	bool browserHWAccelChanged =
+		(ui->browserHWAccel->isChecked() != prevBrowserAccel);
 
-	if (langChanged || audioRestart)
+	if (langChanged || audioRestart || browserHWAccelChanged)
 		restart = true;
 	else
 		restart = false;
