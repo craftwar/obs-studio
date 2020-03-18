@@ -28,9 +28,13 @@ environment:
   matrix:
     - favor_arch: AMD64
     - favor_arch: INTEL64
+      cl_cpu_options: -QIntel-jcc-erratum
+      VCPKG_CPU_C_FLAGS: /QIntel-jcc-erratum
     - favor_arch: AMD64
       vc_inc_arch: SSE2
     - favor_arch: INTEL64
+      cl_cpu_options: -QIntel-jcc-erratum
+      VCPKG_CPU_C_FLAGS: /QIntel-jcc-erratum
       vc_inc_arch: SSE2
 #      D3D12_HOOK: true
 # setting rdp passoword never works
@@ -64,7 +68,7 @@ install:
   - set QTDIR64=C:\Qt\%QT_VERSION%\msvc2017_64
   - set build_config=Release
 #  -Zc:inline is disabled when -GL is on
-  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -Qspectre- -favor:%favor_arch% -Zc:__cplusplus
+  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -Qspectre- -favor:%favor_arch% -Zc:__cplusplus %cl_cpu_options%
 #vcpkg
 # update vcpkg when workaround is required
   - cd C:\tools\vcpkg
@@ -73,7 +77,7 @@ install:
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
   - set VCPKG_LINKER_FLAGS=/LTCG
-  - set VCPKG_C_FLAGS=/arch:%vc_inc_arch% /Gw /Gy /GL /GS- /favor:%favor_arch% /Zc:__cplusplus
+  - set VCPKG_C_FLAGS=/arch:%vc_inc_arch% /Gw /Gy /GL /GS- /favor:%favor_arch% /Zc:__cplusplus %VCPKG_CPU_C_FLAGS%
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
   - '"C:\Program Files\Git\usr\bin\sed.exe" -i "s/CRT_LINKAGE static/CRT_LINKAGE dynamic/" /c/tools/vcpkg/triplets/x64-windows-static.cmake' #patch to dynamic crt
   - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows-static.cmake
