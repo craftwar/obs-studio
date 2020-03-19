@@ -29,6 +29,7 @@
 #include <QColorDialog>
 #include <QSizePolicy>
 #include <QScrollBar>
+#include <QTextStream>
 
 #include <util/dstr.h>
 #include <util/util.hpp>
@@ -1451,9 +1452,8 @@ void OBSBasic::InitPrimitives()
 	gs_render_start(true);
 	gs_vertex2f(0.0f, 0.0f);
 	gs_vertex2f(0.0f, 1.0f);
-	gs_vertex2f(1.0f, 1.0f);
 	gs_vertex2f(1.0f, 0.0f);
-	gs_vertex2f(0.0f, 0.0f);
+	gs_vertex2f(1.0f, 1.0f);
 	box = gs_render_save();
 
 	gs_render_start(true);
@@ -4173,15 +4173,11 @@ void OBSBasic::AddProjectorMenuMonitors(QMenu *parent, QObject *target,
 		QRect screenGeometry = screen->geometry();
 		QString name = "";
 #ifdef _WIN32
-		DISPLAY_DEVICE ddev;
-		ddev.cb = sizeof(ddev);
-		BPtr<wchar_t> wideName;
-		os_utf8_to_wcs_ptr(screen->name().toStdString().c_str(), 0,
-				   &wideName);
-		EnumDisplayDevices(wideName, 0, &ddev, 1);
-		BPtr<char> newName;
-		os_wcs_to_utf8_ptr(ddev.DeviceString, 0, &newName);
-		name = newName;
+		QTextStream fullname(&name);
+		fullname << GetMonitorName(screen->name());
+		fullname << " (";
+		fullname << (i + 1);
+		fullname << ")";
 #elif defined(__APPLE__)
 		name = screen->name();
 #elif QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
@@ -7180,8 +7176,10 @@ void OBSBasic::IconActivated(QSystemTrayIcon::ActivationReason reason)
 	AddProjectorMenuMonitors(studioProgramProjector, this,
 				 SLOT(OpenStudioProgramProjector()));
 
-	if (reason == QSystemTrayIcon::Trigger)
+	if (reason == QSystemTrayIcon::Trigger) {
+		EnablePreviewDisplay(previewEnabled && !isVisible());
 		ToggleShowHide();
+	}
 }
 
 void OBSBasic::SysTrayNotify(const QString &text,
