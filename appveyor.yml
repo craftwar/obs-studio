@@ -62,8 +62,7 @@ install:
   - set DepsPath64=%CD%\dependencies2017\win64
 #  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
 # latest
-# use 5.11 to prevent 5.12 issue
-  - set QT_VERSION=5.12.6
+  - set QT_VERSION=5.14
   - set QTDIR32=C:\Qt\%QT_VERSION%\msvc2017
   - set QTDIR64=C:\Qt\%QT_VERSION%\msvc2017_64
   - set build_config=Release
