@@ -88,7 +88,7 @@ install:
 #  - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows.cmake # bug curl can't build
   - vcpkg install curl[core,winssl]:x64-windows
   - set curlPath=C:\tools\vcpkg\installed\x64-windows\include
-  - vcpkg install mbedtls:x64-windows
+  - if "%vc_inc_arch%"=="SSE2" vcpkg install mbedtls:x64-windows
 # mbedtls use these 3 paths
   - set mbedtlsPath=C:\Tools\vcpkg\installed\x64-windows\include
   - set mbedx509Path=C:\Tools\vcpkg\installed\x64-windows\include
