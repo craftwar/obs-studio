@@ -7478,7 +7478,7 @@ void OBSBasic::ColorChange()
 				obs_data_get_string(curPrivData, "color");
 			const char *customColor = *oldColor != 0 ? oldColor
 								 : "#55FF0000";
-#ifdef __APPLE__
+#ifndef _WIN32
 			options |= QColorDialog::DontUseNativeDialog;
 #endif
 
