@@ -246,7 +246,10 @@ struct TextSource {
 	static struct SONG {
 		HWND hWnd;
 		unsigned char browser_suffix_len;
-		typedef wchar_t *(*pFn)(wchar_t *const, size_t);
+		// prefer using over typedef in C++ Core Guidelines
+		// https://github.com/isocpp/CppCoreGuidelines
+		// typedef wchar_t *(*pFn)(wchar_t *const, size_t);
+		using pFn = wchar_t *(*)(wchar_t *const, size_t);
 		pFn pFunc;
 		HANDLE hThread;
 		DWORD thread_id;
