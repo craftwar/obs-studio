@@ -354,6 +354,7 @@ struct TextSource {
 	// song players
 	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
 						L" - Google Chrome"};
+	static constexpr wchar_t browser_app[] = L"- YouTube";
 	static unsigned char isBrowser(wchar_t *const __restrict title,
 				       size_t title_len);
 	static wchar_t *
@@ -1000,7 +1001,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	// Using "else if"s produces bigger binary (why?)
 	song.browser_suffix_len = isBrowser(title.get(), len);
 	wchar_t *song_name =
-		song.browser_suffix_len
+		song.browser_suffix_len >= 0
 			? get_song_browser_youtube(
 				  title.get(), len - song.browser_suffix_len)
 			: nullptr;
@@ -1054,15 +1055,19 @@ unsigned char TextSource::isBrowser(wchar_t *const __restrict title,
 		if (wcs_endWith(title, brower, title_len, suffix_len))
 			return suffix_len;
 	}
-	return 0;
+	// for browser doesn't suffix window title with its name (ex: M$ Edge based on Chromium)
+	constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
+	if (wcs_endWith(title, browser_app, title_len, app_len))
+		return 0;
+
+	return -1;
 }
 
 wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 					      size_t str_len)
 {
-	static constexpr wchar_t app[] = L"- YouTube";
-	constexpr unsigned char app_len = WSTRLEN_CONST(app);
-	if (wcs_endWith(title, app, str_len, app_len)) {
+	constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
+	if (wcs_endWith(title, browser_app, str_len, app_len)) {
 		title[str_len - app_len - 1] =
 			'\0'; // remove 1 space before suffix
 		return title;
