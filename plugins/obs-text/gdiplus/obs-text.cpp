@@ -1000,14 +1000,16 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 	// Using "else if"s produces bigger binary (why?)
 	song.browser_suffix_len = isBrowser(title.get(), len);
-	wchar_t *song_name =
-		song.browser_suffix_len >= 0
-			? get_song_browser_youtube(
-				  title.get(), len - song.browser_suffix_len)
-			: nullptr;
-	if (song_name) {
-		song.pFunc = &TextSource::get_song_browser_youtube;
-		goto song_found;
+	wchar_t *song_name;
+
+	if (song.browser_suffix_len >= 0) {
+		song_name = get_song_browser_youtube(
+			title.get(), len - song.browser_suffix_len);
+		if (song_name) {
+			song.pFunc = &TextSource::get_song_browser_youtube;
+			goto song_found;
+		} else // skip not brower based app
+			return 0;
 	}
 	song_name = get_song_foobar2000(title.get(), len);
 	if (song_name) {
