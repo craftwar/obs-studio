@@ -1020,13 +1020,13 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (song_name)
 		song.pFunc = &TextSource::get_song_osu;
 	else
-		goto song_not_found;
+		return 0;
 
 song_found:
 	set_song_name(song_name);
 	// If you wana switch player, disable then enable song mode again
 	song.hWnd = hwnd;
-	if (song.thread_owner == NULL) {
+	if (!song.thread_owner) {
 		TextSource::song.hThread = CreateThread(
 			NULL, 0, song_thread, this, 0, &song.thread_id);
 		if (TextSource::song.hThread) {
@@ -1037,8 +1037,7 @@ song_found:
 	} else
 		song_close_thread();
 
-song_not_found:
-	return !!song_name;
+	return 1;
 }
 
 static bool wcs_endWith(wchar_t *__restrict str,
