@@ -9,6 +9,7 @@
 #include <string>
 #include <memory>
 #include <locale>
+#include <regex>
 
 using namespace std;
 using namespace Gdiplus;
@@ -352,7 +353,12 @@ struct TextSource {
 	static BOOL CALLBACK find_target(const HWND hwnd, const LPARAM lParam);
 	BOOL get_song_name(const HWND hwnd);
 	// song players
+	// Microsoft Edge, the white spaces are 0x200b 0x0020
 	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
+						L" - Microsoft"
+						L"\x200b\x0020"
+						L"Edge",
+						//L"Edge",
 						L" - Google Chrome"};
 	static constexpr wchar_t browser_app[] = L"- YouTube";
 	static char isBrowser(wchar_t *const __restrict title,
@@ -1056,7 +1062,7 @@ char TextSource::isBrowser(wchar_t *const __restrict title,
 		if (wcs_endWith(title, brower, title_len, suffix_len))
 			return suffix_len;
 	}
-	// for browser doesn't suffix window title with its name (ex: M$ Edge based on Chromium)
+	// for browser doesn't suffix window title with its name (ex: M$ Edge based on Chromium < 81.0?)
 	constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
 	if (wcs_endWith(title, browser_app, title_len, app_len))
 		return 0;
@@ -1067,12 +1073,29 @@ char TextSource::isBrowser(wchar_t *const __restrict title,
 wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 					      size_t str_len)
 {
+	// song name - YouTube - Personal - Microsoft Edge
+	// song name - YouTube and 13 more pages - Personal - Microsoft Edge
 	constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
-	if (wcs_endWith(title, browser_app, str_len, app_len)) {
-		title[str_len - app_len - 1] =
-			'\0'; // remove 1 space before suffix
-		return title;
+	static const std::wregex const youtube_regex(
+		L".+( - YouTube )(?:and.+?)?",
+		std::regex::optimize | std::regex::ECMAScript);
+	if (str_len > app_len) {
+		std::wcmatch match;
+		title[str_len] = 0; // don't compare browser_suffix part
+		std::regex_match(title, match, youtube_regex);
+		if (!match.empty()) {
+			const auto pos = match.position(1);
+			title[pos] = 0;
+			return title;
+		}
 	}
+
+	// old string match when I don't handle special Edge behavior
+	//if (wcs_endWith(title, browser_app, str_len, app_len)) {
+	//	title[str_len - app_len - 1] =
+	//		'\0'; // remove 1 space before suffix
+	//	return title;
+	//}
 	return nullptr;
 }
 
