@@ -245,7 +245,7 @@ struct TextSource {
 
 	static struct SONG {
 		HWND hWnd;
-		unsigned char browser_suffix_len;
+		char browser_suffix_len;
 		// prefer using over typedef in C++ Core Guidelines
 		// https://github.com/isocpp/CppCoreGuidelines
 		// typedef wchar_t *(*pFn)(wchar_t *const, size_t);
@@ -355,7 +355,7 @@ struct TextSource {
 	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
 						L" - Google Chrome"};
 	static constexpr wchar_t browser_app[] = L"- YouTube";
-	static unsigned char isBrowser(wchar_t *const __restrict title,
+	static char isBrowser(wchar_t *const __restrict title,
 				       size_t title_len);
 	static wchar_t *
 	get_song_browser_youtube(wchar_t *const __restrict title,
@@ -1048,7 +1048,7 @@ static bool wcs_endWith(wchar_t *__restrict str,
 						  suffixStr, suffix_len) == 0);
 }
 
-unsigned char TextSource::isBrowser(wchar_t *const __restrict title,
+char TextSource::isBrowser(wchar_t *const __restrict title,
 				    size_t title_len)
 {
 	for (auto &__restrict brower : TextSource::browsers) {
