@@ -271,8 +271,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 	connect(windowHandle(), &QWindow::screenChanged, displayResize);
 	connect(ui->preview, &OBSQTDisplay::DisplayResized, displayResize);
 
-	delete shortcutFilter;
-	shortcutFilter = CreateShortcutFilter();
+	QObject *shortcutFilter = CreateShortcutFilter();
 	installEventFilter(shortcutFilter);
 
 	stringstream name;
@@ -385,6 +384,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 	statsDock->move(newPos);
 
 	ui->previewLabel->setProperty("themeID", "previewProgramLabels");
+	ui->previewLabel->style()->polish(ui->previewLabel);
 
 	bool labels = config_get_bool(GetGlobalConfig(), "BasicWindow",
 				      "StudioModeLabels");
@@ -670,6 +670,8 @@ void OBSBasic::DeferSaveEnd()
 	}
 }
 
+static void LogFilter(obs_source_t *, obs_source_t *filter, void *v_val);
+
 static void LoadAudioDevice(const char *name, int channel, obs_data_t *parent)
 {
 	obs_data_t *data = obs_data_get_obj(parent, name);
@@ -679,6 +681,10 @@ static void LoadAudioDevice(const char *name, int channel, obs_data_t *parent)
 	obs_source_t *source = obs_load_source(data);
 	if (source) {
 		obs_set_output_source(channel, source);
+
+		const char *name = obs_source_get_name(source);
+		blog(LOG_INFO, "[Loaded global audio device]: '%s'", name);
+		obs_source_enum_filters(source, LogFilter, (void *)(intptr_t)1);
 		obs_source_release(source);
 	}
 
@@ -1815,12 +1821,10 @@ void OBSBasic::OBSInit()
 
 	ui->viewMenu->addSeparator();
 
-	multiviewProjectorMenu = new QMenu(QTStr("MultiviewProjector"));
+	QMenu *multiviewProjectorMenu = new QMenu(QTStr("MultiviewProjector"));
 	ui->viewMenu->addMenu(multiviewProjectorMenu);
 	AddProjectorMenuMonitors(multiviewProjectorMenu, this,
 				 SLOT(OpenMultiviewProjector()));
-	connect(ui->viewMenu->menuAction(), &QAction::hovered, this,
-		&OBSBasic::UpdateMultiviewProjectorMenu);
 	ui->viewMenu->addAction(QTStr("MultiviewWindowed"), this,
 				SLOT(OpenMultiviewWindow()));
 
@@ -2037,13 +2041,6 @@ void OBSBasic::ShowWhatsNew(const QString &url)
 #else
 	UNUSED_PARAMETER(url);
 #endif
-}
-
-void OBSBasic::UpdateMultiviewProjectorMenu()
-{
-	multiviewProjectorMenu->clear();
-	AddProjectorMenuMonitors(multiviewProjectorMenu, this,
-				 SLOT(OpenMultiviewProjector()));
 }
 
 void OBSBasic::InitHotkeys()
@@ -2302,21 +2299,6 @@ OBSBasic::~OBSBasic()
 	if (updateCheckThread && updateCheckThread->isRunning())
 		updateCheckThread->wait();
 
-	delete multiviewProjectorMenu;
-	delete previewProjector;
-	delete studioProgramProjector;
-	delete previewProjectorSource;
-	delete previewProjectorMain;
-	delete sourceProjector;
-	delete sceneProjectorMenu;
-	delete scaleFilteringMenu;
-	delete colorMenu;
-	delete colorWidgetAction;
-	delete colorSelect;
-	delete deinterlaceMenu;
-	delete perSceneTransitionMenu;
-	delete shortcutFilter;
-	delete trayMenu;
 	delete programOptions;
 	delete program;
 
@@ -3915,6 +3897,7 @@ void OBSBasic::ClearSceneData()
 		return true;
 	};
 
+	obs_enum_scenes(cb, nullptr);
 	obs_enum_sources(cb, nullptr);
 
 	if (api)
@@ -4248,8 +4231,7 @@ void OBSBasic::on_scenes_customContextMenuRequested(const QPoint &pos)
 
 		popup.addSeparator();
 
-		delete sceneProjectorMenu;
-		sceneProjectorMenu = new QMenu(QTStr("SceneProjector"));
+		QMenu *sceneProjectorMenu = new QMenu(QTStr("SceneProjector"));
 		AddProjectorMenuMonitors(sceneProjectorMenu, this,
 					 SLOT(OpenSceneProjector()));
 		popup.addMenu(sceneProjectorMenu);
@@ -4264,8 +4246,7 @@ void OBSBasic::on_scenes_customContextMenuRequested(const QPoint &pos)
 
 		popup.addSeparator();
 
-		delete perSceneTransitionMenu;
-		perSceneTransitionMenu = CreatePerSceneTransitionMenu();
+		QMenu *perSceneTransitionMenu = CreatePerSceneTransitionMenu();
 		popup.addMenu(perSceneTransitionMenu);
 
 		/* ---------------------- */
@@ -4576,13 +4557,6 @@ ColorSelect::ColorSelect(QWidget *parent)
 void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 {
 	QMenu popup(this);
-	delete previewProjectorSource;
-	delete sourceProjector;
-	delete scaleFilteringMenu;
-	delete colorMenu;
-	delete colorWidgetAction;
-	delete colorSelect;
-	delete deinterlaceMenu;
 
 	if (preview) {
 		QAction *action = popup.addAction(
@@ -4597,7 +4571,8 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 		popup.addAction(ui->actionLockPreview);
 		popup.addMenu(ui->scalingMenu);
 
-		previewProjectorSource = new QMenu(QTStr("PreviewProjector"));
+		QMenu *previewProjectorSource =
+			new QMenu(QTStr("PreviewProjector"));
 		AddProjectorMenuMonitors(previewProjectorSource, this,
 					 SLOT(OpenPreviewProjector()));
 
@@ -4654,9 +4629,9 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 		bool hasAudio = (flags & OBS_SOURCE_AUDIO) == OBS_SOURCE_AUDIO;
 		QAction *action;
 
-		colorMenu = new QMenu(QTStr("ChangeBG"));
-		colorWidgetAction = new QWidgetAction(colorMenu);
-		colorSelect = new ColorSelect(colorMenu);
+		QMenu *colorMenu = new QMenu(QTStr("ChangeBG"));
+		QWidgetAction *colorWidgetAction = new QWidgetAction(colorMenu);
+		ColorSelect *colorSelect = new ColorSelect(colorMenu);
 		popup.addMenu(AddBackgroundColorMenu(
 			colorMenu, colorWidgetAction, colorSelect, sceneItem));
 		popup.addAction(QTStr("Rename"), this,
@@ -4679,7 +4654,7 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 		ui->actionVerticalCenter->setEnabled(!lock);
 		ui->actionHorizontalCenter->setEnabled(!lock);
 
-		sourceProjector = new QMenu(QTStr("SourceProjector"));
+		QMenu *sourceProjector = new QMenu(QTStr("SourceProjector"));
 		AddProjectorMenuMonitors(sourceProjector, this,
 					 SLOT(OpenSourceProjector()));
 
@@ -4699,7 +4674,8 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 		}
 
 		if (isAsyncVideo) {
-			deinterlaceMenu = new QMenu(QTStr("Deinterlacing"));
+			QMenu *deinterlaceMenu =
+				new QMenu(QTStr("Deinterlacing"));
 			popup.addMenu(
 				AddDeinterlacingMenu(deinterlaceMenu, source));
 			popup.addSeparator();
@@ -4717,7 +4693,7 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 		if (width == 0 || height == 0)
 			resizeOutput->setEnabled(false);
 
-		scaleFilteringMenu = new QMenu(QTStr("ScaleFiltering"));
+		QMenu *scaleFilteringMenu = new QMenu(QTStr("ScaleFiltering"));
 		popup.addMenu(
 			AddScaleFilteringMenu(scaleFilteringMenu, sceneItem));
 		popup.addSeparator();
@@ -5377,10 +5353,7 @@ void OBSBasic::StreamDelayStarting(int sec)
 		sysTrayStream->setEnabled(true);
 	}
 
-	if (!startStreamMenu.isNull())
-		startStreamMenu->deleteLater();
-
-	startStreamMenu = new QMenu();
+	QMenu *startStreamMenu = new QMenu();
 	startStreamMenu->addAction(QTStr("Basic.Main.StopStreaming"), this,
 				   SLOT(StopStreaming()));
 	startStreamMenu->addAction(QTStr("Basic.Main.ForceStopStreaming"), this,
@@ -5403,10 +5376,7 @@ void OBSBasic::StreamDelayStopping(int sec)
 		sysTrayStream->setEnabled(true);
 	}
 
-	if (!startStreamMenu.isNull())
-		startStreamMenu->deleteLater();
-
-	startStreamMenu = new QMenu();
+	QMenu *startStreamMenu = new QMenu();
 	startStreamMenu->addAction(QTStr("Basic.Main.StartStreaming"), this,
 				   SLOT(StartStreaming()));
 	startStreamMenu->addAction(QTStr("Basic.Main.ForceStopStreaming"), this,
@@ -5529,11 +5499,7 @@ void OBSBasic::StreamingStop(int code, QString last_error)
 			      QSystemTrayIcon::Warning);
 	}
 
-	if (!startStreamMenu.isNull()) {
-		ui->streamButton->setMenu(nullptr);
-		startStreamMenu->deleteLater();
-		startStreamMenu = nullptr;
-	}
+	ui->streamButton->setMenu(nullptr);
 }
 
 void OBSBasic::AutoRemux()
@@ -6100,7 +6066,6 @@ void OBSBasic::on_program_customContextMenuRequested(const QPoint &)
 void OBSBasic::PreviewDisabledMenu(const QPoint &pos)
 {
 	QMenu popup(this);
-	delete previewProjectorMain;
 
 	QAction *action =
 		popup.addAction(QTStr("Basic.Main.PreviewConextMenu.Enable"),
@@ -6108,7 +6073,7 @@ void OBSBasic::PreviewDisabledMenu(const QPoint &pos)
 	action->setCheckable(true);
 	action->setChecked(obs_display_enabled(ui->preview->GetDisplay()));
 
-	previewProjectorMain = new QMenu(QTStr("PreviewProjector"));
+	QMenu *previewProjectorMain = new QMenu(QTStr("PreviewProjector"));
 	AddProjectorMenuMonitors(previewProjectorMain, this,
 				 SLOT(OpenPreviewProjector()));
 
@@ -6224,6 +6189,9 @@ void OBSBasic::on_actionEditTransform_triggered()
 {
 	if (transformWindow)
 		transformWindow->close();
+
+	if (!GetCurrentSceneItem())
+		return;
 
 	transformWindow = new OBSBasicTransform(this);
 	transformWindow->show();
@@ -7133,9 +7101,10 @@ void OBSBasic::SystemTrayInit()
 					  trayIcon.data());
 	exit = new QAction(QTStr("Exit"), trayIcon.data());
 
-	trayMenu = new QMenu;
-	previewProjector = new QMenu(QTStr("PreviewProjector"));
-	studioProgramProjector = new QMenu(QTStr("StudioProgramProjector"));
+	QMenu *trayMenu = new QMenu;
+	QMenu *previewProjector = new QMenu(QTStr("PreviewProjector"));
+	QMenu *studioProgramProjector =
+		new QMenu(QTStr("StudioProgramProjector"));
 	AddProjectorMenuMonitors(previewProjector, this,
 				 SLOT(OpenPreviewProjector()));
 	AddProjectorMenuMonitors(studioProgramProjector, this,
@@ -7168,14 +7137,6 @@ void OBSBasic::SystemTrayInit()
 
 void OBSBasic::IconActivated(QSystemTrayIcon::ActivationReason reason)
 {
-	// Refresh projector list
-	previewProjector->clear();
-	studioProgramProjector->clear();
-	AddProjectorMenuMonitors(previewProjector, this,
-				 SLOT(OpenPreviewProjector()));
-	AddProjectorMenuMonitors(studioProgramProjector, this,
-				 SLOT(OpenStudioProgramProjector()));
-
 	if (reason == QSystemTrayIcon::Trigger) {
 		EnablePreviewDisplay(previewEnabled && !isVisible());
 		ToggleShowHide();
@@ -7260,7 +7221,7 @@ void OBSBasic::on_actionCopySource_triggered()
 		copyVisible = obs_sceneitem_visible(item);
 
 		uint32_t output_flags = obs_source_get_output_flags(source);
-		if (!(output_flags & OBS_SOURCE_DO_NOT_DUPLICATE) == 0)
+		if (output_flags & OBS_SOURCE_DO_NOT_DUPLICATE)
 			allowPastingDuplicate = false;
 	}
 
@@ -7699,6 +7660,8 @@ void OBSBasic::PauseRecording()
 		pause->setChecked(true);
 		pause->blockSignals(false);
 
+		ui->statusbar->RecordingPaused();
+
 		if (trayIcon)
 			trayIcon->setIcon(QIcon(":/res/images/obs_paused.png"));
 
@@ -7725,6 +7688,8 @@ void OBSBasic::UnpauseRecording()
 		pause->blockSignals(true);
 		pause->setChecked(false);
 		pause->blockSignals(false);
+
+		ui->statusbar->RecordingUnpaused();
 
 		if (trayIcon)
 			trayIcon->setIcon(
