@@ -1062,10 +1062,11 @@ char TextSource::isBrowser(wchar_t *const __restrict title,
 		if (wcs_endWith(title, brower, title_len, suffix_len))
 			return suffix_len;
 	}
+
 	// for browser doesn't suffix window title with its name (ex: M$ Edge based on Chromium < 81.0?)
-	constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
-	if (wcs_endWith(title, browser_app, title_len, app_len))
-		return 0;
+	//constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
+	//if (wcs_endWith(title, browser_app, title_len, app_len))
+	//	return 0;
 
 	return -1;
 }
@@ -1073,11 +1074,12 @@ char TextSource::isBrowser(wchar_t *const __restrict title,
 wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 					      size_t str_len)
 {
+	// these title suffixes are locale specific in M$ Edge
 	// song name - YouTube - Personal - Microsoft Edge
 	// song name - YouTube and 13 more pages - Personal - Microsoft Edge
 	constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
 	static const std::wregex const youtube_regex(
-		L".+( - YouTube )(?:and.+?)?",
+		L".+( - YouTube).*?",
 		std::regex::optimize | std::regex::ECMAScript);
 	if (str_len > app_len) {
 		std::wcmatch match;
