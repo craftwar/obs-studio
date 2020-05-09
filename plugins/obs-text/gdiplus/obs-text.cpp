@@ -50,9 +50,9 @@ using namespace Gdiplus;
 #define MAX_AREA (4096LL * 4096LL)
 
 static const DWORD VNR_SHM_SIZE = 1024;
-static const char VNR_SHM[] = "Local\\VNR_PlotText";
-static const char VNR_SHM_MUTEX[] = "Local\\VNR_SHM_MUTEX";
-static const char VNR_SHM_EVENT[] = "Local\\VNR_SHM_EVENT";
+static const wchar_t VNR_SHM[] = L"Local\\VNR_PlotText";
+static const wchar_t VNR_SHM_MUTEX[] = L"Local\\VNR_SHM_MUTEX";
+static const wchar_t VNR_SHM_EVENT[] = L"Local\\VNR_SHM_EVENT";
 #define VNR_kyob1010_MultipleStream 0
 #define song_thread_version
 
@@ -1325,12 +1325,12 @@ void TextSource::hide_handler(void *data, [[maybe_unused]] calldata_t *cd)
 bool TextSource::VNR_initial()
 {
 	if (shm.hThread == NULL) {
-		shm.hMapFile = OpenFileMappingA(
+		shm.hMapFile = OpenFileMappingW(
 			FILE_MAP_ALL_ACCESS, // read/write access
 			FALSE,               // do not inherit the name
 			VNR_SHM);            // name of mapping object
 		if (shm.hMapFile == NULL) {
-			shm.hMapFile = CreateFileMappingA(INVALID_HANDLE_VALUE,
+			shm.hMapFile = CreateFileMappingW(INVALID_HANDLE_VALUE,
 							  NULL, PAGE_READWRITE,
 							  0, VNR_SHM_SIZE,
 							  VNR_SHM);
@@ -1350,17 +1350,17 @@ bool TextSource::VNR_initial()
 		// the operating system paging file are 0 (zero).
 
 		TextSource::shm.hMutex =
-			OpenMutexA(SYNCHRONIZE, FALSE, VNR_SHM_MUTEX);
+			OpenMutexW(SYNCHRONIZE, FALSE, VNR_SHM_MUTEX);
 		if (shm.hMutex == NULL) {
-			shm.hMutex = CreateMutexA(NULL, false, VNR_SHM_MUTEX);
+			shm.hMutex = CreateMutexW(NULL, false, VNR_SHM_MUTEX);
 			if (shm.hMutex == NULL)
 				goto SHM_error_clean;
 		}
-		TextSource::shm.hEvent = OpenEventA(
+		TextSource::shm.hEvent = OpenEventW(
 			SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, VNR_SHM_EVENT);
 		if (shm.hEvent == NULL) {
 			shm.hEvent =
-				CreateEventA(NULL, true, false, VNR_SHM_EVENT);
+				CreateEventW(NULL, true, false, VNR_SHM_EVENT);
 			if (shm.hEvent == NULL)
 				goto SHM_error_clean;
 		}
