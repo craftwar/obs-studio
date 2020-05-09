@@ -10,6 +10,7 @@
 #include <memory>
 #include <locale>
 #include <regex>
+#include <Psapi.h>
 
 using namespace std;
 using namespace Gdiplus;
@@ -34,6 +35,8 @@ using namespace Gdiplus;
 #endif
 
 #define STRCMP_CONST(str, const_str) memcmp(str, const_str, sizeof(const_str))
+#define WCSCMP_CONST(str, const_str) \
+	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*const_str))
 // this applys to L"12345" too
 #define WSTRLEN_CONST(str) (sizeof(str) / sizeof(*str) - 1)
 #define WCSCPY_CONST(str, const_str) \
@@ -363,6 +366,8 @@ struct TextSource {
 	static constexpr wchar_t browser_app[] = L"- YouTube";
 	static char isBrowser(wchar_t *const __restrict title,
 				       size_t title_len);
+	static bool isFoobar2000(wchar_t *exeName, wchar_t *className);
+	static bool isOsu(wchar_t *exeName, wchar_t *className);
 	static wchar_t *
 	get_song_browser_youtube(wchar_t *const __restrict title,
 				 size_t str_len);
@@ -988,6 +993,22 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 		return FALSE;
 
+	// for better precision
+	wchar_t className[MAX_PATH];
+	//GetClassNameW(hwnd, className, _countof(className));
+	DWORD pid;
+	GetWindowThreadProcessId(hwnd, &pid);
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+	wchar_t path[MAX_PATH];
+	wchar_t* __restrict exeName;
+	if (hProcess &&
+	    GetProcessImageFileNameW(hProcess, path, _countof(path))) {
+		exeName = wcsrchr(path, L'\\') + 1;
+		if (!exeName)
+			exeName = path;
+	} else
+		return FALSE;
+
 #ifndef song_thread_version
 	if (len > song.browser_suffix_len && song.pFunc) {
 		wchar_t *const song_name = (*song.pFunc)(
@@ -1004,31 +1025,34 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	}
 #endif
 
-	// Using "else if"s produces bigger binary (why?)
+	// Using "else if"s produces bigger binary than go (why?)
+	// Try else if in newer MSVC (16.5.4+, trust compiler)
 	song.browser_suffix_len = isBrowser(title.get(), len);
 	wchar_t *song_name;
 
 	if (song.browser_suffix_len >= 0) {
 		song_name = get_song_browser_youtube(
 			title.get(), len - song.browser_suffix_len);
-		if (song_name) {
+		if (song_name)
 			song.pFunc = &TextSource::get_song_browser_youtube;
-			goto song_found;
-		} else // skip not brower based app
+		else // skip not brower based app
 			return 0;
-	}
-	song_name = get_song_foobar2000(title.get(), len);
-	if (song_name) {
-		song.pFunc = &TextSource::get_song_foobar2000;
-		goto song_found;
-	}
-	song_name = get_song_osu(title.get(), len);
-	if (song_name)
-		song.pFunc = &TextSource::get_song_osu;
-	else
+	} else if (isFoobar2000(exeName, className)) {
+		song_name = get_song_foobar2000(title.get(), len);
+		if (song_name)
+			song.pFunc = &TextSource::get_song_foobar2000;
+		else
+			return 0;
+	} else if (isOsu(exeName, className)) {
+		song_name = get_song_osu(title.get(), len);
+		if (song_name)
+			song.pFunc = &TextSource::get_song_osu;
+		else
+			return 0;
+	} else
 		return 0;
 
-song_found:
+	// song_found
 	set_song_name(song_name);
 	// If you wana switch player, disable then enable song mode again
 	song.hWnd = hwnd;
@@ -1057,6 +1081,7 @@ static bool wcs_endWith(wchar_t *__restrict str,
 char TextSource::isBrowser(wchar_t *const __restrict title,
 				    size_t title_len)
 {
+	// msedge.exe
 	for (auto &__restrict brower : TextSource::browsers) {
 		const size_t suffix_len = wcslen(brower);
 		if (wcs_endWith(title, brower, title_len, suffix_len))
@@ -1069,6 +1094,19 @@ char TextSource::isBrowser(wchar_t *const __restrict title,
 	//	return 0;
 
 	return -1;
+}
+
+bool TextSource::isFoobar2000(wchar_t *exeName, wchar_t *className)
+{
+	return !WCSCMP_CONST(exeName, L"foobar2000.exe");
+	//return !WCSCMP_CONST(exeName, L"foobar2000.exe") &&
+	//       !WCSCMP_CONST(className,
+	//		    L"{97E27FAA-C0B3-4b8e-A693-ED7881E99FC1}");
+}
+
+bool TextSource::isOsu(wchar_t *exeName, wchar_t *className)
+{
+	return !WCSCMP_CONST(exeName, L"osu!.exe");
 }
 
 wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
@@ -1101,9 +1139,14 @@ wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 	return nullptr;
 }
 
+// endWith case
 wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
 					 size_t str_len)
 {
+	// when not playing, title is "foobar2000 v1.5.3"
+	// title suffixes with "[foobar2000]" only when playing
+
+	// decide only by tile, no exeName and className
 	static constexpr wchar_t app[] = L"[foobar2000]";
 	constexpr unsigned char app_len = WSTRLEN_CONST(app);
 	if (wcs_endWith(title, app, str_len, app_len)) {
@@ -1112,19 +1155,42 @@ wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
 		return title;
 	}
 	return nullptr;
+
+	// seems ok but not abosultely safe
+	//static constexpr wchar_t app_playing[] = L"[foobar2000]";
+	//constexpr unsigned char app_len = WSTRLEN_CONST(app_playing);
+	//// not end with ']'
+	//if (title[str_len - 1] == L']') {
+	//	title[str_len - app_len - 1] =
+	//		'\0'; // remove 1 space before suffix
+	//	return title;
+	//}
+	//return nullptr;
 }
 
 // startWith case
 wchar_t *TextSource::get_song_osu(wchar_t *const __restrict title,
 				  size_t str_len)
 {
-	// E0144 if I give 7 elements only. compile pass? no null or overflow?
+	// when not playing, title is "osu!"
+	// title starts with "osu!  -" only when playing
+
 	static constexpr wchar_t app[] = L"osu!  -";
 	constexpr unsigned char app_len = WSTRLEN_CONST(app);
 	if (str_len > app_len && (wmemcmp(title, app, app_len) == 0))
 		return title + app_len + 1; // skip 1 space after prefix
 
 	return nullptr;
+
+	// osu create many windows, use this will do more filtering
+	//constexpr unsigned char app_notPlaying_len = WSTRLEN_CONST(L"osu!");
+	//static constexpr wchar_t app[] = L"osu!  -";
+	//constexpr unsigned char app_len = WSTRLEN_CONST(app);
+	//+title	0x0000026b68801ae0 L"__wglDummyWindowFodder"	wchar_t* const
+	//if (title[app_notPlaying_len])
+	//if (title[app_notPlaying_len] && wmemcmp(title, L"__wglDummyWindowFodder", WSTRLEN_CONST(L"__wglDummyWindowFodder")))
+	//	return title + app_len + 1; // skip 1 space after prefix
+	//return nullptr;
 }
 
 void TextSource::set_song_name(const wchar_t *const name)
