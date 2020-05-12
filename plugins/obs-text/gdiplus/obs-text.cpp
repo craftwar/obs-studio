@@ -1115,7 +1115,7 @@ wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 	// these title suffixes are locale specific in M$ Edge
 	// song name - YouTube - Personal - Microsoft Edge
 	// song name - YouTube and 13 more pages - Personal - Microsoft Edge
-	constexpr unsigned char app_len = WSTRLEN_CONST(browser_app);
+	constexpr size_t app_len = WSTRLEN_CONST(browser_app);
 	static const std::wregex const youtube_regex(
 		L".+( - YouTube).*?",
 		std::regex::optimize | std::regex::ECMAScript);
@@ -1148,7 +1148,7 @@ wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
 
 	// decide only by tile, no exeName and className
 	static constexpr wchar_t app[] = L"[foobar2000]";
-	constexpr unsigned char app_len = WSTRLEN_CONST(app);
+	constexpr size_t app_len = WSTRLEN_CONST(app);
 	if (wcs_endWith(title, app, str_len, app_len)) {
 		title[str_len - app_len - 1] =
 			'\0'; // remove 1 space before suffix
@@ -1176,7 +1176,7 @@ wchar_t *TextSource::get_song_osu(wchar_t *const __restrict title,
 	// title starts with "osu!  -" only when playing
 
 	static constexpr wchar_t app[] = L"osu!  -";
-	constexpr unsigned char app_len = WSTRLEN_CONST(app);
+	constexpr size_t app_len = WSTRLEN_CONST(app);
 	if (str_len > app_len && (wmemcmp(title, app, app_len) == 0))
 		return title + app_len + 1; // skip 1 space after prefix
 
