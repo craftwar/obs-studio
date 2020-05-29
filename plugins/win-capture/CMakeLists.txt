@@ -32,6 +32,7 @@ add_library(win-capture MODULE
 	${win-capture_HEADERS})
 target_link_libraries(win-capture
 	libobs
+	Dwmapi
 	ipc-util
 	Kernel32)
 set_target_properties(win-capture PROPERTIES FOLDER "plugins/win-capture")
