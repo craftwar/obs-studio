@@ -759,7 +759,6 @@ void TextSource::LoadFileText()
 
 	if (!text.empty() && text.back() != '\n')
 		text.push_back('\n');
-	RenderText();
 }
 
 void TextSource::TransformText()
@@ -786,6 +785,7 @@ void TextSource::TransformText()
 			}
 		}
 	}
+	RenderText();
 }
 
 #define obs_data_get_uint32 (uint32_t) obs_data_get_int
@@ -896,7 +896,6 @@ inline void TextSource::Update(obs_data_t *s)
 			* render size */
 		if (!text.empty())
 			text.push_back('\n');
-		RenderText();
 	}
 	// close resource if mode is unused
 	if (old_mode != mode) {
@@ -912,6 +911,8 @@ inline void TextSource::Update(obs_data_t *s)
 			break;
 		}
 	}
+	// xxx, add if, apply to file and text only?
+	// disable transform option except text and file
 	TransformText();
 
 	update_time_elapsed = 0.0f;
