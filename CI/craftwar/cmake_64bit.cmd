@@ -10,3 +10,5 @@ rem	set DepsPath64=C:\projects\obs-studio\old_dep\win64
 ) else (
 	cmake -E env CFLAGS="%cl_options%"  CXXFLAGS="%cl_options%" LDFLAGS="-LTCG" cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_SYSTEM_VERSION=10.0 -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:\Tools\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_EXE_LINKER_FLAGS_INIT=/LTCG -DCMAKE_SHARED_LINKER_FLAGS_INIT=/LTCG -DCMAKE_STATIC_LINKER_FLAGS_INIT=/LTCG -DCMAKE_MODULE_LINKER_FLAGS_INIT=/LTCG -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DBUILD_CAPTIONS=true -DCOMPILE_D3D12_HOOK=true -DENABLE_SCRIPTING=false ..
 )
+rem remove /GL to incompatible project
+"C:\Program Files\Git\usr\bin\sed.exe" -i "/<WholeProgramOptimization>true<\/WholeProgramOptimization>/d" /C/projects/obs-studio/build64/UI/obs.vcxproj

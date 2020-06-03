@@ -67,11 +67,12 @@ install:
   - set QTDIR64=C:\Qt\%QT_VERSION%\msvc2017_64
   - set build_config=Release
 #  -Zc:inline is disabled when -GL is on
-#  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -Qspectre- -favor:%favor_arch% -Zc:__cplusplus %cl_cpu_options%
+  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -Qspectre- -favor:%favor_arch% -Zc:__cplusplus %cl_cpu_options%
 # try to fix
 #LINK : fatal error C1001: Internal compiler error.
 #fatal error LNK1000: Internal error during IMAGE::Pass1
-  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GS- -Qspectre- -favor:%favor_arch% -Zc:__cplusplus %cl_cpu_options%
+#  - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GS- -Qspectre- -favor:%favor_arch% -Zc:__cplusplus %cl_cpu_options%
+
 #vcpkg
 # update vcpkg when workaround is required
   - cd C:\tools\vcpkg
