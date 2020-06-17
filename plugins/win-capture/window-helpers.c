@@ -127,24 +127,28 @@ void get_window_class(struct dstr *class, HWND hwnd)
 		dstr_from_wcs(class, temp);
 }
 
-/* not capturable or internal windows */
-static const char *internal_microsoft_exes[] = {
-	"startmenuexperiencehost",
-	"applicationframehost",
-	"peopleexperiencehost",
-	"shellexperiencehost",
-	"microsoft.notes",
+/* not capturable or internal windows, exact executable names */
+static const char *internal_microsoft_exes_exact[] = {
+	"startmenuexperiencehost.exe",
+	"applicationframehost.exe",
+	"peopleexperiencehost.exe",
+	"shellexperiencehost.exe",
+	"microsoft.notes.exe",
+	"systemsettings.exe",
+	"textinputhost.exe",
+	"searchapp.exe",
+	"video.ui.exe",
+	"searchui.exe",
+	"lockapp.exe",
+	"cortana.exe",
+	"gamebar.exe",
+	"tabtip.exe",
+	"time.exe",
+};
+
+/* partial matches start from the beginning of the executable name */
+static const char *internal_microsoft_exes_partial[] = {
 	"windowsinternal",
-	"systemsettings",
-	"textinputhost",
-	"searchapp",
-	"video.ui",
-	"searchui",
-	"lockapp",
-	"cortana",
-	"gamebar",
-	"tabtip",
-	"time",
 };
 
 static bool is_microsoft_internal_window_exe(const char *exe)
@@ -152,11 +156,19 @@ static bool is_microsoft_internal_window_exe(const char *exe)
 	if (!exe)
 		return false;
 
-	static const char *const *end =
-		internal_microsoft_exes +
-		sizeof(internal_microsoft_exes) /
-			sizeof(internal_microsoft_exes[0]);
-	for (const char **vals = internal_microsoft_exes; vals < end; ++vals) {
+	static const char *const *exact_end =
+		internal_microsoft_exes_exact +
+		sizeof(internal_microsoft_exes_exact) /
+			sizeof(*internal_microsoft_exes_exact);
+	for (const char **vals = internal_microsoft_exes_partial; vals < exact_end; ++vals) {
+		if (_stricmp(*vals, exe) == 0)
+			return true;
+	}
+	static const char *const *partial_end =
+		internal_microsoft_exes_partial +
+		sizeof(internal_microsoft_exes_partial) /
+			sizeof(*internal_microsoft_exes_partial);
+	for (const char **vals = internal_microsoft_exes_partial; vals < partial_end; ++vals) {
 		if (_strnicmp(*vals, exe, strlen(*vals)) == 0)
 			return true;
 	}

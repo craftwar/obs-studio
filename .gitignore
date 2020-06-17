@@ -99,3 +99,4 @@ tags
 */**/.DS_Store
 craftwar.obs_updater/*.exe
 craftwar.obs_updater/update/
+version.txt

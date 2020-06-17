@@ -759,7 +759,6 @@ void TextSource::LoadFileText()
 
 	if (!text.empty() && text.back() != '\n')
 		text.push_back('\n');
-	RenderText();
 }
 
 void TextSource::TransformText()
@@ -786,6 +785,7 @@ void TextSource::TransformText()
 			}
 		}
 	}
+	RenderText();
 }
 
 #define obs_data_get_uint32 (uint32_t) obs_data_get_int
@@ -896,7 +896,6 @@ inline void TextSource::Update(obs_data_t *s)
 			* render size */
 		if (!text.empty())
 			text.push_back('\n');
-		RenderText();
 	}
 	// close resource if mode is unused
 	if (old_mode != mode) {
@@ -912,6 +911,8 @@ inline void TextSource::Update(obs_data_t *s)
 			break;
 		}
 	}
+	// xxx, add if, apply to file and text only?
+	// disable transform option except text and file
 	TransformText();
 
 	update_time_elapsed = 0.0f;
@@ -991,7 +992,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		return FALSE;
 	const std::unique_ptr<wchar_t[]> title(new wchar_t[len + 1]);
 	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
-		return FALSE;
+		[[unlikely]] return FALSE;
 
 	// for better precision
 	wchar_t className[MAX_PATH];
@@ -1244,17 +1245,17 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 	if (idObject == OBJID_WINDOW) {
 		const int len = GetWindowTextLengthW(hwnd);
 		if (!len)
-			return;
+			[[unlikely]] return;
 		const std::unique_ptr<wchar_t[]> title(new wchar_t[len + 1]);
 		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
-			return;
+			[[unlikely]] return;
 		wchar_t *song_name = (song.thread_owner->song.pFunc)(
 			title.get(),
 			len - song.thread_owner->song.browser_suffix_len);
 		// if not found, close thread?
 		// can't handle window close
 		if (song_name == nullptr)
-			song_name = L"";
+			[[unlikely]] song_name = L"";
 		song.thread_owner->set_song_name(song_name);
 	}
 }
@@ -1450,7 +1451,7 @@ void TextSource::ReadFromVNR()
 #endif
 	WaitForSingleObject(TextSource::shm.hEvent, INFINITE);
 	if (WaitForSingleObject(TextSource::shm.hMutex, INFINITE) ==
-	    WAIT_OBJECT_0) {
+	    WAIT_OBJECT_0) [[likely]] {
 		ResetEvent(TextSource::shm.hEvent);
 		text = TextSource::shm.data;
 		// text always not empty? better let vnr add '\n'
