@@ -562,8 +562,7 @@ VolumeMeter::VolumeMeter(QWidget *parent, obs_volmeter_t *obs_volmeter,
 	updateTimerRef = updateTimer.toStrongRef();
 	if (!updateTimerRef) {
 		updateTimerRef = QSharedPointer<VolumeMeterTimer>::create();
-		updateTimerRef->setTimerType(Qt::PreciseTimer);
-		updateTimerRef->start(16);
+		updateTimerRef->start(34);
 		updateTimer = updateTimerRef;
 	}
 
