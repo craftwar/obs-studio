@@ -36,7 +36,6 @@ environment:
       cl_cpu_options: -QIntel-jcc-erratum
       VCPKG_CPU_C_FLAGS: /QIntel-jcc-erratum
       vc_inc_arch: SSE2
-#      D3D12_HOOK: true
 # setting rdp passoword never works
 #  APPVEYOR_RDP_PASSWORD:
 #    secure: K6XkhLVN7PZDnWWtrTKYneDPMS7FgBFYYe1xuU2s8js=
@@ -44,8 +43,14 @@ environment:
 matrix:
   fast_finish: true
 install:
-#  - git submodule update --init --recursive --remote plugins\win-dshow
-  - C:\projects\obs-studio\CI\craftwar\submodule.cmd
+#  - cmd
+# cmd related hack or variable is not set
+# by - if "%vc_inc_arch%"=="SSE2" C:\projects\obs-studio-craftwar\CI\craftwar\submodule.cmd else C:\projects\obs-studio\CI\craftwar\submodule.cmd
+  - copy C:\projects\obs-studio\CI\craftwar\submodule.cmd C:\projects\
+  - if "%vc_inc_arch%"=="SSE2" cd .. && mv obs-studio obs-studio-craftwar && mkdir obs-studio && cd obs-studio
+  - C:\projects\submodule.cmd
+#  - if "%vc_inc_arch%"=="SSE2" C:\projects\obs-studio-craftwar\CI\craftwar\submodule.cmd else C:\projects\obs-studio\CI\craftwar\submodule.cmd
+  - if "%vc_inc_arch%"=="SSE2" powershell.exe -ExecutionPolicy Bypass -file C:\projects\obs-studio-craftwar\CI\craftwar\patch_SSE2build.ps1
   - git fetch --tags --prune https://github.com/obsproject/obs-studio.git # get tags from official obs
   - if exist dependencies2017.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
   #- set VCdeps_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps-blend.7z?job=Environment%3A%20favor_arch%3D%favor_arch%
