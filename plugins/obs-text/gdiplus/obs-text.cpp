@@ -91,6 +91,7 @@ static const wchar_t VNR_SHM_EVENT[] = L"Local\\VNR_SHM_EVENT";
 #define S_EXTENTS_CX                    "extents_cx"
 #define S_EXTENTS_CY                    "extents_cy"
 #define S_TRANSFORM                     "transform"
+#define S_ANTIALIASING                  "antialiasing"
 
 #define S_ALIGN_LEFT                    "left"
 #define S_ALIGN_CENTER                  "center"
@@ -104,6 +105,9 @@ static const wchar_t VNR_SHM_EVENT[] = L"Local\\VNR_SHM_EVENT";
 #define S_TRANSFORM_UPPERCASE           1
 #define S_TRANSFORM_LOWERCASE           2
 #define S_TRANSFORM_STARTCASE           3
+
+#define S_ANTIALIASING_NONE             0
+#define S_ANTIALIASING_STANDARD         1
 
 #define T_(v)                           obs_module_text(v)
 #define T_FONT                          T_("Font")
@@ -135,6 +139,7 @@ static const wchar_t VNR_SHM_EVENT[] = L"Local\\VNR_SHM_EVENT";
 #define T_EXTENTS_CX                    T_("Width")
 #define T_EXTENTS_CY                    T_("Height")
 #define T_TRANSFORM                     T_("Transform")
+#define T_ANTIALIASING                  T_("Antialiasing")
 
 #define T_FILTER_TEXT_FILES             T_("Filter.TextFiles")
 #define T_FILTER_ALL_FILES              T_("Filter.AllFiles")
@@ -287,6 +292,7 @@ struct TextSource {
 	bool italic = false;
 	bool underline = false;
 	bool strikeout = false;
+	bool antialiasing = true;
 	bool vertical = false;
 
 	bool use_outline = false;
@@ -346,6 +352,7 @@ struct TextSource {
 	void RenderText();
 	void LoadFileText();
 	void TransformText();
+	void SetAntiAliasing(Graphics &graphics_bitmap);
 
 	const char *GetMainString(const char *str);
 
@@ -678,9 +685,8 @@ void TextSource::RenderText()
 		warn_stat("graphics_bitmap.Clear");
 	}
 
-	graphics_bitmap.SetTextRenderingHint(TextRenderingHintAntiAlias);
 	graphics_bitmap.SetCompositingMode(CompositingModeSourceOver);
-	graphics_bitmap.SetSmoothingMode(SmoothingModeAntiAlias);
+	SetAntiAliasing(graphics_bitmap);
 
 	if (!text.empty()) {
 		if (use_outline) {
@@ -788,6 +794,19 @@ void TextSource::TransformText()
 	RenderText();
 }
 
+void TextSource::SetAntiAliasing(Graphics &graphics_bitmap)
+{
+	if (!antialiasing) {
+		graphics_bitmap.SetTextRenderingHint(
+			TextRenderingHintSingleBitPerPixel);
+		graphics_bitmap.SetSmoothingMode(SmoothingModeNone);
+		return;
+	}
+
+	graphics_bitmap.SetTextRenderingHint(TextRenderingHintAntiAlias);
+	graphics_bitmap.SetSmoothingMode(SmoothingModeAntiAlias);
+}
+
 #define obs_data_get_uint32 (uint32_t) obs_data_get_int
 
 #pragma optimize("s", on)
@@ -818,6 +837,7 @@ inline void TextSource::Update(obs_data_t *s)
 	extents_cx = obs_data_get_uint32(s, S_EXTENTS_CX);
 	extents_cy = obs_data_get_uint32(s, S_EXTENTS_CY);
 	text_transform = (int)obs_data_get_int(s, S_TRANSFORM);
+	antialiasing = obs_data_get_bool(s, S_ANTIALIASING);
 
 	wstring new_face = to_wide(obs_data_get_string(font_obj, "face"));
 	int font_size = (int)obs_data_get_int(font_obj, "size");
@@ -1621,6 +1641,8 @@ static obs_properties_t *get_properties(void *data)
 	obs_properties_add_path(props, S_FILE, T_FILE, OBS_PATH_FILE,
 				filter.c_str(), path.c_str());
 
+	obs_properties_add_bool(props, S_ANTIALIASING, T_ANTIALIASING);
+
 	p = obs_properties_add_list(props, S_TRANSFORM, T_TRANSFORM,
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(p, T_TRANSFORM_NONE, S_TRANSFORM_NONE);
@@ -1632,6 +1654,7 @@ static obs_properties_t *get_properties(void *data)
 				  S_TRANSFORM_STARTCASE);
 
 	obs_properties_add_bool(props, S_VERTICAL, T_VERTICAL);
+
 	obs_properties_add_color(props, S_COLOR, T_COLOR);
 	p = obs_properties_add_int_slider(props, S_OPACITY, T_OPACITY, 0, 100,
 					  1);
@@ -1693,32 +1716,33 @@ static obs_properties_t *get_properties(void *data)
 
 static void defaults(obs_data_t *settings, int ver)
 {
-		obs_data_t *font_obj = obs_data_create();
-		obs_data_set_default_string(font_obj, "face", "Arial");
-		obs_data_set_default_int(font_obj, "size", ver == 1 ? 36 : 256);
+	obs_data_t *font_obj = obs_data_create();
+	obs_data_set_default_string(font_obj, "face", "Arial");
+	obs_data_set_default_int(font_obj, "size", ver == 1 ? 36 : 256);
 
-		obs_data_set_default_obj(settings, S_FONT, font_obj);
-		obs_data_release(font_obj);
+	obs_data_set_default_obj(settings, S_FONT, font_obj);
+	obs_data_release(font_obj);
 #if VNR_kyob1010_MultipleStream
-		obs_data_set_default_string(settings, S_VNR_MODE, "t");
+	obs_data_set_default_string(settings, S_VNR_MODE, "t");
 #endif
-		obs_data_set_default_string(settings, S_ALIGN, S_ALIGN_LEFT);
-		obs_data_set_default_string(settings, S_VALIGN, S_VALIGN_TOP);
-		obs_data_set_default_int(settings, S_COLOR, 0xFFFFFF);
-		obs_data_set_default_int(settings, S_OPACITY, 100);
-		obs_data_set_default_int(settings, S_GRADIENT_COLOR, 0xFFFFFF);
-		obs_data_set_default_int(settings, S_GRADIENT_OPACITY, 100);
-		obs_data_set_default_double(settings, S_GRADIENT_DIR, 90.0);
-		obs_data_set_default_int(settings, S_BKCOLOR, 0x000000);
-		obs_data_set_default_int(settings, S_BKOPACITY, 0);
-		obs_data_set_default_int(settings, S_OUTLINE_SIZE, 2);
-		obs_data_set_default_int(settings, S_OUTLINE_COLOR, 0xFFFFFF);
-		obs_data_set_default_int(settings, S_OUTLINE_OPACITY, 100);
-		obs_data_set_default_int(settings, S_CHATLOG_LINES, 6);
-		obs_data_set_default_bool(settings, S_EXTENTS_WRAP, true);
-		obs_data_set_default_int(settings, S_EXTENTS_CX, 100);
-		obs_data_set_default_int(settings, S_EXTENTS_CY, 100);
-		obs_data_set_default_int(settings, S_TRANSFORM, S_TRANSFORM_NONE);
+	obs_data_set_default_string(settings, S_ALIGN, S_ALIGN_LEFT);
+	obs_data_set_default_string(settings, S_VALIGN, S_VALIGN_TOP);
+	obs_data_set_default_int(settings, S_COLOR, 0xFFFFFF);
+	obs_data_set_default_int(settings, S_OPACITY, 100);
+	obs_data_set_default_int(settings, S_GRADIENT_COLOR, 0xFFFFFF);
+	obs_data_set_default_int(settings, S_GRADIENT_OPACITY, 100);
+	obs_data_set_default_double(settings, S_GRADIENT_DIR, 90.0);
+	obs_data_set_default_int(settings, S_BKCOLOR, 0x000000);
+	obs_data_set_default_int(settings, S_BKOPACITY, 0);
+	obs_data_set_default_int(settings, S_OUTLINE_SIZE, 2);
+	obs_data_set_default_int(settings, S_OUTLINE_COLOR, 0xFFFFFF);
+	obs_data_set_default_int(settings, S_OUTLINE_OPACITY, 100);
+	obs_data_set_default_int(settings, S_CHATLOG_LINES, 6);
+	obs_data_set_default_bool(settings, S_EXTENTS_WRAP, true);
+	obs_data_set_default_int(settings, S_EXTENTS_CX, 100);
+	obs_data_set_default_int(settings, S_EXTENTS_CY, 100);
+	obs_data_set_default_int(settings, S_TRANSFORM, S_TRANSFORM_NONE);
+	obs_data_set_default_bool(settings, S_ANTIALIASING, true);
 };
 
 bool obs_module_load(void)
