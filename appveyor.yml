@@ -67,9 +67,9 @@ install:
   - set DepsPath64=%CD%\dependencies2017\win64
 #  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
 # latest
-  - set QT_VERSION=5.14
-  - set QTDIR32=C:\Qt\%QT_VERSION%\msvc2017
-  - set QTDIR64=C:\Qt\%QT_VERSION%\msvc2017_64
+  - set QT_VERSION=5.15
+  - set QTDIR32=C:\Qt\%QT_VERSION%\msvc2019
+  - set QTDIR64=C:\Qt\%QT_VERSION%\msvc2019_64
   - set build_config=Release
 #  -Zc:inline is disabled when -GL is on
   - set cl_options=-MP -Oi -arch:%vc_inc_arch% -Gw -Gy -GL -GS- -Qspectre- -favor:%favor_arch% -Zc:__cplusplus %cl_cpu_options%
