@@ -221,7 +221,9 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	statsDock = new OBSDock();
 	statsDock->setObjectName(QStringLiteral("statsDock"));
-	statsDock->setFeatures(QDockWidget::AllDockWidgetFeatures);
+	statsDock->setFeatures(QDockWidget::DockWidgetClosable |
+			       QDockWidget::DockWidgetMovable |
+			       QDockWidget::DockWidgetFloatable);
 	statsDock->setWindowTitle(QTStr("Basic.Stats"));
 	addDockWidget(Qt::BottomDockWidgetArea, statsDock);
 	statsDock->setVisible(false);
@@ -696,6 +698,16 @@ static void LoadAudioDevice(const char *name, int channel, obs_data_t *parent)
 		const char *name = obs_source_get_name(source);
 		blog(LOG_INFO, "[Loaded global audio device]: '%s'", name);
 		obs_source_enum_filters(source, LogFilter, (void *)(intptr_t)1);
+		obs_monitoring_type monitoring_type =
+			obs_source_get_monitoring_type(source);
+		if (monitoring_type != OBS_MONITORING_TYPE_NONE) {
+			const char *type = (monitoring_type ==
+					    OBS_MONITORING_TYPE_MONITOR_ONLY)
+						   ? "monitor only"
+						   : "monitor and output";
+
+			blog(LOG_INFO, "    - monitoring: %s", type);
+		}
 		obs_source_release(source);
 	}
 
@@ -1078,6 +1090,12 @@ retryScene:
 		QMetaObject::invokeMethod(this, "StartReplayBuffer",
 					  Qt::QueuedConnection);
 		opt_start_replaybuffer = false;
+	}
+
+	if (opt_start_virtualcam) {
+		QMetaObject::invokeMethod(this, "StartVirtualCam",
+					  Qt::QueuedConnection);
+		opt_start_virtualcam = false;
 	}
 
 	copyStrings.clear();
@@ -1518,6 +1536,18 @@ void OBSBasic::ReplayBufferClicked()
 		StartReplayBuffer();
 };
 
+void OBSBasic::AddVCamButton()
+{
+	vcamButton = new ReplayBufferButton(QTStr("Basic.Main.StartVirtualCam"),
+					    this);
+	vcamButton->setCheckable(true);
+	connect(vcamButton.data(), &QPushButton::clicked, this,
+		&OBSBasic::VCamButtonClicked);
+
+	vcamButton->setProperty("themeID", "vcamButton");
+	ui->buttonsVLayout->insertWidget(2, vcamButton);
+}
+
 void OBSBasic::ResetOutputs()
 {
 	ProfileScope("OBSBasic::ResetOutputs");
@@ -1644,6 +1674,13 @@ void OBSBasic::OBSInit()
 #ifdef BROWSER_AVAILABLE
 	cef = obs_browser_init_panel();
 #endif
+
+	obs_data_t *obsData = obs_get_private_data();
+	vcamEnabled = obs_data_get_bool(obsData, "vcamEnabled");
+	if (vcamEnabled) {
+		AddVCamButton();
+	}
+	obs_data_release(obsData);
 
 	InitBasicConfigDefaults2();
 
@@ -1800,11 +1837,6 @@ void OBSBasic::OBSInit()
 	SystemTray(true);
 #endif
 
-#ifdef _WIN32
-	taskBtn->setWindow(windowHandle());
-	taskProg->setRange(0, 1);
-#endif
-
 	bool has_last_version = config_has_user_value(App()->GlobalConfig(),
 						      "General", "LastVersion");
 	bool first_run =
@@ -1865,6 +1897,8 @@ void OBSBasic::OBSInit()
 #endif
 
 	OnFirstLoad();
+
+	activateWindow();
 
 #ifdef __APPLE__
 	QMetaObject::invokeMethod(this, "DeferredSysTrayLoad",
@@ -2245,6 +2279,23 @@ void OBSBasic::CreateHotkeys()
 		this, this);
 	LoadHotkeyPair(replayBufHotkeys, "OBSBasic.StartReplayBuffer",
 		       "OBSBasic.StopReplayBuffer");
+
+	if (vcamEnabled) {
+		vcamHotkeys = obs_hotkey_pair_register_frontend(
+			"OBSBasic.StartVirtualCam",
+			Str("Basic.Main.StartVirtualCam"),
+			"OBSBasic.StopVirtualCam",
+			Str("Basic.Main.StopVirtualCam"),
+			MAKE_CALLBACK(!basic.outputHandler->VirtualCamActive(),
+				      basic.StartVirtualCam,
+				      "Starting virtual camera"),
+			MAKE_CALLBACK(basic.outputHandler->VirtualCamActive(),
+				      basic.StopVirtualCam,
+				      "Stopping virtual camera"),
+			this, this);
+		LoadHotkeyPair(vcamHotkeys, "OBSBasic.StartVirtualCam",
+			       "OBSBasic.StopVirtualCam");
+	}
 
 	togglePreviewHotkeys = obs_hotkey_pair_register_frontend(
 		"OBSBasic.EnablePreview",
@@ -3177,8 +3228,9 @@ bool OBSBasic::QueryRemoveSource(obs_source_t *source)
 
 	QMessageBox remove_source(this);
 	remove_source.setText(text);
-	QAbstractButton *Yes =
+	QPushButton *Yes =
 		remove_source.addButton(QTStr("Yes"), QMessageBox::YesRole);
+	remove_source.setDefaultButton(Yes);
 	remove_source.addButton(QTStr("No"), QMessageBox::NoRole);
 	remove_source.setIcon(QMessageBox::Question);
 	remove_source.setWindowTitle(QTStr("ConfirmRemove.Title"));
@@ -4940,8 +4992,9 @@ void OBSBasic::on_actionRemoveSource_triggered()
 
 		QMessageBox remove_items(this);
 		remove_items.setText(text);
-		QAbstractButton *Yes = remove_items.addButton(
-			QTStr("Yes"), QMessageBox::YesRole);
+		QPushButton *Yes = remove_items.addButton(QTStr("Yes"),
+							  QMessageBox::YesRole);
+		remove_items.setDefaultButton(Yes);
 		remove_items.addButton(QTStr("No"), QMessageBox::NoRole);
 		remove_items.setIcon(QMessageBox::Question);
 		remove_items.setWindowTitle(QTStr("ConfirmRemove.Title"));
@@ -5245,6 +5298,10 @@ void OBSBasic::OpenSceneFilters()
 	"==== Streaming Start ==============================================="
 #define STREAMING_STOP \
 	"==== Streaming Stop ================================================"
+#define VIRTUAL_CAM_START \
+	"==== Virtual Camera Start =========================================="
+#define VIRTUAL_CAM_STOP \
+	"==== Virtual Camera Stop ==========================================="
 
 void OBSBasic::StartStreaming()
 {
@@ -5259,6 +5316,7 @@ void OBSBasic::StartStreaming()
 	SaveProject();
 
 	ui->streamButton->setEnabled(false);
+	ui->streamButton->setChecked(false);
 	ui->streamButton->setText(QTStr("Basic.Main.Connecting"));
 
 	if (sysTrayStream) {
@@ -5329,13 +5387,6 @@ inline void OBSBasic::OnActivate()
 		App()->IncrementSleepInhibition();
 		UpdateProcessPriority();
 
-#ifdef _WIN32
-		taskProg->show();
-		taskProg->resume();
-		taskProg->setValue(1);
-		taskBtn->setOverlayIcon(QIcon::fromTheme(
-			"obs-active", QIcon(":/res/images/active.png")));
-#endif
 		if (trayIcon)
 			trayIcon->setIcon(QIcon::fromTheme(
 				"obs-tray-active",
@@ -5357,34 +5408,12 @@ inline void OBSBasic::OnDeactivate()
 		if (trayIcon)
 			trayIcon->setIcon(QIcon::fromTheme(
 				"obs-tray", QIcon(":/res/images/obs.png")));
-#ifdef _WIN32
-		taskProg->hide();
-		taskBtn->clearOverlayIcon();
-#endif
-	} else {
-		if (os_atomic_load_bool(&recording_paused)) {
-#ifdef _WIN32
-			taskProg->show();
-			taskProg->pause();
-			taskBtn->setOverlayIcon(QIcon::fromTheme(
-				"obs-paused",
-				QIcon(":/res/images/paused.png")));
-#endif
-			if (trayIcon)
-				trayIcon->setIcon(
-					QIcon(":/res/images/obs_paused.png"));
-		} else {
-#ifdef _WIN32
-			taskProg->show();
-			taskProg->resume();
-			taskBtn->setOverlayIcon(QIcon::fromTheme(
-				"obs-active",
-				QIcon(":/res/images/active.png")));
-#endif
-			if (trayIcon)
-				trayIcon->setIcon(
-					QIcon(":/res/images/tray_active.png"));
-		}
+	} else if (trayIcon) {
+		if (os_atomic_load_bool(&recording_paused))
+			trayIcon->setIcon(QIcon(":/res/images/obs_paused.png"));
+		else
+			trayIcon->setIcon(
+				QIcon(":/res/images/tray_active.png"));
 	}
 }
 
@@ -5965,6 +5994,61 @@ void OBSBasic::ReplayBufferStop(int code)
 	UpdateReplayBuffer(false);
 }
 
+void OBSBasic::StartVirtualCam()
+{
+	if (!outputHandler || !outputHandler->virtualCam)
+		return;
+	if (outputHandler->VirtualCamActive())
+		return;
+	if (disableOutputsRef)
+		return;
+
+	SaveProject();
+
+	if (!outputHandler->StartVirtualCam()) {
+		vcamButton->setChecked(false);
+	}
+}
+
+void OBSBasic::StopVirtualCam()
+{
+	if (!outputHandler || !outputHandler->virtualCam)
+		return;
+
+	SaveProject();
+
+	if (outputHandler->VirtualCamActive())
+		outputHandler->StopVirtualCam();
+
+	OnDeactivate();
+}
+
+void OBSBasic::OnVirtualCamStart()
+{
+	if (!outputHandler || !outputHandler->virtualCam)
+		return;
+
+	vcamButton->setText(QTStr("Basic.Main.StopVirtualCam"));
+	vcamButton->setChecked(true);
+
+	OnActivate();
+
+	blog(LOG_INFO, VIRTUAL_CAM_START);
+}
+
+void OBSBasic::OnVirtualCamStop(int)
+{
+	if (!outputHandler || !outputHandler->virtualCam)
+		return;
+
+	vcamButton->setText(QTStr("Basic.Main.StartVirtualCam"));
+	vcamButton->setChecked(false);
+
+	blog(LOG_INFO, VIRTUAL_CAM_STOP);
+
+	OnDeactivate();
+}
+
 void OBSBasic::on_streamButton_clicked()
 {
 	if (outputHandler->StreamingActive()) {
@@ -6068,6 +6152,20 @@ void OBSBasic::on_recordButton_clicked()
 		}
 
 		StartRecording();
+	}
+}
+
+void OBSBasic::VCamButtonClicked()
+{
+	if (outputHandler->VirtualCamActive()) {
+		StopVirtualCam();
+	} else {
+		if (!UIValidation::NoSourcesConfirmation(this)) {
+			vcamButton->setChecked(false);
+			return;
+		}
+
+		StartVirtualCam();
 	}
 }
 
@@ -7005,13 +7103,17 @@ void OBSBasic::on_resetUI_triggered()
 	resizeDocks(docks, {cy, cy, cy, cy, cy}, Qt::Vertical);
 	resizeDocks(docks, sizes, Qt::Horizontal);
 #endif
+
+	activateWindow();
 }
 
 void OBSBasic::on_lockUI_toggled(bool lock)
 {
 	QDockWidget::DockWidgetFeatures features =
 		lock ? QDockWidget::NoDockWidgetFeatures
-		     : QDockWidget::AllDockWidgetFeatures;
+		     : (QDockWidget::DockWidgetClosable |
+			QDockWidget::DockWidgetMovable |
+			QDockWidget::DockWidgetFloatable);
 
 	QDockWidget::DockWidgetFeatures mainFeatures = features;
 	mainFeatures &= ~QDockWidget::QDockWidget::DockWidgetClosable;
@@ -7681,7 +7783,9 @@ QAction *OBSBasic::AddDockWidget(QDockWidget *dock)
 	bool lock = ui->lockUI->isChecked();
 	QDockWidget::DockWidgetFeatures features =
 		lock ? QDockWidget::NoDockWidgetFeatures
-		     : QDockWidget::AllDockWidgetFeatures;
+		     : (QDockWidget::DockWidgetClosable |
+			QDockWidget::DockWidgetMovable |
+			QDockWidget::DockWidgetFloatable);
 
 	dock->setFeatures(features);
 
@@ -7773,11 +7877,6 @@ void OBSBasic::PauseRecording()
 
 		ui->statusbar->RecordingPaused();
 
-#ifdef _WIN32
-		taskProg->pause();
-		taskBtn->setOverlayIcon(QIcon::fromTheme(
-			"obs-paused", QIcon(":/res/images/paused.png")));
-#endif
 		if (trayIcon)
 			trayIcon->setIcon(QIcon(":/res/images/obs_paused.png"));
 
@@ -7807,11 +7906,6 @@ void OBSBasic::UnpauseRecording()
 
 		ui->statusbar->RecordingUnpaused();
 
-#ifdef _WIN32
-		taskProg->resume();
-		taskBtn->setOverlayIcon(QIcon::fromTheme(
-			"obs-active", QIcon(":/res/images/active.png")));
-#endif
 		if (trayIcon)
 			trayIcon->setIcon(
 				QIcon(":/res/images/tray_active.png"));

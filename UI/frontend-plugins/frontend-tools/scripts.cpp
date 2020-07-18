@@ -200,10 +200,19 @@ ScriptsTool::ScriptsTool() : QWidget(nullptr), ui(new Ui_ScriptsTool)
 	propertiesView->setSizePolicy(QSizePolicy::Expanding,
 				      QSizePolicy::Expanding);
 	ui->propertiesLayout->addWidget(propertiesView);
+
+	config_t *global_config = obs_frontend_get_global_config();
+	int row =
+		config_get_int(global_config, "scripts-tool", "prevScriptRow");
+	ui->scripts->setCurrentRow(row);
 }
 
 ScriptsTool::~ScriptsTool()
 {
+	config_t *global_config = obs_frontend_get_global_config();
+	config_set_int(global_config, "scripts-tool", "prevScriptRow",
+		       ui->scripts->currentRow());
+
 	delete ui;
 }
 
@@ -252,6 +261,22 @@ void ScriptsTool::RefreshLists()
 		QListWidgetItem *item = new QListWidgetItem(script_file);
 		item->setData(Qt::UserRole, QString(script_path));
 		ui->scripts->addItem(item);
+	}
+}
+
+void ScriptsTool::SetScriptDefaults(const char *path)
+{
+	for (OBSScript &script : scriptData->scripts) {
+		const char *script_path = obs_script_get_path(script);
+		if (strcmp(script_path, path) == 0) {
+			obs_data_t *settings = obs_script_get_settings(script);
+			obs_data_clear(settings);
+			obs_data_release(settings);
+
+			obs_script_update(script, nullptr);
+			on_reloadScripts_clicked();
+			break;
+		}
 	}
 }
 
@@ -332,6 +357,8 @@ void ScriptsTool::on_addScripts_clicked()
 				obs_script_get_properties(script);
 			obs_properties_apply_settings(prop, settings);
 			obs_properties_destroy(prop);
+
+			ui->scripts->setCurrentItem(item);
 		}
 	}
 }
@@ -431,6 +458,16 @@ void ScriptsTool::on_scripts_currentRowChanged(int row)
 		(PropertiesUpdateCallback)obs_script_update);
 	ui->propertiesLayout->addWidget(propertiesView);
 	ui->description->setText(obs_script_get_description(script));
+}
+
+void ScriptsTool::on_defaults_clicked()
+{
+	QListWidgetItem *item = ui->scripts->currentItem();
+	if (!item)
+		return;
+
+	SetScriptDefaults(
+		item->data(Qt::UserRole).toString().toUtf8().constData());
 }
 
 /* ----------------------------------------------------------------- */

@@ -594,6 +594,13 @@ void OBSPropertiesView::AddEditableList(obs_property_t *prop,
 
 	WidgetInfo *info = new WidgetInfo(this, prop, list);
 
+	list->setDragDropMode(QAbstractItemView::InternalMove);
+	connect(list->model(),
+		SIGNAL(rowsMoved(QModelIndex, int, int, QModelIndex, int)),
+		info,
+		SLOT(EditListReordered(const QModelIndex &, int, int,
+				       const QModelIndex &, int)));
+
 	QVBoxLayout *sideLayout = new QVBoxLayout();
 	NewButton(sideLayout, info, "addIconSmall", &WidgetInfo::EditListAdd);
 	NewButton(sideLayout, info, "removeIconSmall",
@@ -650,14 +657,15 @@ void OBSPropertiesView::AddColor(obs_property_t *prop, QFormLayout *layout,
 
 	QPalette palette = QPalette(color);
 	colorLabel->setFrameStyle(QFrame::Sunken | QFrame::Panel);
+	// The picker doesn't have an alpha option, show only RGB
 	colorLabel->setText(color.name(QColor::HexRgb));
 	colorLabel->setPalette(palette);
 	colorLabel->setStyleSheet(
 		QString("background-color :%1; color: %2;")
 			.arg(palette.color(QPalette::Window)
-				     .name(QColor::HexArgb))
+				     .name(QColor::HexRgb))
 			.arg(palette.color(QPalette::WindowText)
-				     .name(QColor::HexArgb)));
+				     .name(QColor::HexRgb)));
 	colorLabel->setAutoFillBackground(true);
 	colorLabel->setAlignment(Qt::AlignCenter);
 	colorLabel->setToolTip(QT_UTF8(obs_property_long_description(prop)));
@@ -1686,7 +1694,7 @@ bool WidgetInfo::ColorChanged(const char *setting)
 	long long val = obs_data_get_int(view->settings, setting);
 	QColor color = color_from_int(val);
 
-	QColorDialog::ColorDialogOptions options = 0;
+	QColorDialog::ColorDialogOptions options;
 
 	/* The native dialog on OSX has all kinds of problems, like closing
 	 * other open QDialogs on exit, and
@@ -1703,14 +1711,14 @@ bool WidgetInfo::ColorChanged(const char *setting)
 		return false;
 
 	QLabel *label = static_cast<QLabel *>(widget);
-	label->setText(color.name(QColor::HexArgb));
+	label->setText(color.name(QColor::HexRgb));
 	QPalette palette = QPalette(color);
 	label->setPalette(palette);
 	label->setStyleSheet(QString("background-color :%1; color: %2;")
 				     .arg(palette.color(QPalette::Window)
-						  .name(QColor::HexArgb))
+						  .name(QColor::HexRgb))
 				     .arg(palette.color(QPalette::WindowText)
-						  .name(QColor::HexArgb)));
+						  .name(QColor::HexRgb)));
 
 	obs_data_set_int(view->settings, setting, color_to_int(color));
 
@@ -1772,6 +1780,19 @@ void WidgetInfo::GroupChanged(const char *setting)
 	obs_data_set_bool(view->settings, setting,
 			  groupbox->isCheckable() ? groupbox->isChecked()
 						  : true);
+}
+
+void WidgetInfo::EditListReordered(const QModelIndex &parent, int start,
+				   int end, const QModelIndex &destination,
+				   int row)
+{
+	UNUSED_PARAMETER(parent);
+	UNUSED_PARAMETER(start);
+	UNUSED_PARAMETER(end);
+	UNUSED_PARAMETER(destination);
+	UNUSED_PARAMETER(row);
+
+	EditableListChanged();
 }
 
 void WidgetInfo::EditableListChanged()
