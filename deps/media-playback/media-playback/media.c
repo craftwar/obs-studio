@@ -227,13 +227,20 @@ static bool mp_media_init_scaling(mp_media_t *m)
 
 static bool mp_media_prepare_frames(mp_media_t *m)
 {
+	bool actively_seeking = m->seek_next_ts && m->pause;
+
 	while (!mp_media_ready_to_start(m)) {
 		if (!m->eof) {
 			int ret = mp_media_next_packet(m);
-			if (ret == AVERROR_EOF || ret == AVERROR_EXIT)
-				m->eof = true;
-			else if (ret < 0)
+			if (ret == AVERROR_EOF || ret == AVERROR_EXIT) {
+				if (!actively_seeking) {
+					m->eof = true;
+				} else {
+					break;
+				}
+			} else if (ret < 0) {
 				return false;
+			}
 		}
 
 		if (m->has_video && !mp_decode_frame(&m->v))
@@ -461,8 +468,12 @@ static void seek_to(mp_media_t *m, int64_t pos)
 		}
 	}
 
-	if (m->has_video && m->is_local_file)
+	if (m->has_video && m->is_local_file) {
 		mp_decode_flush(&m->v);
+		if (m->seek_next_ts && m->pause && m->v_preload_cb &&
+		    mp_media_prepare_frames(m))
+			mp_media_next_video(m, true);
+	}
 	if (m->has_audio && m->is_local_file)
 		mp_decode_flush(&m->a);
 }

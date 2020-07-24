@@ -1,6 +1,8 @@
+#include "obs-module.h"
 #include "scripts.hpp"
 #include "frontend-tools-config.h"
 #include "../../properties-view.hpp"
+#include "../../qt-wrappers.hpp"
 
 #include <QFileDialog>
 #include <QPlainTextEdit>
@@ -13,6 +15,9 @@
 #include <QDialogButtonBox>
 #include <QResizeEvent>
 #include <QAction>
+#include <QMessageBox>
+#include <QUrl>
+#include <QDesktopServices>
 
 #include <obs.hpp>
 #include <obs-module.h>
@@ -319,19 +324,16 @@ void ScriptsTool::on_addScripts_clicked()
 		lastBrowsedDir = baseScriptPath;
 	}
 
-	QFileDialog dlg(this, obs_module_text("AddScripts"));
-	dlg.setFileMode(QFileDialog::ExistingFiles);
-	dlg.setDirectory(QDir(lastBrowsedDir.c_str()));
-	dlg.setNameFilter(filter);
-	dlg.exec();
-
-	QStringList files = dlg.selectedFiles();
+	QStringList files = OpenFiles(this,
+				      QT_UTF8(obs_module_text("AddScripts")),
+				      QT_UTF8(lastBrowsedDir.c_str()), filter);
 	if (!files.count())
 		return;
 
-	lastBrowsedDir = dlg.directory().path().toUtf8().constData();
-
 	for (const QString &file : files) {
+		lastBrowsedDir =
+			QFileInfo(file).absolutePath().toUtf8().constData();
+
 		QByteArray pathBytes = file.toUtf8();
 		const char *path = pathBytes.constData();
 
@@ -396,8 +398,8 @@ void ScriptsTool::on_scriptLog_clicked()
 void ScriptsTool::on_pythonPathBrowse_clicked()
 {
 	QString curPath = ui->pythonPath->text();
-	QString newPath = QFileDialog::getExistingDirectory(
-		this, ui->pythonPathLabel->text(), curPath);
+	QString newPath =
+		SelectDirectory(this, ui->pythonPathLabel->text(), curPath);
 
 	if (newPath.isEmpty())
 		return;
@@ -468,6 +470,40 @@ void ScriptsTool::on_defaults_clicked()
 
 	SetScriptDefaults(
 		item->data(Qt::UserRole).toString().toUtf8().constData());
+}
+
+void ScriptsTool::on_description_linkActivated(const QString &link)
+{
+	QUrl url(link, QUrl::StrictMode);
+	if (url.isValid() && (url.scheme().compare("http") == 0 ||
+			      url.scheme().compare("https") == 0)) {
+		QString msg(obs_module_text("ScriptDescriptionLink.Text"));
+		msg += "\n\n";
+		msg += QString(obs_module_text(
+				       "ScriptDescriptionLink.Text.Url"))
+			       .arg(link);
+
+		const char *open =
+			obs_module_text("ScriptDescriptionLink.OpenURL");
+
+		QMessageBox messageBox(this);
+		messageBox.setWindowTitle(open);
+		messageBox.setText(msg);
+
+		obs_frontend_push_ui_translation(obs_module_get_string);
+		QPushButton *yesButton =
+			messageBox.addButton(open, QMessageBox::YesRole);
+		QPushButton *noButton =
+			messageBox.addButton(tr("Cancel"), QMessageBox::NoRole);
+		obs_frontend_pop_ui_translation();
+		messageBox.setDefaultButton(yesButton);
+		messageBox.setEscapeButton(noButton);
+		messageBox.setIcon(QMessageBox::Question);
+		messageBox.exec();
+
+		if (messageBox.clickedButton() == yesButton)
+			QDesktopServices::openUrl(url);
+	}
 }
 
 /* ----------------------------------------------------------------- */

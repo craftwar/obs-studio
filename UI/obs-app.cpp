@@ -79,6 +79,7 @@ bool opt_start_virtualcam = false;
 bool opt_minimize_tray = false;
 bool opt_allow_opengl = false;
 bool opt_always_on_top = false;
+bool opt_disable_updater = false;
 string opt_starting_collection;
 string opt_starting_profile;
 string opt_starting_scene;
@@ -1130,6 +1131,9 @@ OBSApp::~OBSApp()
 
 	os_inhibit_sleep_set_active(sleepInhibitor, false);
 	os_inhibit_sleep_destroy(sleepInhibitor);
+
+	if (libobs_initialized)
+		obs_shutdown();
 }
 
 static void move_basic_to_profiles(void)
@@ -1351,6 +1355,8 @@ bool OBSApp::OBSInit()
 	if (!StartupOBS(locale.c_str(), GetProfilerNameStore()))
 		return false;
 
+	libobs_initialized = true;
+
 	obs_set_ui_task_handler(ui_task_handler);
 
 #ifdef _WIN32
@@ -1403,6 +1409,11 @@ constexpr char *OBSApp::GetVersionString()
 bool OBSApp::IsPortableMode()
 {
 	return portable_mode;
+}
+
+bool OBSApp::IsUpdaterDisabled()
+{
+	return opt_disable_updater;
 }
 
 #ifdef __APPLE__
@@ -2431,6 +2442,9 @@ int main(int argc, char *argv[])
 		} else if (arg_is(argv[i], "--allow-opengl", nullptr)) {
 			opt_allow_opengl = true;
 
+		} else if (arg_is(argv[i], "--disable-updater", nullptr)) {
+			opt_disable_updater = true;
+
 		} else if (arg_is(argv[i], "--help", "-h")) {
 			std::string help =
 				"--help, -h: Get list of available commands.\n\n"
@@ -2448,7 +2462,8 @@ int main(int argc, char *argv[])
 				"--multi, -m: Don't warn when launching multiple instances.\n\n"
 				"--verbose: Make log more verbose.\n"
 				"--always-on-top: Start in 'always on top' mode.\n\n"
-				"--unfiltered_log: Make log unfiltered.\n\n";
+				"--unfiltered_log: Make log unfiltered.\n\n"
+				"--disable-updater: Disable built-in updater (Windows/Mac only)\n\n";
 
 #ifdef _WIN32
 			MessageBoxA(NULL, help.c_str(), "Help",
@@ -2473,6 +2488,12 @@ int main(int argc, char *argv[])
 			os_file_exists(BASE_PATH "/obs_portable_mode") ||
 			os_file_exists(BASE_PATH "/portable_mode.txt") ||
 			os_file_exists(BASE_PATH "/obs_portable_mode.txt");
+	}
+
+	if (!opt_disable_updater) {
+		opt_disable_updater =
+			os_file_exists(BASE_PATH "/disable_updater") ||
+			os_file_exists(BASE_PATH "/disable_updater.txt");
 	}
 #endif
 
