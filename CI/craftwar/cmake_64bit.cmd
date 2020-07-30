@@ -12,5 +12,5 @@ rem	set DepsPath64=C:\projects\obs-studio\old_dep\win64
 )
 rem patch project setting
 rem remove /GL to incompatible project
-"C:\Program Files\Git\usr\bin\sed.exe" -i "/<WholeProgramOptimization>true<\/WholeProgramOptimization>/d" /C/projects/obs-studio/build64/UI/obs.vcxproj
+rem "C:\Program Files\Git\usr\bin\sed.exe" -i "/<WholeProgramOptimization>true<\/WholeProgramOptimization>/d" /C/projects/obs-studio/build64/UI/obs.vcxproj
 "C:\Program Files\Git\usr\bin\sed.exe" -i "s/<LanguageStandard>stdcpp17</<LanguageStandard>stdcpplatest</" /C/projects/obs-studio/build64/plugins/obs-text/obs-text.vcxproj
