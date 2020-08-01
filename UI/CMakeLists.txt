@@ -204,6 +204,7 @@ set(obs_SOURCES
 	window-basic-main-outputs.cpp
 	window-basic-source-select.cpp
 	window-basic-settings-stream.cpp
+	window-basic-main-screenshot.cpp
 	window-basic-auto-config-test.cpp
 	window-basic-main-scene-collections.cpp
 	window-basic-main-transitions.cpp
@@ -292,6 +293,7 @@ set(obs_HEADERS
 	mute-checkbox.hpp
 	record-button.hpp
 	ui-validation.hpp
+	screenshot-obj.hpp
 	url-push-button.hpp
 	volume-control.hpp
 	adv-audio-control.hpp
