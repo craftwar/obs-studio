@@ -5,7 +5,9 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
+#if __has_include(<mbedtls/threading.h>)
 #include <mbedtls/threading.h>
+#endif
 #endif
 
 OBS_DECLARE_MODULE()
