@@ -47,6 +47,7 @@ configure_file(
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 set(CMAKE_AUTOMOC TRUE)
 
+find_package(Qt5Widgets ${FIND_MODE})
 find_package(Qt5Svg ${FIND_MODE})
 find_package(Qt5Xml ${FIND_MODE})
 
@@ -218,6 +219,7 @@ set(obs_SOURCES
 	window-basic-preview.cpp
 	window-basic-about.cpp
 	window-importer.cpp
+	media-controls.cpp
 	window-namedialog.cpp
 	window-log-reply.cpp
 	window-projector.cpp
@@ -238,6 +240,7 @@ set(obs_SOURCES
 	volume-control.cpp
 	adv-audio-control.cpp
 	item-widget-helpers.cpp
+	context-bar-controls.cpp
 	horizontal-scroll-area.cpp
 	vertical-scroll-area.cpp
 	visibility-item-widget.cpp
@@ -249,7 +252,11 @@ set(obs_SOURCES
 	remote-text.cpp
 	audio-encoders.cpp
 	qt-wrappers.cpp
-	log-viewer.cpp)
+	log-viewer.cpp
+	obs-proxy-style.cpp
+	locked-checkbox.cpp
+	visibility-checkbox.cpp
+	media-slider.cpp)
 
 set(obs_HEADERS
 	${obs_PLATFORM_HEADERS}
@@ -274,6 +281,7 @@ set(obs_HEADERS
 	window-basic-transform.hpp
 	window-basic-preview.hpp
 	window-importer.hpp
+	media-controls.hpp
 	window-namedialog.hpp
 	window-log-reply.hpp
 	window-projector.hpp
@@ -300,6 +308,7 @@ set(obs_HEADERS
 	adv-audio-control.hpp
 	item-widget-helpers.hpp
 	visibility-checkbox.hpp
+	context-bar-controls.hpp
 	locked-checkbox.hpp
 	horizontal-scroll-area.hpp
 	expand-checkbox.hpp
@@ -314,7 +323,10 @@ set(obs_HEADERS
 	audio-encoders.hpp
 	qt-wrappers.hpp
 	clickable-label.hpp
-	log-viewer.hpp)
+	log-viewer.hpp
+	obs-proxy-style.hpp
+	obs-proxy-style.hpp
+	media-slider.hpp)
 
 set(obs_importers_HEADERS
 	importers/importers.hpp)
@@ -330,6 +342,13 @@ source_group("importers\\Source Files" FILES ${obs_importers_SOURCES})
 source_group("importers\\Header Files" FILES ${obs_importers_HEADERS})
 
 set(obs_UI
+	forms/source-toolbar/browser-source-toolbar.ui
+	forms/source-toolbar/device-select-toolbar.ui
+	forms/source-toolbar/game-capture-toolbar.ui
+	forms/source-toolbar/image-source-toolbar.ui
+	forms/source-toolbar/color-source-toolbar.ui
+	forms/source-toolbar/text-source-toolbar.ui
+	forms/source-toolbar/media-controls.ui
 	forms/NameDialog.ui
 	forms/AutoConfigStartPage.ui
 	forms/AutoConfigVideoPage.ui
