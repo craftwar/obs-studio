@@ -347,6 +347,7 @@ private:
 
 	void CloseDialogs();
 	void ClearSceneData();
+	void ClearProjectors();
 
 	void Nudge(int dist, MoveDir dir);
 
@@ -391,6 +392,7 @@ private:
 	void LoadTransitions(obs_data_array_t *transitions);
 
 	obs_source_t *fadeTransition;
+	obs_source_t *cutTransition;
 
 	void CreateProgramDisplay();
 	void CreateProgramOptions();
@@ -529,6 +531,7 @@ private:
 
 	void UpdateProjectorHideCursor();
 	void UpdateProjectorAlwaysOnTop(bool top);
+	void ResetProjectors();
 
 	QPointer<QObject> screenshotData;
 
