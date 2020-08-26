@@ -302,12 +302,12 @@ OBSBasic::OBSBasic(QWidget *parent)
 	connect(diskFullTimer, SIGNAL(timeout()), this,
 		SLOT(CheckDiskSpaceRemaining()));
 
-	QAction *renameScene = new QAction(ui->scenesDock);
+	renameScene = new QAction(ui->scenesDock);
 	renameScene->setShortcutContext(Qt::WidgetWithChildrenShortcut);
 	connect(renameScene, SIGNAL(triggered()), this, SLOT(EditSceneName()));
 	ui->scenesDock->addAction(renameScene);
 
-	QAction *renameSource = new QAction(ui->sourcesDock);
+	renameSource = new QAction(ui->sourcesDock);
 	renameSource->setShortcutContext(Qt::WidgetWithChildrenShortcut);
 	connect(renameSource, SIGNAL(triggered()), this,
 		SLOT(EditSceneItemName()));
@@ -907,6 +907,13 @@ void OBSBasic::Load(const char *file)
 	ClearSceneData();
 	InitDefaultTransitions();
 	ClearContextBar();
+
+	if (devicePropertiesThread && devicePropertiesThread->isRunning()) {
+		devicePropertiesThread->wait();
+		devicePropertiesThread.reset();
+	}
+
+	QApplication::sendPostedEvents(this);
 
 	obs_data_t *modulesObj = obs_data_get_obj(data, "modules");
 	if (api)
@@ -2951,7 +2958,6 @@ void OBSBasic::UpdateContextBar()
 			   strcmp(id, "v4l2_input") == 0) {
 			DeviceCaptureToolbar *c = new DeviceCaptureToolbar(
 				ui->emptySpace, source);
-			c->Init();
 			ui->emptySpace->layout()->addWidget(c);
 
 		} else if (strcmp(id, "game_capture") == 0) {
@@ -4119,12 +4125,9 @@ void OBSBasic::ClearSceneData()
 
 	ClearProjectors();
 
-	obs_set_output_source(0, nullptr);
-	obs_set_output_source(1, nullptr);
-	obs_set_output_source(2, nullptr);
-	obs_set_output_source(3, nullptr);
-	obs_set_output_source(4, nullptr);
-	obs_set_output_source(5, nullptr);
+	for (int i = 0; i < MAX_CHANNELS; i++)
+		obs_set_output_source(i, nullptr);
+
 	lastScene = nullptr;
 	swapScene = nullptr;
 	programScene = nullptr;
@@ -4193,6 +4196,12 @@ void OBSBasic::closeEvent(QCloseEvent *event)
 		updateCheckThread->wait();
 	if (logUploadThread)
 		logUploadThread->wait();
+	if (devicePropertiesThread && devicePropertiesThread->isRunning()) {
+		devicePropertiesThread->wait();
+		devicePropertiesThread.reset();
+	}
+
+	QApplication::sendPostedEvents(this);
 
 	signalHandlers.clear();
 
@@ -4378,6 +4387,7 @@ void OBSBasic::on_scenes_currentItemChanged(QListWidgetItem *current,
 
 void OBSBasic::EditSceneName()
 {
+	ui->scenesDock->removeAction(renameScene);
 	QListWidgetItem *item = ui->scenes->currentItem();
 	Qt::ItemFlags flags = item->flags();
 
@@ -5306,7 +5316,15 @@ void OBSBasic::on_actionUploadLastLog_triggered()
 
 void OBSBasic::on_actionViewCurrentLog_triggered()
 {
-	logView->setVisible(!logView->isVisible());
+	if (!logView->isVisible()) {
+		logView->setVisible(true);
+	} else {
+		logView->setWindowState(logView->windowState() &
+						~Qt::WindowMinimized |
+					Qt::WindowActive);
+		logView->activateWindow();
+		logView->raise();
+	}
 }
 
 void OBSBasic::on_actionShowCrashLogs_triggered()
@@ -5411,6 +5429,8 @@ void OBSBasic::SceneNameEdited(QWidget *editor,
 
 	obs_source_t *source = obs_scene_get_source(scene);
 	RenameListItem(this, ui->scenes, source, text);
+
+	ui->scenesDock->addAction(renameScene);
 
 	if (api)
 		api->on_event(OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED);
@@ -5535,7 +5555,7 @@ inline void OBSBasic::OnActivate()
 		App()->IncrementSleepInhibition();
 		UpdateProcessPriority();
 
-		if (trayIcon)
+		if (trayIcon && trayIcon->isVisible())
 			trayIcon->setIcon(QIcon::fromTheme(
 				"obs-tray-active",
 				QIcon(":/res/images/tray_active.png")));
@@ -5553,10 +5573,10 @@ inline void OBSBasic::OnDeactivate()
 		App()->DecrementSleepInhibition();
 		ClearProcessPriority();
 
-		if (trayIcon)
+		if (trayIcon && trayIcon->isVisible())
 			trayIcon->setIcon(QIcon::fromTheme(
 				"obs-tray", QIcon(":/res/images/obs.png")));
-	} else if (trayIcon) {
+	} else if (trayIcon && trayIcon->isVisible()) {
 		if (os_atomic_load_bool(&recording_paused))
 			trayIcon->setIcon(QIcon(":/res/images/obs_paused.png"));
 		else
@@ -7527,7 +7547,8 @@ void OBSBasic::IconActivated(QSystemTrayIcon::ActivationReason reason)
 void OBSBasic::SysTrayNotify(const QString &text,
 			     QSystemTrayIcon::MessageIcon n)
 {
-	if (trayIcon && QSystemTrayIcon::supportsMessages()) {
+	if (trayIcon && trayIcon->isVisible() &&
+	    QSystemTrayIcon::supportsMessages()) {
 		QSystemTrayIcon::MessageIcon icon =
 			QSystemTrayIcon::MessageIcon(n);
 		trayIcon->showMessage("OBS Studio", text, icon, 10000);
@@ -8045,7 +8066,7 @@ void OBSBasic::PauseRecording()
 
 		ui->statusbar->RecordingPaused();
 
-		if (trayIcon)
+		if (trayIcon && trayIcon->isVisible())
 			trayIcon->setIcon(QIcon(":/res/images/obs_paused.png"));
 
 		os_atomic_set_bool(&recording_paused, true);
@@ -8074,7 +8095,7 @@ void OBSBasic::UnpauseRecording()
 
 		ui->statusbar->RecordingUnpaused();
 
-		if (trayIcon)
+		if (trayIcon && trayIcon->isVisible())
 			trayIcon->setIcon(
 				QIcon(":/res/images/tray_active.png"));
 

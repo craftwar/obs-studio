@@ -31,9 +31,6 @@ SourceToolbar::SourceToolbar(QWidget *parent, OBSSource source)
 	  weakSource(OBSGetWeakRef(source)),
 	  props(obs_source_properties(source), obs_properties_destroy)
 {
-	obs_data_t *settings = obs_source_get_settings(source);
-	obs_properties_apply_settings(props.get(), settings);
-	obs_data_release(settings);
 }
 
 /* ========================================================================= */
@@ -107,13 +104,10 @@ static void SetComboItemDisabled(QComboBox *c, int idx)
 	item->setFlags(Qt::NoItemFlags);
 }
 
-void ComboSelectToolbar::Init()
+void UpdateSourceComboToolbarProperties(QComboBox *combo, OBSSource source,
+					obs_properties_t *props,
+					const char *prop_name, bool is_int)
 {
-	OBSSource source = GetSource();
-	if (!source) {
-		return;
-	}
-
 	std::string cur_id;
 
 	obs_data_t *settings = obs_source_get_settings(source);
@@ -124,41 +118,41 @@ void ComboSelectToolbar::Init()
 	}
 	obs_data_release(settings);
 
-	ui->device->blockSignals(true);
+	combo->blockSignals(true);
 
-	obs_property_t *p = obs_properties_get(props.get(), prop_name);
-	int cur_idx = FillPropertyCombo(ui->device, p, cur_id, is_int);
+	obs_property_t *p = obs_properties_get(props, prop_name);
+	int cur_idx = FillPropertyCombo(combo, p, cur_id, is_int);
 
 	if (cur_idx == -1 || obs_property_list_item_disabled(p, cur_idx)) {
 		if (cur_idx == -1) {
-			ui->device->insertItem(
+			combo->insertItem(
 				0,
 				QTStr("Basic.Settings.Audio.UnknownAudioDevice"));
 			cur_idx = 0;
 		}
 
-		SetComboItemDisabled(ui->device, cur_idx);
-	} else {
-		ui->device->setCurrentIndex(cur_idx);
+		SetComboItemDisabled(combo, cur_idx);
 	}
 
-	ui->device->blockSignals(false);
+	combo->setCurrentIndex(cur_idx);
+	combo->blockSignals(false);
 }
 
-void ComboSelectToolbar::UpdateActivateButtonName()
-{
-	obs_property_t *p = obs_properties_get(props.get(), "activate");
-	ui->activateButton->setText(obs_property_description(p));
-}
-
-void ComboSelectToolbar::on_device_currentIndexChanged(int idx)
+void ComboSelectToolbar::Init()
 {
 	OBSSource source = GetSource();
-	if (idx == -1 || !source) {
+	if (!source) {
 		return;
 	}
 
-	QString id = ui->device->itemData(idx).toString();
+	UpdateSourceComboToolbarProperties(ui->device, source, props.get(),
+					   prop_name, is_int);
+}
+
+void UpdateSourceComboToolbarValue(QComboBox *combo, OBSSource source, int idx,
+				   const char *prop_name, bool is_int)
+{
+	QString id = combo->itemData(idx).toString();
 
 	obs_data_t *settings = obs_data_create();
 	if (is_int) {
@@ -170,20 +164,15 @@ void ComboSelectToolbar::on_device_currentIndexChanged(int idx)
 	obs_data_release(settings);
 }
 
-void ComboSelectToolbar::on_activateButton_clicked()
+void ComboSelectToolbar::on_device_currentIndexChanged(int idx)
 {
 	OBSSource source = GetSource();
-	if (!source) {
+	if (idx == -1 || !source) {
 		return;
 	}
 
-	obs_property_t *p = obs_properties_get(props.get(), "activate");
-	if (!p) {
-		return;
-	}
-
-	obs_property_button_clicked(p, source.Get());
-	UpdateActivateButtonName();
+	UpdateSourceComboToolbarValue(ui->device, source, idx, prop_name,
+				      is_int);
 }
 
 AudioCaptureToolbar::AudioCaptureToolbar(QWidget *parent, OBSSource source)
@@ -259,38 +248,6 @@ void DisplayCaptureToolbar::Init()
 	prop_name = "display";
 #else
 	prop_name = "screen";
-#endif
-
-	ComboSelectToolbar::Init();
-}
-
-DeviceCaptureToolbar::DeviceCaptureToolbar(QWidget *parent, OBSSource source)
-	: ComboSelectToolbar(parent, source)
-{
-}
-
-void DeviceCaptureToolbar::Init()
-{
-#ifndef _WIN32
-	delete ui->activateButton;
-	ui->activateButton = nullptr;
-#endif
-
-	obs_module_t *mod =
-		get_os_module("win-dshow", "mac-avcapture", "linux-v4l2");
-	const char *device_str = obs_module_get_locale_text(mod, "Device");
-	ui->deviceLabel->setText(device_str);
-
-#ifdef _WIN32
-	prop_name = "video_device_id";
-#elif __APPLE__
-	prop_name = "device";
-#else
-	prop_name = "device_id";
-#endif
-
-#ifdef _WIN32
-	UpdateActivateButtonName();
 #endif
 
 	ComboSelectToolbar::Init();
