@@ -291,3 +291,4 @@ else()
 endif()
 
 include(CopyMSVCBins)
+set(CMAKE_SUPPRESS_REGENERATION ON)
