@@ -373,11 +373,14 @@ struct TextSource {
 	static constexpr wchar_t browser_app[] = L"- YouTube";
 	static char isBrowser(wchar_t *const __restrict title,
 				       size_t title_len);
+	static bool isSpotify(wchar_t* exeName, wchar_t* className);
 	static bool isFoobar2000(wchar_t *exeName, wchar_t *className);
 	static bool isOsu(wchar_t *exeName, wchar_t *className);
 	static wchar_t *
 	get_song_browser_youtube(wchar_t *const __restrict title,
 				 size_t str_len);
+	static wchar_t* get_title_song(wchar_t* const __restrict title,
+		size_t str_len);
 	static wchar_t *get_song_foobar2000(wchar_t *const __restrict title,
 					    size_t str_len);
 	static wchar_t *get_song_osu(wchar_t *const __restrict title,
@@ -1016,7 +1019,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 
 	// for better precision
 	wchar_t className[MAX_PATH];
-	//GetClassNameW(hwnd, className, _countof(className));
+	GetClassNameW(hwnd, className, _countof(className));
 	DWORD pid;
 	GetWindowThreadProcessId(hwnd, &pid);
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
@@ -1028,7 +1031,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		if (!exeName)
 			exeName = path;
 	} else
-		return FALSE;
+		[[unlikely]] return FALSE;
 
 #ifndef song_thread_version
 	if (len > song.browser_suffix_len && song.pFunc) {
@@ -1062,6 +1065,12 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		song_name = get_song_foobar2000(title.get(), len);
 		if (song_name)
 			song.pFunc = &TextSource::get_song_foobar2000;
+		else
+			return 0;
+	} else if (isSpotify(exeName, className)) {
+		song_name = get_title_song(title.get(), len);
+		if (song_name)
+			song.pFunc = &TextSource::get_title_song;
 		else
 			return 0;
 	} else if (isOsu(exeName, className)) {
@@ -1117,6 +1126,12 @@ char TextSource::isBrowser(wchar_t *const __restrict title,
 	return -1;
 }
 
+bool TextSource::isSpotify(wchar_t *exeName, wchar_t *className)
+{
+	return !WCSCMP_CONST(exeName, L"Spotify.exe") &&
+	       !WCSCMP_CONST(className, L"Chrome_WidgetWin_0");
+}
+
 bool TextSource::isFoobar2000(wchar_t *exeName, wchar_t *className)
 {
 	return !WCSCMP_CONST(exeName, L"foobar2000.exe");
@@ -1158,6 +1173,12 @@ wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 	//	return title;
 	//}
 	return nullptr;
+}
+
+wchar_t *TextSource::get_title_song(wchar_t *const __restrict title,
+				    [[maybe_unused]] size_t str_len)
+{
+	return title;
 }
 
 // endWith case
@@ -1274,7 +1295,7 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 			len - song.thread_owner->song.browser_suffix_len);
 		// if not found, close thread?
 		// can't handle window close
-		if (song_name == nullptr)
+		if (!song_name)
 			[[unlikely]] song_name = L"";
 		song.thread_owner->set_song_name(song_name);
 	}
@@ -1363,7 +1384,7 @@ bool TextSource::VNR_initial()
 			shm.hMapFile,        // handle to map object
 			FILE_MAP_ALL_ACCESS, // read/write permission
 			0, 0, VNR_SHM_SIZE));
-		if (TextSource::shm.data == nullptr)
+		if (!TextSource::shm.data)
 			goto SHM_error_clean;
 
 		// No initialization is required https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
@@ -1399,9 +1420,9 @@ bool TextSource::VNR_initial()
 	return true;
 
 SHM_error_clean:
-	TextSource::VNR_cleanup();
+	[[unlikely]] TextSource::VNR_cleanup();
 SHM_fail:
-	return false;
+	[[unlikely]] return false;
 }
 
 BOOL CALLBACK TextSource::find_target(const HWND hwnd, const LPARAM lParam)
