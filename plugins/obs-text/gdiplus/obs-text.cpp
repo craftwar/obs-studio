@@ -381,6 +381,8 @@ struct TextSource {
 				 size_t str_len);
 	static wchar_t* get_title_song(wchar_t* const __restrict title,
 		size_t str_len);
+	static wchar_t* get_song_Spotify(wchar_t* const __restrict title,
+		size_t str_len);
 	static wchar_t *get_song_foobar2000(wchar_t *const __restrict title,
 					    size_t str_len);
 	static wchar_t *get_song_osu(wchar_t *const __restrict title,
@@ -1063,16 +1065,10 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 			return 0;
 	} else if (isFoobar2000(exeName, className)) {
 		song_name = get_song_foobar2000(title.get(), len);
-		if (song_name)
-			song.pFunc = &TextSource::get_song_foobar2000;
-		else
-			return 0;
+		song.pFunc = &TextSource::get_song_foobar2000;
 	} else if (isSpotify(exeName, className)) {
-		song_name = get_title_song(title.get(), len);
-		if (song_name)
-			song.pFunc = &TextSource::get_title_song;
-		else
-			return 0;
+		song_name = get_song_Spotify(title.get(), len);
+		song.pFunc = &TextSource::get_song_Spotify;
 	} else if (isOsu(exeName, className)) {
 		song_name = get_song_osu(title.get(), len);
 		if (song_name)
@@ -1181,6 +1177,16 @@ wchar_t *TextSource::get_title_song(wchar_t *const __restrict title,
 	return title;
 }
 
+wchar_t *TextSource::get_song_Spotify(wchar_t *const __restrict title,
+				      [[maybe_unused]] size_t str_len)
+{
+	// not playing
+	if (!WCSCMP_CONST(title, L"Spotify Free") ||
+	    !WCSCMP_CONST(title, L"Spotify Premium"))
+		[[unlikely]] return L"";
+	return title;
+}
+
 // endWith case
 wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
 					 size_t str_len)
@@ -1196,7 +1202,7 @@ wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
 			'\0'; // remove 1 space before suffix
 		return title;
 	}
-	return nullptr;
+	return L"";
 
 	// seems ok but not abosultely safe
 	//static constexpr wchar_t app_playing[] = L"[foobar2000]";
