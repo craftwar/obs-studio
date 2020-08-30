@@ -105,7 +105,7 @@ install:
   - set mbedx509Path=C:\Tools\vcpkg\installed\x64-windows\include
   - set mbedcryptoPath=C:\Tools\vcpkg\installed\x64-windows\include
   - set vulkanPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
-  
+  - set rnnoisePath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
 
 build_script:
   - mkdir build build32 build64
