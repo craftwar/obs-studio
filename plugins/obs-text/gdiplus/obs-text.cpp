@@ -1476,11 +1476,13 @@ void TextSource::VNR_close_thread()
 	TextSource::shm.thread_owner = nullptr;
 }
 
+#pragma warning(disable : 4702)
 DWORD WINAPI TextSource::VNR_thread(LPVOID lpParam)
 {
 	for (;;)
 		reinterpret_cast<TextSource *>(lpParam)->ReadFromVNR();
 	return 1;
+#pragma warning(default : 4702)
 }
 
 void TextSource::ReadFromVNR()
