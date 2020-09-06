@@ -1251,6 +1251,11 @@ void TextSource::set_song_name(const wchar_t *const name)
 
 DWORD __stdcall TextSource::song_thread([[maybe_unused]] LPVOID lpParam)
 {
+	// TODO: report error and retry. Current: user should retry manually
+	DWORD process_id;
+	DWORD thread_id = GetWindowThreadProcessId(song.hWnd, &process_id);
+	if (!thread_id || !process_id)
+		[[unlikely]] return 0;
 	//DWORD error;
 	//WNDCLASSW wndClass = {0};
 	//wndClass.lpfnWndProc = DefWindowProcW;
@@ -1263,22 +1268,18 @@ DWORD __stdcall TextSource::song_thread([[maybe_unused]] LPVOID lpParam)
 	// https://docs.microsoft.com/en-us/windows/win32/winmsg/about-window-classes#system
 	CreateWindowW(L"Message", L"", 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	//error = GetLastError();
-
-	MSG Msg;
-	DWORD process_id;
-	DWORD thread_id = GetWindowThreadProcessId(song.hWnd, &process_id);
 	HWINEVENTHOOK hHook = SetWinEventHook(EVENT_OBJECT_NAMECHANGE,
 					      EVENT_OBJECT_NAMECHANGE, NULL,
 					      Wineventproc, process_id,
 					      thread_id, WINEVENT_OUTOFCONTEXT);
+	if (!hHook)
+		[[unlikely]] return 0;
+	MSG Msg;
 	while (GetMessage(&Msg, NULL, 0, 0))
 		;
-	UnhookWinEvent(hHook);
+	// If the client's thread ends, the system automatically calls this function.
+	//UnhookWinEvent(hHook);
 	//CloseHandle(song.hThread);
-	song.hWnd = NULL;
-	song.hThread = NULL;
-	song.thread_owner = nullptr;
-
 	return 0;
 }
 
@@ -1309,7 +1310,11 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 
 void TextSource::song_close_thread()
 {
+	// add closing mutex lock?
 	PostThreadMessageW(song.thread_id, WM_QUIT, 0, 0);
+	song.hWnd = NULL;
+	song.hThread = NULL;
+	song.thread_owner = nullptr;
 }
 
 void TextSource::connect_signal_handler()
