@@ -20,6 +20,7 @@ if "%favor_arch%"=="INTEL64" (
 		if exist obs-vulkan64.json (curl -kLO %cdn_gc_url%/obs-vulkan64.json -f --retry 5 -z obs-vulkan64.json) else (curl -kLO %cdn_gc_url%/obs-vulkan64.json -f --retry 5 -C -)
 		cd locale
 		if exist en-US.ini (curl -kLO %cdn_gc_url%/locale/en-US.ini -f --retry 5 -z locale\en-US.ini) else (curl -kLO %cdn_gc_url%/locale/en-US.ini -f --retry 5 -C -)
+		if exist zh-TW.ini (curl -kLO %cdn_gc_url%/locale/zh-TW.ini -f --retry 5 -z locale\zh-TW.ini) else (curl -kLO %cdn_gc_url%/locale/zh-TW.ini -f --retry 5 -C -)
 		popd
 
 		mkdir Jim_OBS\obs-plugins\64bit
