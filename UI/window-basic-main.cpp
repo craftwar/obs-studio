@@ -53,6 +53,7 @@
 #include "window-remux.hpp"
 #include "qt-wrappers.hpp"
 #include "context-bar-controls.hpp"
+#include "obs-proxy-style.hpp"
 #include "display-helpers.hpp"
 #include "volume-control.hpp"
 #include "remote-text.hpp"
@@ -192,9 +193,6 @@ extern void RegisterRestreamAuth();
 OBSBasic::OBSBasic(QWidget *parent)
 	: OBSMainWindow(parent), ui(new Ui::OBSBasic)
 {
-	/* setup log viewer */
-	logView = new OBSLogViewer();
-
 	qRegisterMetaTypeStreamOperators<SignalContainer<OBSScene>>(
 		"SignalContainer<OBSScene>");
 
@@ -217,6 +215,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	ui->setupUi(this);
 	ui->previewDisabledWidget->setVisible(false);
+	ui->contextContainer->setStyle(new OBSProxyStyle);
 
 	startingDockLayout = saveState();
 
@@ -1953,8 +1952,14 @@ void OBSBasic::OnFirstLoad()
 
 	Auth::Load();
 
-	if (logView && logView->ShowOnStartup())
+	bool showLogViewerOnStartup = config_get_bool(
+		App()->GlobalConfig(), "LogViewer", "ShowLogStartup");
+
+	if (showLogViewerOnStartup) {
+		if (!logView)
+			logView = new OBSLogViewer();
 		logView->show();
+	}
 }
 
 void OBSBasic::DeferredSysTrayLoad(int requeueCount)
@@ -5279,7 +5284,9 @@ void OBSBasic::UploadLog(const char *subdir, const char *file, const bool crash)
 		return;
 
 	ui->menuLogFiles->setEnabled(false);
+#if defined(_WIN32) || defined(__APPLE__)
 	ui->menuCrashLogs->setEnabled(false);
+#endif
 
 	stringstream ss;
 	ss << "OBS " << App()->GetVersionString() << " log file uploaded at "
@@ -5327,6 +5334,9 @@ void OBSBasic::on_actionUploadLastLog_triggered()
 
 void OBSBasic::on_actionViewCurrentLog_triggered()
 {
+	if (!logView)
+		logView = new OBSLogViewer();
+
 	if (!logView->isVisible()) {
 		logView->setVisible(true);
 	} else {
@@ -5361,7 +5371,9 @@ void OBSBasic::on_actionCheckForUpdates_triggered()
 void OBSBasic::logUploadFinished(const QString &text, const QString &error)
 {
 	ui->menuLogFiles->setEnabled(true);
+#if defined(_WIN32) || defined(__APPLE__)
 	ui->menuCrashLogs->setEnabled(true);
+#endif
 
 	if (text.isEmpty()) {
 		OBSMessageBox::critical(
@@ -5375,7 +5387,9 @@ void OBSBasic::logUploadFinished(const QString &text, const QString &error)
 void OBSBasic::crashUploadFinished(const QString &text, const QString &error)
 {
 	ui->menuLogFiles->setEnabled(true);
+#if defined(_WIN32) || defined(__APPLE__)
 	ui->menuCrashLogs->setEnabled(true);
+#endif
 
 	if (text.isEmpty()) {
 		OBSMessageBox::critical(
@@ -5482,12 +5496,34 @@ void OBSBasic::OpenSceneFilters()
 #define VIRTUAL_CAM_STOP \
 	"==== Virtual Camera Stop ==========================================="
 
+void OBSBasic::DisplayStreamStartError()
+{
+	QString message = !outputHandler->lastError.empty()
+				  ? QTStr(outputHandler->lastError.c_str())
+				  : QTStr("Output.StartFailedGeneric");
+	ui->streamButton->setText(QTStr("Basic.Main.StartStreaming"));
+	ui->streamButton->setEnabled(true);
+	ui->streamButton->setChecked(false);
+
+	if (sysTrayStream) {
+		sysTrayStream->setText(ui->streamButton->text());
+		sysTrayStream->setEnabled(true);
+	}
+
+	QMessageBox::critical(this, QTStr("Output.StartStreamFailed"), message);
+}
+
 void OBSBasic::StartStreaming()
 {
 	if (outputHandler->StreamingActive())
 		return;
 	if (disableOutputsRef)
 		return;
+
+	if (!outputHandler->SetupStreaming(service)) {
+		DisplayStreamStartError();
+		return;
+	}
 
 	if (api)
 		api->on_event(OBS_FRONTEND_EVENT_STREAMING_STARTING);
@@ -5504,21 +5540,7 @@ void OBSBasic::StartStreaming()
 	}
 
 	if (!outputHandler->StartStreaming(service)) {
-		QString message =
-			!outputHandler->lastError.empty()
-				? QTStr(outputHandler->lastError.c_str())
-				: QTStr("Output.StartFailedGeneric");
-		ui->streamButton->setText(QTStr("Basic.Main.StartStreaming"));
-		ui->streamButton->setEnabled(true);
-		ui->streamButton->setChecked(false);
-
-		if (sysTrayStream) {
-			sysTrayStream->setText(ui->streamButton->text());
-			sysTrayStream->setEnabled(true);
-		}
-
-		QMessageBox::critical(this, QTStr("Output.StartStreamFailed"),
-				      message);
+		DisplayStreamStartError();
 		return;
 	}
 

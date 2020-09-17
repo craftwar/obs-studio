@@ -214,7 +214,7 @@ private:
 	QPointer<QDockWidget> statsDock;
 	QPointer<OBSAbout> about;
 
-	OBSLogViewer *logView;
+	OBSLogViewer *logView = nullptr;
 
 	QPointer<QTimer> cpuUsageTimer;
 	QPointer<QTimer> diskFullTimer;
@@ -543,6 +543,8 @@ private:
 public slots:
 	void DeferSaveBegin();
 	void DeferSaveEnd();
+
+	void DisplayStreamStartError();
 
 	void StartStreaming();
 	void StopStreaming();
