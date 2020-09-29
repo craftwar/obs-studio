@@ -129,7 +129,7 @@ build_script:
   - ps: Push-AppveyorArtifact "version.txt" -FileName "${env:favor_arch}-${env:vc_inc_arch}.txt"
 
   - '"%APPVEYOR_BUILD_FOLDER%\CI\craftwar\download game capture.cmd"'
-  - ps: if (${env:favor_arch} -eq "INTEL64" -And ${env:vc_inc_arch} -eq "SSE2") { Push-AppveyorArtifact gc.7z }
+  - ps: if (${env:favor_arch} -eq "AMD64" -And ${env:vc_inc_arch} -eq "SSE2") { Push-AppveyorArtifact gc.7z }
 
   - set release=%APPVEYOR_REPO_COMMIT:~0,7%
   - if "%vc_inc_arch%"=="AVX2" C:\projects\obs-studio\CI\craftwar\obs-text-blend.cmd

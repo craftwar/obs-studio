@@ -6,7 +6,7 @@ set gc_dir=data/obs-plugins/win-capture
 set cdn_gc_url=%cdn_root%/core/%gc_dir%
 set file_dir=obs-plugins/64bit
 set cdn_wc_url=%cdn_root%/core/%file_dir%/win-capture.dll
-if "%favor_arch%"=="INTEL64" (
+if "%favor_arch%"=="AMD64" (
 	if "%vc_inc_arch%"=="SSE2" (
 		mkdir Jim_OBS\data\obs-plugins\win-capture\locale
 		pushd Jim_OBS\data\obs-plugins\win-capture\
