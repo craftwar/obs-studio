@@ -177,6 +177,7 @@ public slots:
 	void on_useStreamKey_clicked();
 	void ServiceChanged();
 	void UpdateKeyLink();
+	void UpdateMoreInfoLink();
 	void UpdateServerList();
 	void UpdateCompleted();
 };
