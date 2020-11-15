@@ -258,7 +258,7 @@ struct TextSource {
 		// prefer using over typedef in C++ Core Guidelines
 		// https://github.com/isocpp/CppCoreGuidelines
 		// typedef wchar_t *(*pFn)(wchar_t *const, size_t);
-		using pFn = wchar_t *(*)(wchar_t *const, size_t);
+		using pFn = const wchar_t *(*)(wchar_t *const, size_t);
 		pFn pFunc;
 		HANDLE hThread;
 		DWORD thread_id;
@@ -364,7 +364,7 @@ struct TextSource {
 	BOOL get_song_name(const HWND hwnd);
 	// song players
 	// Microsoft Edge, the white spaces are 0x200b 0x0020
-	static constexpr wchar_t *browsers[] = {L" - Mozilla Firefox",
+	static constexpr wchar_t const *browsers[] = {L" - Mozilla Firefox",
 						L" - Microsoft"
 						L"\x200b\x0020"
 						L"Edge",
@@ -376,17 +376,17 @@ struct TextSource {
 	static bool isSpotify(wchar_t* exeName, wchar_t* className);
 	static bool isFoobar2000(wchar_t *exeName, wchar_t *className);
 	static bool isOsu(wchar_t *exeName, wchar_t *className);
-	static wchar_t *
+	static const wchar_t *
 	get_song_browser_youtube(wchar_t *const __restrict title,
 				 size_t str_len);
-	static wchar_t* get_title_song(wchar_t* const __restrict title,
-		size_t str_len);
-	static wchar_t* get_song_Spotify(wchar_t* const __restrict title,
-		size_t str_len);
-	static wchar_t *get_song_foobar2000(wchar_t *const __restrict title,
-					    size_t str_len);
-	static wchar_t *get_song_osu(wchar_t *const __restrict title,
-				     size_t str_len);
+	static const wchar_t *get_title_song(wchar_t *const __restrict title,
+				       size_t str_len);
+	static const wchar_t *get_song_Spotify(wchar_t *const __restrict title,
+					       size_t str_len);
+	static const wchar_t *
+	get_song_foobar2000(wchar_t *const __restrict title, size_t str_len);
+	static const wchar_t *get_song_osu(wchar_t *const __restrict title,
+					   size_t str_len);
 	void set_song_name(const wchar_t *const name);
 	static DWORD WINAPI song_thread(LPVOID lpParam);
 	static void Wineventproc(HWINEVENTHOOK hWinEventHook, DWORD event,
@@ -1054,7 +1054,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	// Using "else if"s produces bigger binary than go (why?)
 	// Try else if in newer MSVC (16.5.4+, trust compiler)
 	song.browser_suffix_len = isBrowser(title.get(), len);
-	wchar_t *song_name;
+	const wchar_t *song_name;
 
 	if (song.browser_suffix_len >= 0) {
 		song_name = get_song_browser_youtube(
@@ -1141,8 +1141,9 @@ bool TextSource::isOsu(wchar_t *exeName, wchar_t *className)
 	return !WCSCMP_CONST(exeName, L"osu!.exe");
 }
 
-wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
-					      size_t str_len)
+const wchar_t *
+TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
+				     size_t str_len)
 {
 	// these title suffixes are locale specific in M$ Edge
 	// song name - YouTube - Personal - Microsoft Edge
@@ -1171,14 +1172,14 @@ wchar_t *TextSource::get_song_browser_youtube(wchar_t *const __restrict title,
 	return nullptr;
 }
 
-wchar_t *TextSource::get_title_song(wchar_t *const __restrict title,
-				    [[maybe_unused]] size_t str_len)
+const wchar_t *TextSource::get_title_song(wchar_t *const __restrict title,
+					  [[maybe_unused]] size_t str_len)
 {
 	return title;
 }
 
-wchar_t *TextSource::get_song_Spotify(wchar_t *const __restrict title,
-				      [[maybe_unused]] size_t str_len)
+const wchar_t *TextSource::get_song_Spotify(wchar_t *const __restrict title,
+					    [[maybe_unused]] size_t str_len)
 {
 	// not playing
 	if (!WCSCMP_CONST(title, L"Spotify Free") ||
@@ -1188,8 +1189,8 @@ wchar_t *TextSource::get_song_Spotify(wchar_t *const __restrict title,
 }
 
 // endWith case
-wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
-					 size_t str_len)
+const wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
+					       size_t str_len)
 {
 	// when not playing, title is "foobar2000 v1.5.3"
 	// title suffixes with "[foobar2000]" only when playing
@@ -1217,8 +1218,8 @@ wchar_t *TextSource::get_song_foobar2000(wchar_t *const __restrict title,
 }
 
 // startWith case
-wchar_t *TextSource::get_song_osu(wchar_t *const __restrict title,
-				  size_t str_len)
+const wchar_t *TextSource::get_song_osu(wchar_t *const __restrict title,
+					size_t str_len)
 {
 	// when not playing, title is "osu!"
 	// title starts with "osu!  -" only when playing
@@ -1297,7 +1298,7 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 		const std::unique_ptr<wchar_t[]> title(new wchar_t[len + 1]);
 		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
 			[[unlikely]] return;
-		wchar_t *song_name = (song.thread_owner->song.pFunc)(
+		const wchar_t *song_name = (song.thread_owner->song.pFunc)(
 			title.get(),
 			len - song.thread_owner->song.browser_suffix_len);
 		// if not found, close thread?
