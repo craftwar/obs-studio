@@ -38,6 +38,7 @@ PRODUCT_NAME="OBS-Studio"
 CHECKOUT_DIR="$(git rev-parse --show-toplevel)"
 DEPS_BUILD_DIR="${CHECKOUT_DIR}/../obs-build-dependencies"
 BUILD_DIR="${BUILD_DIR:-build}"
+BUILD_CONFIG=${BUILD_CONFIG:-RelWithDebInfo}
 CI_SCRIPTS="${CHECKOUT_DIR}/CI/scripts/macos"
 CI_WORKFLOW="${CHECKOUT_DIR}/.github/workflows/main.yml"
 CI_CEF_VERSION=$(cat ${CI_WORKFLOW} | sed -En "s/[ ]+CEF_BUILD_VERSION: '([0-9]+)'/\1/p")
@@ -45,6 +46,7 @@ CI_DEPS_VERSION=$(cat ${CI_WORKFLOW} | sed -En "s/[ ]+MACOS_DEPS_VERSION: '([0-9
 CI_VLC_VERSION=$(cat ${CI_WORKFLOW} | sed -En "s/[ ]+VLC_VERSION: '([0-9\.]+)'/\1/p")
 CI_SPARKLE_VERSION=$(cat ${CI_WORKFLOW} | sed -En "s/[ ]+SPARKLE_VERSION: '([0-9\.]+)'/\1/p")
 CI_QT_VERSION=$(cat ${CI_WORKFLOW} | sed -En "s/[ ]+QT_VERSION: '([0-9\.]+)'/\1/p" | head -1)
+CI_MIN_MACOS_VERSION=$(cat ${CI_WORKFLOW} | sed -En "s/[ ]+MIN_MACOS_VERSION: '([0-9\.]+)'/\1/p")
 
 BUILD_DEPS=(
     "obs-deps ${MACOS_DEPS_VERSION:-${CI_DEPS_VERSION}}"
@@ -113,13 +115,32 @@ caught_error() {
 }
 
 ## CHECK AND INSTALL DEPENDENCIES ##
+check_macos_version() {
+    MIN_VERSION=${MIN_MACOS_VERSION:-${CI_MIN_MACOS_VERSION}}
+    MIN_MAJOR=$(echo ${MIN_VERSION} | cut -d '.' -f 1)
+    MIN_MINOR=$(echo ${MIN_VERSION} | cut -d '.' -f 2)
+
+    if [ "${MACOS_MAJOR}" -lt "11" ] && [ "${MACOS_MINOR}" -lt "${MIN_MINOR}" ]; then
+        error "WARNING: Minimum required macOS version is ${MIN_VERSION}, but running on ${MACOS_VERSION}"
+    fi
+}
+
 install_homebrew_deps() {
     if ! exists brew; then
         error "Homebrew not found - please install homebrew (https://brew.sh)"
         exit 1
     fi
 
-    brew update
+    if [ -d /usr/local/opt/openssl@1.0.2t ]; then
+        brew uninstall openssl@1.0.2t
+        brew untap local/openssl
+    fi
+
+    if [ -d /usr/local/opt/python@2.7.17 ]; then
+        brew uninstall python@2.7.17
+        brew untap local/python2
+    fi
+
     brew bundle --file ${CI_SCRIPTS}/Brewfile
 
     check_curl
@@ -195,16 +216,14 @@ install_cef() {
     tar -xf ./cef_binary_${1}_macosx64.tar.bz2
     cd ./cef_binary_${1}_macosx64
     step "Fix tests..."
-    # remove a broken test
     sed -i '.orig' '/add_subdirectory(tests\/ceftests)/d' ./CMakeLists.txt
-    # target 10.11
-    sed -i '.orig' s/\"10.9\"/\"10.11\"/ ./cmake/cef_variables.cmake
+    sed -i '.orig' s/\"10.9\"/\"${MIN_MACOS_VERSION:-${CI_MIN_MACOS_VERSION}}\"/ ./cmake/cef_variables.cmake
     ensure_dir ./build
     step "Run CMAKE..."
     cmake \
-        -DCMAKE_CXX_FLAGS="-std=c++11 -stdlib=libc++"\
+        -DCMAKE_CXX_FLAGS="-std=c++11 -stdlib=libc++ -Wno-deprecated-declarations"\
         -DCMAKE_EXE_LINKER_FLAGS="-std=c++11 -stdlib=libc++"\
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION:-${CI_MIN_MACOS_VERSION}} \
         ..
     step "Build..."
     make -j4
@@ -251,7 +270,7 @@ configure_obs_build() {
 
     hr "Run CMAKE for OBS..."
     cmake -DENABLE_SPARKLE_UPDATER=ON \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION:-${CI_MIN_MACOS_VERSION}} \
         -DDISABLE_PYTHON=ON  \
         -DQTDIR="/tmp/obsdeps" \
         -DSWIGDIR="/tmp/obsdeps" \
@@ -259,9 +278,9 @@ configure_obs_build() {
         -DVLCPath="${DEPS_BUILD_DIR}/vlc-${VLC_VERSION:-${CI_VLC_VERSION}}" \
         -DBUILD_BROWSER=ON \
         -DBROWSER_DEPLOY=ON \
-        -DBUILD_CAPTIONS=ON \
         -DWITH_RTMPS=ON \
         -DCEF_ROOT_DIR="${DEPS_BUILD_DIR}/cef_binary_${CEF_BUILD_VERSION:-${CI_CEF_VERSION}}_macosx64" \
+        -DCMAKE_BUILD_TYPE="${BUILD_CONFIG}" \
         ..
 
 }
@@ -287,7 +306,7 @@ bundle_dylibs() {
     ${CI_SCRIPTS}/app/dylibbundler -cd -of -a ./OBS.app -q -f \
         -s ./OBS.app/Contents/MacOS \
         -s "${DEPS_BUILD_DIR}/sparkle/Sparkle.framework" \
-        -s ./rundir/RelWithDebInfo/bin/ \
+        -s ./rundir/${BUILD_CONFIG}/bin/ \
         -x ./OBS.app/Contents/PlugIns/coreaudio-encoder.so \
         -x ./OBS.app/Contents/PlugIns/decklink-ouput-ui.so \
         -x ./OBS.app/Contents/PlugIns/frontend-tools.so \
@@ -298,6 +317,7 @@ bundle_dylibs() {
         -x ./OBS.app/Contents/PlugIns/mac-decklink.so \
         -x ./OBS.app/Contents/PlugIns/mac-syphon.so \
         -x ./OBS.app/Contents/PlugIns/mac-vth264.so \
+        -x ./OBS.app/Contents/PlugIns/mac-virtualcam.so \
         -x ./OBS.app/Contents/PlugIns/obs-browser.so \
         -x ./OBS.app/Contents/PlugIns/obs-browser-page \
         -x ./OBS.app/Contents/PlugIns/obs-ffmpeg.so \
@@ -312,7 +332,12 @@ bundle_dylibs() {
         -x ./OBS.app/Contents/PlugIns/obs-libfdk.so \
         -x ./OBS.app/Contents/PlugIns/obs-outputs.so
     step "Move libobs-opengl to final destination"
-    cp ./libobs-opengl/libobs-opengl.so ./OBS.app/Contents/Frameworks
+
+    if [ -f "./libobs-opengl/libobs-opengl.so" ]; then
+        cp ./libobs-opengl/libobs-opengl.so ./OBS.app/Contents/Frameworks
+    else
+        cp ./libobs-opengl/${BUILD_CONFIG}/libobs-opengl.so ./OBS.app/Contents/Frameworks
+    fi
 
     step "Copy QtNetwork for plugin support"
     cp -R /tmp/obsdeps/lib/QtNetwork.framework ./OBS.app/Contents/Frameworks
@@ -334,14 +359,14 @@ install_frameworks() {
 
     hr "Adding Chromium Embedded Framework"
     step "Copy Framework..."
-    sudo cp -R "${DEPS_BUILD_DIR}/cef_binary_${CEF_BUILD_VERSION:-${CI_CEF_VERSION}}_macosx64/Release/Chromium Embedded Framework.framework" ./OBS.app/Contents/Frameworks/
-    sudo chown -R $(whoami) ./OBS.app/Contents/Frameworks/
+    cp -R "${DEPS_BUILD_DIR}/cef_binary_${CEF_BUILD_VERSION:-${CI_CEF_VERSION}}_macosx64/Release/Chromium Embedded Framework.framework" ./OBS.app/Contents/Frameworks/
+    chown -R $(whoami) ./OBS.app/Contents/Frameworks/
 }
 
 prepare_macos_bundle() {
     ensure_dir "${CHECKOUT_DIR}/${BUILD_DIR}"
 
-    if [ ! -d ./rundir/RelWithDebInfo/bin ]; then
+    if [ ! -d ./rundir/${BUILD_CONFIG}/bin ]; then
         error "No OBS build found"
         return
     fi
@@ -354,12 +379,12 @@ prepare_macos_bundle() {
     mkdir OBS.app/Contents/PlugIns
     mkdir OBS.app/Contents/Resources
 
-    cp rundir/RelWithDebInfo/bin/obs ./OBS.app/Contents/MacOS
-    cp rundir/RelWithDebInfo/bin/obs-ffmpeg-mux ./OBS.app/Contents/MacOS
-    cp rundir/RelWithDebInfo/bin/libobsglad.0.dylib ./OBS.app/Contents/MacOS
-    cp -R rundir/RelWithDebInfo/data ./OBS.app/Contents/Resources
-    cp ${CI_SCRIPTS}/app/obs.icns ./OBS.app/Contents/Resources
-    cp -R rundir/RelWithDebInfo/obs-plugins/ ./OBS.app/Contents/PlugIns
+    cp rundir/${BUILD_CONFIG}/bin/obs ./OBS.app/Contents/MacOS
+    cp rundir/${BUILD_CONFIG}/bin/obs-ffmpeg-mux ./OBS.app/Contents/MacOS
+    cp rundir/${BUILD_CONFIG}/bin/libobsglad.0.dylib ./OBS.app/Contents/MacOS
+    cp -R rundir/${BUILD_CONFIG}/data ./OBS.app/Contents/Resources
+    cp ${CI_SCRIPTS}/app/AppIcon.icns ./OBS.app/Contents/Resources
+    cp -R rundir/${BUILD_CONFIG}/obs-plugins/ ./OBS.app/Contents/PlugIns
     cp ${CI_SCRIPTS}/app/Info.plist ./OBS.app/Contents
     # Scripting plugins are required to be placed in same directory as binary
     if [ -d ./OBS.app/Contents/Resources/data/obs-scripting ]; then
@@ -483,6 +508,11 @@ codesign_bundle() {
     codesign --force --options runtime --sign "${CODESIGN_IDENT}" --deep "./OBS.app/Contents/Frameworks/Chromium Embedded Framework.framework"
     echo -n "${COLOR_RESET}"
 
+    step "Code-sign DAL Plugin..."
+    echo -n "${COLOR_ORANGE}"
+    codesign --force --options runtime --deep --sign "${CODESIGN_IDENT}" "./OBS.app/Contents/Resources/data/obs-mac-virtualcam.plugin"
+    echo -n "${COLOR_RESET}"
+
     step "Code-sign OBS code..."
     echo -n "${COLOR_ORANGE}"
     codesign --force --options runtime --entitlements "${CI_SCRIPTS}/app/entitlements.plist" --sign "${CODESIGN_IDENT}" --deep ./OBS.app
@@ -603,6 +633,7 @@ print_usage() {
 
 obs-build-main() {
     ensure_dir ${CHECKOUT_DIR}
+    check_macos_version
     step "Fetching OBS tags..."
     git fetch origin --tags
     GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)

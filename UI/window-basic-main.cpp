@@ -360,8 +360,6 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	QPoint curPos;
 
-	UpdateContextBar();
-
 	//restore parent window geometry
 	const char *geometry = config_get_string(App()->GlobalConfig(),
 						 "BasicWindow", "geometry");
@@ -1269,6 +1267,22 @@ bool OBSBasic::InitBasicConfigDefaults()
 	}
 
 	/* ----------------------------------------------------- */
+	/* move bitrate enforcement setting to new value         */
+	if (config_has_user_value(basicConfig, "SimpleOutput",
+				  "EnforceBitrate") &&
+	    !config_has_user_value(basicConfig, "Stream1",
+				   "IgnoreRecommended") &&
+	    !config_has_user_value(basicConfig, "Stream1", "MovedOldEnforce")) {
+		bool enforce = config_get_bool(basicConfig, "SimpleOutput",
+					       "EnforceBitrate");
+		config_set_bool(basicConfig, "Stream1", "IgnoreRecommended",
+				!enforce);
+		config_set_bool(basicConfig, "Stream1", "MovedOldEnforce",
+				true);
+		changed = true;
+	}
+
+	/* ----------------------------------------------------- */
 
 	if (changed)
 		config_save_safe(basicConfig, "tmp", nullptr);
@@ -1276,6 +1290,9 @@ bool OBSBasic::InitBasicConfigDefaults()
 	/* ----------------------------------------------------- */
 
 	config_set_default_string(basicConfig, "Output", "Mode", "Simple");
+
+	config_set_default_bool(basicConfig, "Stream1", "IgnoreRecommended",
+				false);
 
 	config_set_default_string(basicConfig, "SimpleOutput", "FilePath",
 				  GetDefaultVideoSavePath().c_str());
@@ -1285,8 +1302,6 @@ bool OBSBasic::InitBasicConfigDefaults()
 	config_set_default_uint(basicConfig, "SimpleOutput", "ABitrate", 160);
 	config_set_default_bool(basicConfig, "SimpleOutput", "UseAdvanced",
 				false);
-	config_set_default_bool(basicConfig, "SimpleOutput", "EnforceBitrate",
-				true);
 	config_set_default_string(basicConfig, "SimpleOutput", "Preset",
 				  "veryfast");
 	config_set_default_string(basicConfig, "SimpleOutput", "NVENCPreset",
@@ -1303,6 +1318,7 @@ bool OBSBasic::InitBasicConfigDefaults()
 				true);
 	config_set_default_bool(basicConfig, "AdvOut", "UseRescale", false);
 	config_set_default_uint(basicConfig, "AdvOut", "TrackIndex", 1);
+	config_set_default_uint(basicConfig, "AdvOut", "VodTrackIndex", 2);
 	config_set_default_string(basicConfig, "AdvOut", "Encoder", "obs_x264");
 
 	config_set_default_string(basicConfig, "AdvOut", "RecType", "Standard");
@@ -1755,6 +1771,8 @@ void OBSBasic::OBSInit()
 					       "ShowContextToolbars");
 		ui->toggleContextBar->setChecked(visible);
 		ui->contextContainer->setVisible(visible);
+		if (visible)
+			UpdateContextBar(true);
 	} else {
 		ui->toggleContextBar->setChecked(true);
 		ui->contextContainer->setVisible(true);
@@ -2929,8 +2947,11 @@ static bool is_network_media_source(obs_source_t *source, const char *id)
 	return !is_local_file;
 }
 
-void OBSBasic::UpdateContextBar()
+void OBSBasic::UpdateContextBar(bool force)
 {
+	if (!ui->contextContainer->isVisible() && !force)
+		return;
+
 	OBSSceneItem item = GetCurrentSceneItem();
 
 	ClearContextBar();
@@ -5598,10 +5619,19 @@ inline void OBSBasic::OnActivate()
 		App()->IncrementSleepInhibition();
 		UpdateProcessPriority();
 
-		if (trayIcon && trayIcon->isVisible())
+		if (trayIcon && trayIcon->isVisible()) {
+#ifdef __APPLE__
+			QIcon trayMask =
+				QIcon(":/res/images/tray_active_macos.png");
+			trayMask.setIsMask(true);
+			trayIcon->setIcon(
+				QIcon::fromTheme("obs-tray", trayMask));
+#else
 			trayIcon->setIcon(QIcon::fromTheme(
 				"obs-tray-active",
 				QIcon(":/res/images/tray_active.png")));
+#endif
+		}
 	}
 }
 
@@ -5616,19 +5646,42 @@ inline void OBSBasic::OnDeactivate()
 		App()->DecrementSleepInhibition();
 		ClearProcessPriority();
 
-		if (trayIcon && trayIcon->isVisible())
-			trayIcon->setIcon(QIcon::fromTheme(
-				"obs-tray", QIcon(":/res/images/obs.png")));
+		if (trayIcon && trayIcon->isVisible()) {
+#ifdef __APPLE__
+			QIcon trayIconFile =
+				QIcon(":/res/images/obs_macos.png");
+			trayIconFile.setIsMask(true);
+#else
+			QIcon trayIconFile = QIcon(":/res/images/obs.png");
+#endif
+			trayIcon->setIcon(
+				QIcon::fromTheme("obs-tray", trayIconFile));
+		}
 	} else if (outputHandler->Active() && trayIcon &&
 		   trayIcon->isVisible()) {
-		if (os_atomic_load_bool(&recording_paused))
-			trayIcon->setIcon(QIcon::fromTheme(
-				"obs-tray-paused",
-				QIcon(":/res/images/obs_paused.png")));
-		else
-			trayIcon->setIcon(QIcon::fromTheme(
-				"obs-tray-active",
-				QIcon(":/res/images/tray_active.png")));
+		if (os_atomic_load_bool(&recording_paused)) {
+#ifdef __APPLE__
+			QIcon trayIconFile =
+				QIcon(":/res/images/obs_paused_macos.png");
+			trayIconFile.setIsMask(true);
+#else
+			QIcon trayIconFile =
+				QIcon(":/res/images/obs_paused.png");
+#endif
+			trayIcon->setIcon(QIcon::fromTheme("obs-tray-paused",
+							   trayIconFile));
+		} else {
+#ifdef __APPLE__
+			QIcon trayIconFile =
+				QIcon(":/res/images/tray_active_macos.png");
+			trayIconFile.setIsMask(true);
+#else
+			QIcon trayIconFile =
+				QIcon(":/res/images/tray_active.png");
+#endif
+			trayIcon->setIcon(QIcon::fromTheme("obs-tray-active",
+							   trayIconFile));
+		}
 	}
 }
 
@@ -7358,6 +7411,7 @@ void OBSBasic::on_toggleContextBar_toggled(bool visible)
 	config_set_bool(App()->GlobalConfig(), "BasicWindow",
 			"ShowContextToolbars", visible);
 	this->ui->contextContainer->setVisible(visible);
+	UpdateContextBar(true);
 }
 
 void OBSBasic::on_toggleStatusBar_toggled(bool visible)
@@ -7510,9 +7564,14 @@ void OBSBasic::ToggleShowHide()
 
 void OBSBasic::SystemTrayInit()
 {
+#ifdef __APPLE__
+	QIcon trayIconFile = QIcon(":/res/images/obs_macos.png");
+	trayIconFile.setIsMask(true);
+#else
+	QIcon trayIconFile = QIcon(":/res/images/obs.png");
+#endif
 	trayIcon.reset(new QSystemTrayIcon(
-		QIcon::fromTheme("obs-tray", QIcon(":/res/images/obs.png")),
-		this));
+		QIcon::fromTheme("obs-tray", trayIconFile), this));
 	trayIcon->setToolTip("OBS Studio");
 
 	showHide = new QAction(QTStr("Basic.SystemTray.Show"), trayIcon.data());
@@ -7567,10 +7626,12 @@ void OBSBasic::IconActivated(QSystemTrayIcon::ActivationReason reason)
 	AddProjectorMenuMonitors(studioProgramProjector, this,
 				 SLOT(OpenStudioProgramProjector()));
 
+#ifndef __APPLE__
 	if (reason == QSystemTrayIcon::Trigger) {
 		EnablePreviewDisplay(previewEnabled && !isVisible());
 		ToggleShowHide();
 	}
+#endif
 }
 
 void OBSBasic::SysTrayNotify(const QString &text,
@@ -8088,10 +8149,18 @@ void OBSBasic::PauseRecording()
 
 		ui->statusbar->RecordingPaused();
 
-		if (trayIcon && trayIcon->isVisible())
-			trayIcon->setIcon(QIcon::fromTheme(
-				"obs-tray-paused",
-				QIcon(":/res/images/obs_paused.png")));
+		if (trayIcon && trayIcon->isVisible()) {
+#ifdef __APPLE__
+			QIcon trayIconFile =
+				QIcon(":/res/images/obs_paused_macos.png");
+			trayIconFile.setIsMask(true);
+#else
+			QIcon trayIconFile =
+				QIcon(":/res/images/obs_paused.png");
+#endif
+			trayIcon->setIcon(QIcon::fromTheme("obs-tray-paused",
+							   trayIconFile));
+		}
 
 		os_atomic_set_bool(&recording_paused, true);
 
@@ -8119,10 +8188,18 @@ void OBSBasic::UnpauseRecording()
 
 		ui->statusbar->RecordingUnpaused();
 
-		if (trayIcon && trayIcon->isVisible())
-			trayIcon->setIcon(QIcon::fromTheme(
-				"obs-tray-active",
-				QIcon(":/res/images/tray_active.png")));
+		if (trayIcon && trayIcon->isVisible()) {
+#ifdef __APPLE__
+			QIcon trayIconFile =
+				QIcon(":/res/images/tray_active_macos.png");
+			trayIconFile.setIsMask(true);
+#else
+			QIcon trayIconFile =
+				QIcon(":/res/images/tray_active.png");
+#endif
+			trayIcon->setIcon(QIcon::fromTheme("obs-tray-active",
+							   trayIconFile));
+		}
 
 		os_atomic_set_bool(&recording_paused, false);
 

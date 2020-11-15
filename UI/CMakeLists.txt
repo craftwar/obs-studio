@@ -136,6 +136,11 @@ elseif(UNIX)
 
         set(obs_PLATFORM_LIBRARIES
                 Qt5::X11Extras)
+
+	if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD")
+		list(APPEND obs_PLATFORM_LIBRARIES
+			procstat)
+	endif()
 endif()
 
 if(BROWSER_AVAILABLE_INTERNAL)
@@ -349,7 +354,6 @@ set(obs_UI
 	forms/source-toolbar/color-source-toolbar.ui
 	forms/source-toolbar/text-source-toolbar.ui
 	forms/source-toolbar/media-controls.ui
-	forms/NameDialog.ui
 	forms/AutoConfigStartPage.ui
 	forms/AutoConfigVideoPage.ui
 	forms/AutoConfigStreamPage.ui
