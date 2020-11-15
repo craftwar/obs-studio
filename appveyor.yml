@@ -86,6 +86,7 @@ install:
   - cd %APPVEYOR_BUILD_FOLDER%
   - vcpkg remove --outdated --recurse
 # /MP /Oi is default in vcpkg
+  - set VCPKG_CMAKE_SYSTEM_VERSION=10.0
   - set VCPKG_LINKER_FLAGS=/LTCG
   - set VCPKG_C_FLAGS=/arch:%vc_inc_arch% /Gw /Gy /GL /GS- /favor:%favor_arch% /Zc:__cplusplus %VCPKG_CPU_C_FLAGS%
   - set VCPKG_CXX_FLAGS=%VCPKG_C_FLAGS%
