@@ -116,7 +116,7 @@ QObject *CreateShortcutFilter()
 			case Qt::MouseButtonMask:
 				return false;
 
-			case Qt::MidButton:
+			case Qt::MiddleButton:
 				hotkey.key = OBS_KEY_MOUSE3;
 				break;
 
@@ -1910,6 +1910,10 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
 	QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+		Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 #endif
 
 #if !defined(_WIN32) && !defined(__APPLE__) && BROWSER_AVAILABLE
