@@ -52,19 +52,19 @@ install:
 #  - if "%vc_inc_arch%"=="SSE2" C:\projects\obs-studio-craftwar\CI\craftwar\submodule.cmd else C:\projects\obs-studio\CI\craftwar\submodule.cmd
   - if "%vc_inc_arch%"=="SSE2" powershell.exe -ExecutionPolicy Bypass -file C:\projects\obs-studio-craftwar\CI\craftwar\patch_SSE2build.ps1
   - git fetch --tags --prune https://github.com/obsproject/obs-studio.git # get tags from official obs
-  - if exist dependencies2017.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -z dependencies2017.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2017.zip -f --retry 5 -C -)
+  - if exist dependencies2019.zip (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2019.zip -f --retry 5 -z dependencies2019.zip) else (curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies2019.zip -f --retry 5 -C -)
   #- set VCdeps_url=https://ci.appveyor.com/api/projects/craftwar_appveyor/obs-deps/artifacts/VCdeps-blend.7z?job=Environment%3A%20favor_arch%3D%favor_arch%
   - set VCdeps_file=VCdeps-%favor_arch%-%vc_inc_arch%.7z
   - set VCdeps_url=https://github.com/craftwar/obs-deps/releases/download/git/%VCdeps_file%
   - if exist %VCdeps_file% (curl -kLo %VCdeps_file% %VCdeps_url% -f --retry 5 -z %VCdeps_file%) else (curl -kLo %VCdeps_file% %VCdeps_url% -f --retry 5 -C -)
 
 # for 32bit cmake run
-  - 7z x dependencies2017.zip -oold_dep
-  - 7z x %VCdeps_file% -odependencies2017
+  - 7z x dependencies2019.zip -oold_dep
+  - 7z x %VCdeps_file% -odependencies2019
 # update nvenc related headers
-  - move /Y dependencies2017\Win64\include\ffnvcodec\*.h "C:\projects\\%APPVEYOR_PROJECT_NAME%\plugins\obs-ffmpeg"
+  - move /Y dependencies2019\Win64\include\ffnvcodec\*.h "C:\projects\\%APPVEYOR_PROJECT_NAME%\plugins\obs-ffmpeg"
   - set DepsPath32=%CD%\old_dep\win32
-  - set DepsPath64=%CD%\dependencies2017\win64
+  - set DepsPath64=%CD%\dependencies2019\win64
 #  - set curlPath=%APPVEYOR_BUILD_FOLDER%\old_dep\win64\include\
 # latest
   - set QT_VERSION=5.15
@@ -94,9 +94,9 @@ install:
   - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows-static.cmake
   - if NOT "%vc_inc_arch%"=="SSE2" vcpkg install jansson:x64-windows-static
   - vcpkg install zlib:x64-windows
-  - copy /Y dependencies2017\win64\lib\zlib.lib C:\tools\vcpkg\installed\x64-windows\lib\
-  - copy /Y dependencies2017\win64\bin\zlib.dll C:\tools\vcpkg\installed\x64-windows\bin\
-  - copy /Y dependencies2017\win64\include\z* C:\tools\vcpkg\installed\x64-windows\include\
+  - copy /Y dependencies2019\win64\lib\zlib.lib C:\tools\vcpkg\installed\x64-windows\lib\
+  - copy /Y dependencies2019\win64\bin\zlib.dll C:\tools\vcpkg\installed\x64-windows\bin\
+  - copy /Y dependencies2019\win64\include\z* C:\tools\vcpkg\installed\x64-windows\include\
 #  - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows.cmake # bug curl can't build
   - vcpkg install curl[core,winssl]:x64-windows
   - set curlPath=C:\tools\vcpkg\installed\x64-windows\include
@@ -150,7 +150,7 @@ test: off
 
 cache:
   - C:\tools\vcpkg\installed\ -> appveyor.yml
-  - dependencies2017.zip
+  - dependencies2019.zip
   - '%VCdeps_file%'
 # for SSE2
   - vlc.zip
