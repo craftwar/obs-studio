@@ -80,8 +80,8 @@ install:
 
 #vcpkg
 # update vcpkg when workaround is required
-  - cd C:\tools\vcpkg
-  - git checkout 2020.04 && .\bootstrap-vcpkg.bat
+#  - cd C:\tools\vcpkg
+#  - git checkout 2020.04 && .\bootstrap-vcpkg.bat
 #  - git pull && .\bootstrap-vcpkg.bat
   - cd %APPVEYOR_BUILD_FOLDER%
   - vcpkg remove --outdated --recurse
