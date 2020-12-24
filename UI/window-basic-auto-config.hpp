@@ -36,7 +36,10 @@ class AutoConfig : public QWizard {
 		VirtualCam,
 	};
 
-	enum class Service { Twitch, Smashcast, Other };
+	enum class Service {
+		Twitch,
+		Other,
+	};
 
 	enum class Encoder { x264, NVENC, QSV, AMD, Stream };
 
