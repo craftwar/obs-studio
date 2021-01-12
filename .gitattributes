@@ -8,3 +8,5 @@
 *.vcxproj.filters text eol=crlf
 
 cmake/ALL_BUILD.vcxproj.user.in text eol=crlf
+
+en-US.ini text eol=crlf
