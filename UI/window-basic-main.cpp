@@ -136,6 +136,16 @@ template<typename T> static void SetOBSRef(QListWidgetItem *item, T &&val)
 
 static void AddExtraModulePaths()
 {
+	char *plugins_path = getenv("OBS_PLUGINS_PATH");
+	char *plugins_data_path = getenv("OBS_PLUGINS_DATA_PATH");
+	if (plugins_path && plugins_data_path) {
+		string data_path_with_module_suffix;
+		data_path_with_module_suffix += plugins_data_path;
+		data_path_with_module_suffix += "/%module%";
+		obs_add_module_path(plugins_path,
+				    data_path_with_module_suffix.c_str());
+	}
+
 	char base_module_dir[512];
 #if defined(_WIN32) || defined(__APPLE__)
 	int ret = GetProgramDataPath(base_module_dir, sizeof(base_module_dir),
@@ -6298,7 +6308,11 @@ void OBSBasic::OnVirtualCamStart()
 		return;
 
 	vcamButton->setText(QTStr("Basic.Main.StopVirtualCam"));
+	sysTrayVirtualCam->setText(QTStr("Basic.Main.StopVirtualCam"));
 	vcamButton->setChecked(true);
+
+	if (api)
+		api->on_event(OBS_FRONTEND_EVENT_VIRTUALCAM_STARTED);
 
 	OnActivate();
 
@@ -6311,7 +6325,11 @@ void OBSBasic::OnVirtualCamStop(int)
 		return;
 
 	vcamButton->setText(QTStr("Basic.Main.StartVirtualCam"));
+	sysTrayVirtualCam->setText(QTStr("Basic.Main.StartVirtualCam"));
 	vcamButton->setChecked(false);
+
+	if (api)
+		api->on_event(OBS_FRONTEND_EVENT_VIRTUALCAM_STOPPED);
 
 	blog(LOG_INFO, VIRTUAL_CAM_STOP);
 
@@ -7595,6 +7613,8 @@ void OBSBasic::SystemTrayInit()
 				    trayIcon.data());
 	sysTrayReplayBuffer = new QAction(QTStr("Basic.Main.StartReplayBuffer"),
 					  trayIcon.data());
+	sysTrayVirtualCam = new QAction(QTStr("Basic.Main.StartVirtualCam"),
+					trayIcon.data());
 	exit = new QAction(QTStr("Exit"), trayIcon.data());
 
 	trayMenu = new QMenu;
@@ -7610,12 +7630,15 @@ void OBSBasic::SystemTrayInit()
 	trayMenu->addAction(sysTrayStream);
 	trayMenu->addAction(sysTrayRecord);
 	trayMenu->addAction(sysTrayReplayBuffer);
+	trayMenu->addAction(sysTrayVirtualCam);
 	trayMenu->addAction(exit);
 	trayIcon->setContextMenu(trayMenu);
 	trayIcon->show();
 
 	if (outputHandler && !outputHandler->replayBuffer)
 		sysTrayReplayBuffer->setEnabled(false);
+
+	sysTrayVirtualCam->setEnabled(vcamEnabled);
 
 	connect(trayIcon.data(),
 		SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this,
@@ -7627,6 +7650,8 @@ void OBSBasic::SystemTrayInit()
 		SLOT(on_recordButton_clicked()));
 	connect(sysTrayReplayBuffer.data(), &QAction::triggered, this,
 		&OBSBasic::ReplayBufferClicked);
+	connect(sysTrayVirtualCam.data(), &QAction::triggered, this,
+		&OBSBasic::VCamButtonClicked);
 	connect(exit, SIGNAL(triggered()), this, SLOT(close()));
 }
 
