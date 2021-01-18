@@ -364,7 +364,7 @@ struct TextSource {
 	BOOL get_song_name(const HWND hwnd);
 	// song players
 	// Microsoft Edge, the white spaces are 0x200b 0x0020
-	static constexpr wchar_t const *browsers[] = {L" - Mozilla Firefox",
+	static constexpr wchar_t const *browsers[] = {L" — Mozilla Firefox",
 						L" - Microsoft"
 						L"\x200b\x0020"
 						L"Edge",
