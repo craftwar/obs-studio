@@ -7,8 +7,12 @@ project(obs-text)
 if(WIN32)
 	set(MODULE_DESCRIPTION "OBS GDI+ text module")
 	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in obs-text.rc)
+	set(obs-text_PLATFORM_HEADERS
+		gdiplus/song-geter-cfg.h
+		gdiplus/song-geter.h)
 	set(obs-text_PLATFORM_SOURCES
 		gdiplus/obs-text.cpp
+		gdiplus/song-geter.cpp
 		obs-text.rc)
 	set(obs-text_PLATFORM_DEPS
 		gdiplus)
