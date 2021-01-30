@@ -3301,6 +3301,7 @@ void OBSBasic::VolControlContextMenu()
 		pasteFiltersAction.setEnabled(true);
 
 	QMenu popup;
+	vol->SetContextMenu(&popup);
 	popup.addAction(&lockAction);
 	popup.addSeparator();
 	popup.addAction(&unhideAllAction);
@@ -3316,6 +3317,7 @@ void OBSBasic::VolControlContextMenu()
 	popup.addAction(&propertiesAction);
 	popup.addAction(&advPropAction);
 	popup.exec(QCursor::pos());
+	vol->SetContextMenu(nullptr);
 }
 
 void OBSBasic::on_hMixerScrollArea_customContextMenuRequested()
@@ -6316,7 +6318,8 @@ void OBSBasic::OnVirtualCamStart()
 		return;
 
 	vcamButton->setText(QTStr("Basic.Main.StopVirtualCam"));
-	sysTrayVirtualCam->setText(QTStr("Basic.Main.StopVirtualCam"));
+	if (sysTrayVirtualCam)
+		sysTrayVirtualCam->setText(QTStr("Basic.Main.StopVirtualCam"));
 	vcamButton->setChecked(true);
 
 	if (api)
@@ -6333,7 +6336,8 @@ void OBSBasic::OnVirtualCamStop(int)
 		return;
 
 	vcamButton->setText(QTStr("Basic.Main.StartVirtualCam"));
-	sysTrayVirtualCam->setText(QTStr("Basic.Main.StartVirtualCam"));
+	if (sysTrayVirtualCam)
+		sysTrayVirtualCam->setText(QTStr("Basic.Main.StartVirtualCam"));
 	vcamButton->setChecked(false);
 
 	if (api)

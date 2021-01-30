@@ -20,6 +20,7 @@
 #include "util/util_uint64.h"
 #include "graphics/math-defs.h"
 #include "obs-scene.h"
+#include "obs-internal.h"
 
 const struct obs_source_info group_info;
 
@@ -569,6 +570,7 @@ static inline void render_item(struct obs_scene_item *item)
 		}
 	}
 
+	const bool previous = gs_set_linear_srgb(true);
 	gs_matrix_push();
 	gs_matrix_mul(&item->draw_transform);
 	if (item->item_render) {
@@ -577,6 +579,7 @@ static inline void render_item(struct obs_scene_item *item)
 		obs_source_video_render(item->source);
 	}
 	gs_matrix_pop();
+	gs_set_linear_srgb(previous);
 
 cleanup:
 	GS_DEBUG_MARKER_END();
@@ -1243,7 +1246,8 @@ static inline obs_source_t *dup_child(struct darray *array, size_t idx,
 		}
 	}
 
-	return obs_source_duplicate(source, NULL, private);
+	return obs_source_duplicate(
+		source, private ? obs_source_get_name(source) : NULL, private);
 }
 
 static inline obs_source_t *new_ref(obs_source_t *source)
