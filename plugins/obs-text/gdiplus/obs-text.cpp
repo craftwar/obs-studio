@@ -992,24 +992,25 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	if (!len)
 		return FALSE;
 	const std::unique_ptr<wchar_t[]> title(new wchar_t[len + 1]);
-	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
-		[[unlikely]] return FALSE;
+	if (!title || !GetWindowTextW(hwnd, title.get(), len + 1)) [[unlikely]]
+		return FALSE;
 
 	// for better precision
 	wchar_t className[MAX_PATH];
 	GetClassNameW(hwnd, className, _countof(className));
 	DWORD pid;
 	GetWindowThreadProcessId(hwnd, &pid);
-	HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+	HANDLE hProcess =
+		OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
 	wchar_t path[MAX_PATH];
-	wchar_t* __restrict exeName;
+	wchar_t *__restrict exeName;
 	if (hProcess &&
 	    GetProcessImageFileNameW(hProcess, path, _countof(path))) {
 		exeName = wcsrchr(path, L'\\') + 1;
 		if (!exeName)
 			exeName = path;
-	} else
-		[[unlikely]] return FALSE;
+	} else [[unlikely]]
+		return FALSE;
 
 #ifndef song_thread_version
 	if (len > song.browser_suffix_len && song.pFunc) {
@@ -1036,7 +1037,8 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		song_name = SongGeter::get_song_browser_youtube(
 			title.get(), len - song.browser_suffix_len);
 		if (song_name)
-			song.pFunc = &SongGeter::SongGeter::get_song_browser_youtube;
+			song.pFunc =
+				&SongGeter::SongGeter::get_song_browser_youtube;
 		else // skip not brower based app
 			return 0;
 	} else if (SongGeter::isFoobar2000(exeName, className)) {
@@ -1045,13 +1047,23 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	} else if (SongGeter::isSpotify(exeName, className)) {
 		song_name = SongGeter::get_song_Spotify(title.get(), len);
 		song.pFunc = &SongGeter::get_song_Spotify;
-	} else if (SongGeter::isOsu(exeName, className)) {
+	}
+#if ENABLE_OSU || _DEBUG
+	else if (SongGeter::isOsu(exeName, className)) {
 		song_name = SongGeter::get_song_osu(title.get(), len);
 		if (song_name)
 			song.pFunc = &SongGeter::get_song_osu;
 		else
 			return 0;
-	} else
+	}
+#endif
+#if ENABLE_YTMDesktop || _DEBUG
+	else if (SongGeter::isYTMDesktop(exeName, className)) {
+		song_name = SongGeter::get_title_song(title.get(), len);
+		song.pFunc = &SongGeter::get_title_song;
+	}
+#endif
+	else
 		return 0;
 
 	// song_found
@@ -1085,8 +1097,8 @@ DWORD __stdcall TextSource::song_thread([[maybe_unused]] LPVOID lpParam)
 	// TODO: report error and retry. Current: user should retry manually
 	DWORD process_id;
 	DWORD thread_id = GetWindowThreadProcessId(song.hWnd, &process_id);
-	if (!thread_id || !process_id)
-		[[unlikely]] return 0;
+	if (!thread_id || !process_id) [[unlikely]]
+		return 0;
 	//DWORD error;
 	//WNDCLASSW wndClass = {0};
 	//wndClass.lpfnWndProc = DefWindowProcW;
@@ -1103,8 +1115,8 @@ DWORD __stdcall TextSource::song_thread([[maybe_unused]] LPVOID lpParam)
 					      EVENT_OBJECT_NAMECHANGE, NULL,
 					      Wineventproc, process_id,
 					      thread_id, WINEVENT_OUTOFCONTEXT);
-	if (!hHook)
-		[[unlikely]] return 0;
+	if (!hHook) [[unlikely]]
+		return 0;
 	MSG Msg;
 	while (GetMessage(&Msg, NULL, 0, 0))
 		;
@@ -1123,18 +1135,19 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 {
 	if (idObject == OBJID_WINDOW) {
 		const int len = GetWindowTextLengthW(hwnd);
-		if (!len)
-			[[unlikely]] return;
+		if (!len) [[unlikely]]
+			return;
 		const std::unique_ptr<wchar_t[]> title(new wchar_t[len + 1]);
 		if (!title || !GetWindowTextW(hwnd, title.get(), len + 1))
-			[[unlikely]] return;
+			[[unlikely]]
+			return;
 		const wchar_t *song_name = (song.thread_owner->song.pFunc)(
 			title.get(),
 			len - song.thread_owner->song.browser_suffix_len);
 		// if not found, close thread?
 		// can't handle window close
-		if (!song_name)
-			[[unlikely]] song_name = L"";
+		if (!song_name) [[unlikely]]
+			song_name = L"";
 		song.thread_owner->set_song_name(song_name);
 	}
 }

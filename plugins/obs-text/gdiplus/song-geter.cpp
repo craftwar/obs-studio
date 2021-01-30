@@ -46,6 +46,13 @@ bool SongGeter::isOsu(wchar_t *exeName, wchar_t *className)
 	return !WCSCMP_CONST(exeName, L"osu!.exe");
 }
 
+bool SongGeter::isYTMDesktop(wchar_t *exeName, wchar_t *className)
+{
+
+	return !WCSCMP_CONST(exeName, L"YouTube Music Desktop App.exe") &&
+	       !WCSCMP_CONST(className, L"Chrome_WidgetWin_1");
+}
+
 const wchar_t *
 SongGeter::get_song_browser_youtube(wchar_t *const __restrict title,
 				    size_t str_len)
