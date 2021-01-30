@@ -2,14 +2,6 @@
 #include <wchar.h>
 #include <regex>
 
-#define STRCMP_CONST(str, const_str) memcmp(str, const_str, sizeof(const_str))
-#define WCSCMP_CONST(str, const_str) \
-	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*(const_str)))
-// this applys to L"12345" too
-#define WSTRLEN_CONST(str) (sizeof(str) / sizeof(*(str)) - 1)
-#define WCSCPY_CONST(str, const_str) \
-	wmemcpy(str, const_str, sizeof(const_str) / sizeof(*(const_str)))
-
 char SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
 {
 	// msedge.exe

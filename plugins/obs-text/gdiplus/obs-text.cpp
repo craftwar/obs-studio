@@ -10,7 +10,6 @@
 #include <string>
 #include <memory>
 #include <locale>
-#include <regex>
 #include <Psapi.h>
 
 using namespace std;
@@ -35,13 +34,6 @@ using namespace Gdiplus;
 		val = max_val;
 #endif
 
-#define STRCMP_CONST(str, const_str) memcmp(str, const_str, sizeof(const_str))
-#define WCSCMP_CONST(str, const_str) \
-	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*(const_str)))
-// this applys to L"12345" too
-#define WSTRLEN_CONST(str) (sizeof(str) / sizeof(*(str)) - 1)
-#define WCSCPY_CONST(str, const_str) \
-	wmemcpy(str, const_str, sizeof(const_str) / sizeof(*(const_str)))
 
 #define MIN_SIZE_CX 2
 #define MIN_SIZE_CY 2
