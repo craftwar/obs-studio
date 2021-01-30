@@ -1041,10 +1041,13 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	} else if (SongGeter::isFoobar2000(exeName, className)) {
 		song_name = SongGeter::get_song_foobar2000(title.get(), len);
 		song.pFunc = &SongGeter::get_song_foobar2000;
-	} else if (SongGeter::isSpotify(exeName, className)) {
+	}
+#if ENABLE_Spotify || _DEBUG
+	else if (SongGeter::isSpotify(exeName, className)) {
 		song_name = SongGeter::get_song_Spotify(title.get(), len);
 		song.pFunc = &SongGeter::get_song_Spotify;
 	}
+#endif
 #if ENABLE_OSU || _DEBUG
 	else if (SongGeter::isOsu(exeName, className)) {
 		song_name = SongGeter::get_song_osu(title.get(), len);

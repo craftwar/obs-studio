@@ -28,7 +28,7 @@ public:
 	static bool isOsu(wchar_t *exeName, wchar_t *className);
 	// A Desktop App for YouTube Music https://github.com/ytmdesktop/ytmdesktop
 	// you need YouTube Music Premium to prevent set advertising as song name potentially
-	static bool isYTMDesktop(wchar_t* exeName, wchar_t* className);
+	static bool isYTMDesktop(wchar_t *exeName, wchar_t *className);
 	static const wchar_t *
 	get_song_browser_youtube(wchar_t *const __restrict title,
 				 size_t str_len);
@@ -42,10 +42,6 @@ public:
 					   size_t str_len);
 };
 
-static bool wcs_endWith(wchar_t* __restrict str,
-	const wchar_t* __restrict suffixStr, size_t str_len,
-	size_t suffix_len)
-{
-	return (str_len > suffix_len) && (wmemcmp(str + str_len - suffix_len,
-		suffixStr, suffix_len) == 0);
-}
+static bool wcs_endWith(wchar_t *__restrict str,
+			const wchar_t *__restrict suffixStr, size_t str_len,
+			size_t suffix_len);

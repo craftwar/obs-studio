@@ -2,6 +2,14 @@
 #include <wchar.h>
 #include <regex>
 
+static bool wcs_endWith(wchar_t *__restrict str,
+			const wchar_t *__restrict suffixStr, size_t str_len,
+			size_t suffix_len)
+{
+	return (str_len > suffix_len) && (wmemcmp(str + str_len - suffix_len,
+						  suffixStr, suffix_len) == 0);
+}
+
 char SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
 {
 	// msedge.exe
