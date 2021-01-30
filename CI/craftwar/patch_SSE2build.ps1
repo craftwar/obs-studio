@@ -21,5 +21,6 @@ foreach ($file in $files) {
 }
 
 $cpu_arch = ${env:favor_arch}.substring(0, $env:favor_arch.length - 2)
+& "C:\Program Files\Git\usr\bin\sed.exe" -i "s/0/1/" /C/projects/obs-studio/plugins/obs-text/gdiplus/song-geter-cfg.h
 & "C:\Program Files\Git\usr\bin\sed.exe" -i "s/(by craftwar)/($cpu_arch, by craftwar)/" /C/projects/obs-studio/UI/obs-app.cpp
 & "C:\Program Files\Git\usr\bin\sed.exe" -i "/TimedCheckForUpdates();/d" /C/projects/obs-studio/UI/window-basic-main.cpp
