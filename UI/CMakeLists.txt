@@ -227,6 +227,7 @@ set(obs_SOURCES
 	window-log-reply.cpp
 	window-projector.cpp
 	window-remux.cpp
+	window-missing-files.cpp
 	auth-base.cpp
 	source-tree.cpp
 	scene-tree.cpp
@@ -289,6 +290,7 @@ set(obs_HEADERS
 	window-log-reply.hpp
 	window-projector.hpp
 	window-remux.hpp
+	window-missing-files.hpp
 	auth-base.hpp
 	source-tree.hpp
 	scene-tree.hpp
@@ -368,6 +370,7 @@ set(obs_UI
 	forms/OBSUpdate.ui
 	forms/OBSRemux.ui
 	forms/OBSImporter.ui
+	forms/OBSMissingFiles.ui
 	forms/OBSAbout.ui)
 
 set(obs_QRC
