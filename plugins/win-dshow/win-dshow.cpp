@@ -39,29 +39,31 @@ using namespace DShow;
 #define BUFFERING_VAL "buffering"
 #define FLIP_IMAGE "flip_vertically"
 #define AUDIO_OUTPUT_MODE "audio_output_mode"
-#define USE_CUSTOM_AUDIO "use_custom_audio_device"
-#define AUDIO_DEVICE_ID "audio_device_id"
-#define COLOR_SPACE "color_space"
-#define COLOR_RANGE "color_range"
-#define DEACTIVATE_WNS "deactivate_when_not_showing"
+#define USE_CUSTOM_AUDIO  "use_custom_audio_device"
+#define AUDIO_DEVICE_ID   "audio_device_id"
+#define COLOR_SPACE       "color_space"
+#define COLOR_RANGE       "color_range"
+#define DEACTIVATE_WNS    "deactivate_when_not_showing"
+#define AUTOROTATION      "autorotation"
 
-#define TEXT_INPUT_NAME obs_module_text("VideoCaptureDevice")
-#define TEXT_DEVICE obs_module_text("Device")
-#define TEXT_CONFIG_VIDEO obs_module_text("ConfigureVideo")
-#define TEXT_CONFIG_XBAR obs_module_text("ConfigureCrossbar")
-#define TEXT_RES_FPS_TYPE obs_module_text("ResFPSType")
-#define TEXT_CUSTOM_RES obs_module_text("ResFPSType.Custom")
-#define TEXT_PREFERRED_RES obs_module_text("ResFPSType.DevPreferred")
-#define TEXT_FPS_MATCHING obs_module_text("FPS.Matching")
-#define TEXT_FPS_HIGHEST obs_module_text("FPS.Highest")
-#define TEXT_RESOLUTION obs_module_text("Resolution")
-#define TEXT_VIDEO_FORMAT obs_module_text("VideoFormat")
+#define TEXT_INPUT_NAME     obs_module_text("VideoCaptureDevice")
+#define TEXT_DEVICE         obs_module_text("Device")
+#define TEXT_CONFIG_VIDEO   obs_module_text("ConfigureVideo")
+#define TEXT_CONFIG_XBAR    obs_module_text("ConfigureCrossbar")
+#define TEXT_RES_FPS_TYPE   obs_module_text("ResFPSType")
+#define TEXT_CUSTOM_RES     obs_module_text("ResFPSType.Custom")
+#define TEXT_PREFERRED_RES  obs_module_text("ResFPSType.DevPreferred")
+#define TEXT_FPS_MATCHING   obs_module_text("FPS.Matching")
+#define TEXT_FPS_HIGHEST    obs_module_text("FPS.Highest")
+#define TEXT_RESOLUTION     obs_module_text("Resolution")
+#define TEXT_VIDEO_FORMAT   obs_module_text("VideoFormat")
 #define TEXT_FORMAT_UNKNOWN obs_module_text("VideoFormat.Unknown")
 #define TEXT_BUFFERING obs_module_text("Buffering")
 #define TEXT_BUFFERING_AUTO obs_module_text("Buffering.AutoDetect")
 #define TEXT_BUFFERING_ON   obs_module_text("Buffering.Enable")
 #define TEXT_BUFFERING_OFF  obs_module_text("Buffering.Disable")
 #define TEXT_FLIP_IMAGE     obs_module_text("FlipVertically")
+#define TEXT_AUTOROTATION   obs_module_text("Autorotation")
 #define TEXT_AUDIO_MODE     obs_module_text("AudioOutputMode")
 #define TEXT_MODE_CAPTURE   obs_module_text("AudioOutputMode.Capture")
 #define TEXT_MODE_DSOUND    obs_module_text("AudioOutputMode.DirectSound")
@@ -179,6 +181,7 @@ struct DShowInput {
 	bool deviceHasSeparateAudioFilter = false;
 	bool flip = false;
 	bool active = false;
+	bool autorotation = true;
 
 	Decoder audio_decoder;
 	Decoder video_decoder;
@@ -520,7 +523,7 @@ void DShowInput::OnVideoData(const VideoConfig &config, unsigned char *data,
 			     size_t size, long long startTime,
 			     long long endTime, long rotation)
 {
-	if (rotation != lastRotation) {
+	if (autorotation && rotation != lastRotation) {
 		lastRotation = rotation;
 		obs_source_set_async_rotation(source, rotation);
 	}
@@ -866,6 +869,7 @@ bool DShowInput::UpdateVideoConfig(obs_data_t *settings)
 	string video_device_id = obs_data_get_string(settings, VIDEO_DEVICE_ID);
 	deactivateWhenNotShowing = obs_data_get_bool(settings, DEACTIVATE_WNS);
 	flip = obs_data_get_bool(settings, FLIP_IMAGE);
+	autorotation = obs_data_get_bool(settings, AUTOROTATION);
 
 	DeviceId id;
 	if (!DecodeDeviceId(id, video_device_id.c_str())) {
@@ -1189,6 +1193,7 @@ static void GetDShowDefaults(obs_data_t *settings)
 	obs_data_set_default_string(settings, COLOR_RANGE, "default");
 	obs_data_set_default_int(settings, AUDIO_OUTPUT_MODE,
 				 (int)AudioMode::Capture);
+	obs_data_set_default_bool(settings, AUTOROTATION, true);
 }
 
 struct Resolution {
@@ -1937,6 +1942,8 @@ static obs_properties_t *GetDShowProperties(void *obj)
 					  obs_module_text("Buffering.ToolTip"));
 
 	obs_properties_add_bool(ppts, FLIP_IMAGE, TEXT_FLIP_IMAGE);
+
+	obs_properties_add_bool(ppts, AUTOROTATION, TEXT_AUTOROTATION);
 
 	/* ------------------------------------- */
 	/* audio settings */
