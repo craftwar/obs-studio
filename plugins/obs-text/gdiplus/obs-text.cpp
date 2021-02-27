@@ -1488,8 +1488,27 @@ static obs_properties_t *get_properties(void *data)
 	p = obs_properties_add_bool(props, S_USE_FILE, T_USE_FILE);
 	obs_property_set_modified_callback(p, use_file_changed);
 	p = obs_properties_add_bool(props, S_USE_SONG, T_USE_SONG);
+#if ENABLE_PLAYING_SONG_LONG_DESC
+	obs_property_set_long_description(
+		p,
+		"browser player: Youtube, others with specific userscript""<p>"
+		"standalone program: foobar2000"
+#if ENABLE_OSU
+		", osu!"
+#endif
+#if ENABLE_Spotify
+		", Spotify"
+#endif
+#if ENABLE_Spotify
+		", YouTube Music Desktop"
+#endif
+	);
+#endif
 	obs_property_set_modified_callback(p, use_song_changed);
 	p = obs_properties_add_bool(props, S_USE_VNR, T_USE_VNR);
+#if ENABLE_PLAYING_SONG_LONG_DESC
+	obs_property_set_long_description(p, "require patched Visual Novel Reader by craftwar");
+#endif
 	obs_property_set_modified_callback(p, use_vnr_changed);
 #if VNR_kyob1010_MultipleStream
 	p = obs_properties_add_list(props, S_VNR_MODE, T_VNR_MODE,
