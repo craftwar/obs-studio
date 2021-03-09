@@ -24,6 +24,7 @@
 #include "display-helpers.hpp"
 #include "window-namedialog.hpp"
 #include "menu-button.hpp"
+#include "slider-ignorewheel.hpp"
 #include "qt-wrappers.hpp"
 
 #include "obs-hotkey.h"
@@ -563,7 +564,7 @@ void OBSBasic::AddTransition(QString id)
 	}
 }
 
-void OBSBasic::on_transitionRemove_clicked()
+void OBSBasic::RemoveTransitionClicked()
 {
 	OBSSource tr = GetCurrentTransition();
 
@@ -667,7 +668,7 @@ void OBSBasic::on_transitionProps_clicked()
 
 	action = new QAction(QTStr("Remove"), &menu);
 	connect(action, SIGNAL(triggered()), this,
-		SLOT(on_transitionRemove_clicked()));
+		SLOT(RemoveTransitionClicked()));
 	menu.addAction(action);
 
 	action = new QAction(QTStr("Properties"), &menu);
@@ -752,8 +753,6 @@ void OBSBasic::SetCurrentScene(OBSSource scene, bool force)
 		}
 	}
 
-	UpdateSceneSelection(scene);
-
 	if (scene) {
 		bool userSwitched = (!force && !disableSaving);
 		blog(LOG_INFO, "%s to scene '%s'",
@@ -768,7 +767,7 @@ void OBSBasic::CreateProgramDisplay()
 
 	program->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(program.data(), &QWidget::customContextMenuRequested, this,
-		&OBSBasic::on_program_customContextMenuRequested);
+		&OBSBasic::ProgramViewContextMenuRequested);
 
 	auto displayResize = [this]() {
 		struct obs_video_info ovi;
@@ -834,7 +833,7 @@ void OBSBasic::CreateProgramOptions()
 	mainButtonLayout->addWidget(transitionButton);
 	mainButtonLayout->addWidget(configTransitions);
 
-	tBar = new QSlider(Qt::Horizontal);
+	tBar = new SliderIgnoreScroll(Qt::Horizontal);
 	tBar->setMinimum(0);
 	tBar->setMaximum(T_BAR_PRECISION - 1);
 
@@ -943,6 +942,8 @@ void OBSBasic::TBarReleased()
 		tBarActive = false;
 		EnableTransitionWidgets(true);
 	}
+
+	tBar->clearFocus();
 }
 
 static bool ValidTBarTransition(OBSSource transition)

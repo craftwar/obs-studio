@@ -24,7 +24,6 @@
 #include <QShowEvent>
 #include <QDesktopServices>
 #include <QFileDialog>
-#include <QDesktopWidget>
 #include <QScreen>
 #include <QColorDialog>
 #include <QSizePolicy>
@@ -51,7 +50,6 @@
 #include "window-log-reply.hpp"
 #include "window-projector.hpp"
 #include "window-remux.hpp"
-#include "window-missing-files.hpp"
 #include "qt-wrappers.hpp"
 #include "context-bar-controls.hpp"
 #include "obs-proxy-style.hpp"
@@ -74,7 +72,6 @@
 #include <fstream>
 #include <sstream>
 
-#include <QScreen>
 #include <QWindow>
 
 #include <json11.hpp>
@@ -208,8 +205,10 @@ extern void RegisterRestreamAuth();
 OBSBasic::OBSBasic(QWidget *parent)
 	: OBSMainWindow(parent), ui(new Ui::OBSBasic)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	qRegisterMetaTypeStreamOperators<SignalContainer<OBSScene>>(
 		"SignalContainer<OBSScene>");
+#endif
 
 	setAttribute(Qt::WA_NativeWindow);
 
@@ -264,10 +263,12 @@ OBSBasic::OBSBasic(QWidget *parent)
 	qRegisterMetaType<obs_hotkey_id>("obs_hotkey_id");
 	qRegisterMetaType<SavedProjectorInfo *>("SavedProjectorInfo *");
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	qRegisterMetaTypeStreamOperators<std::vector<std::shared_ptr<OBSSignal>>>(
 		"std::vector<std::shared_ptr<OBSSignal>>");
 	qRegisterMetaTypeStreamOperators<OBSScene>("OBSScene");
 	qRegisterMetaTypeStreamOperators<OBSSceneItem>("OBSSceneItem");
+#endif
 
 	ui->scenes->setAttribute(Qt::WA_MacShowFocusRect, false);
 	ui->sources->setAttribute(Qt::WA_MacShowFocusRect, false);
@@ -385,7 +386,8 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 		QRect windowGeometry = normalGeometry();
 		if (!WindowPositionValid(windowGeometry)) {
-			QRect rect = App()->desktop()->geometry();
+			QRect rect =
+				QGuiApplication::primaryScreen()->geometry();
 			setGeometry(QStyle::alignedRect(Qt::LeftToRight,
 							Qt::AlignCenter, size(),
 							rect));
@@ -1142,9 +1144,13 @@ retryScene:
 	LogScenes();
 
 	if (obs_missing_files_count(files) > 0) {
-		OBSMissingFiles *miss = new OBSMissingFiles(files, this);
-		miss->show();
-		miss->raise();
+		missDialog = new OBSMissingFiles(files, this);
+		missDialog->show();
+		missDialog->raise();
+
+		auto close = [=]() { delete missDialog; };
+
+		connect(missDialog, &OBSMissingFiles::finished, close);
 	} else {
 		obs_missing_files_destroy(files);
 	}
@@ -2927,32 +2933,6 @@ void OBSBasic::AddSceneItem(OBSSceneItem item)
 	}
 }
 
-void OBSBasic::UpdateSceneSelection(OBSSource source)
-{
-	if (source) {
-		obs_scene_t *scene = obs_scene_from_source(source);
-		const char *name = obs_source_get_name(source);
-
-		if (!scene)
-			return;
-
-		QList<QListWidgetItem *> items =
-			ui->scenes->findItems(QT_UTF8(name), Qt::MatchExactly);
-
-		if (items.count()) {
-			sceneChanging = true;
-			ui->scenes->setCurrentItem(items.first());
-			sceneChanging = false;
-
-			OBSScene curScene =
-				GetOBSRef<OBSScene>(ui->scenes->currentItem());
-			if (api && scene != curScene)
-				api->on_event(
-					OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED);
-		}
-	}
-}
-
 static void RenameListValues(QListWidget *listWidget, const QString &newName,
 			     const QString &prevName)
 {
@@ -4467,15 +4447,15 @@ void OBSBasic::on_actionAdvAudioProperties_triggered()
 	advAudioWindow->SetIconsVisible(iconsVisible);
 
 	connect(advAudioWindow, SIGNAL(destroyed()), this,
-		SLOT(on_advAudioProps_destroyed()));
+		SLOT(AdvAudioPropsDestroyed()));
 }
 
-void OBSBasic::on_advAudioProps_clicked()
+void OBSBasic::AdvAudioPropsClicked()
 {
 	on_actionAdvAudioProperties_triggered();
 }
 
-void OBSBasic::on_advAudioProps_destroyed()
+void OBSBasic::AdvAudioPropsDestroyed()
 {
 	advAudioWindow = nullptr;
 }
@@ -4484,9 +4464,6 @@ void OBSBasic::on_scenes_currentItemChanged(QListWidgetItem *current,
 					    QListWidgetItem *prev)
 {
 	obs_source_t *source = NULL;
-
-	if (sceneChanging)
-		return;
 
 	if (current) {
 		obs_scene_t *scene;
@@ -4657,13 +4634,13 @@ void OBSBasic::on_scenes_customContextMenuRequested(const QPoint &pos)
 					       : QTStr("Basic.Main.GridMode"),
 					  this);
 	connect(gridAction, SIGNAL(triggered()), this,
-		SLOT(on_actionGridMode_triggered()));
+		SLOT(GridActionClicked()));
 	popup.addAction(gridAction);
 
 	popup.exec(QCursor::pos());
 }
 
-void OBSBasic::on_actionGridMode_triggered()
+void OBSBasic::GridActionClicked()
 {
 	bool gridMode = !ui->scenes->GetGridMode();
 	ui->scenes->SetGridMode(gridMode);
@@ -4727,18 +4704,16 @@ void OBSBasic::ChangeSceneIndex(bool relative, int offset, int invalidIdx)
 	if (idx == -1 || idx == invalidIdx)
 		return;
 
-	sceneChanging = true;
-
 	QListWidgetItem *item = ui->scenes->takeItem(idx);
 
 	if (!relative)
 		idx = 0;
 
+	ui->scenes->blockSignals(true);
 	ui->scenes->insertItem(idx + offset, item);
 	ui->scenes->setCurrentRow(idx + offset);
 	item->setSelected(true);
-
-	sceneChanging = false;
+	ui->scenes->blockSignals(false);
 
 	OBSProjector::UpdateMultiviewProjectors();
 }
@@ -6573,7 +6548,7 @@ void OBSBasic::on_preview_customContextMenuRequested(const QPoint &pos)
 	UNUSED_PARAMETER(pos);
 }
 
-void OBSBasic::on_program_customContextMenuRequested(const QPoint &)
+void OBSBasic::ProgramViewContextMenuRequested(const QPoint &)
 {
 	QMenu popup(this);
 	QPointer<QMenu> studioProgramProjector;
@@ -7310,7 +7285,8 @@ void OBSBasic::OpenSavedProjector(SavedProjectorInfo *info)
 			projector->restoreGeometry(byteArray);
 
 			if (!WindowPositionValid(projector->normalGeometry())) {
-				QRect rect = App()->desktop()->geometry();
+				QRect rect = QGuiApplication::primaryScreen()
+						     ->geometry();
 				projector->setGeometry(QStyle::alignedRect(
 					Qt::LeftToRight, Qt::AlignCenter,
 					size(), rect));

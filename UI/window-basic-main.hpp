@@ -31,6 +31,7 @@
 #include "window-basic-transform.hpp"
 #include "window-basic-adv-audio.hpp"
 #include "window-basic-filters.hpp"
+#include "window-missing-files.hpp"
 #include "window-projector.hpp"
 #include "window-basic-about.hpp"
 #include "auth-base.hpp"
@@ -233,8 +234,6 @@ private:
 	gs_vertbuffer_t *boxRight = nullptr;
 	gs_vertbuffer_t *boxBottom = nullptr;
 	gs_vertbuffer_t *circle = nullptr;
-
-	bool sceneChanging = false;
 
 	int previewX = 0, previewY = 0;
 	int previewCX = 0, previewCY = 0;
@@ -478,6 +477,8 @@ private:
 	QList<QDialog *> visDialogs;
 	QList<QDialog *> modalDialogs;
 	QList<QMessageBox *> visMsgBoxes;
+
+	OBSMissingFiles *missDialog;
 
 	QList<QPoint> visDlgPositions;
 
@@ -854,8 +855,8 @@ private slots:
 	void on_actionRemux_triggered();
 	void on_action_Settings_triggered();
 	void on_actionAdvAudioProperties_triggered();
-	void on_advAudioProps_clicked();
-	void on_advAudioProps_destroyed();
+	void AdvAudioPropsClicked();
+	void AdvAudioPropsDestroyed();
 	void on_actionShowLogs_triggered();
 	void on_actionUploadCurrentLog_triggered();
 	void on_actionUploadLastLog_triggered();
@@ -884,7 +885,7 @@ private slots:
 	void on_scenes_currentItemChanged(QListWidgetItem *current,
 					  QListWidgetItem *prev);
 	void on_scenes_customContextMenuRequested(const QPoint &pos);
-	void on_actionGridMode_triggered();
+	void GridActionClicked();
 	void on_actionAddScene_triggered();
 	void on_actionRemoveScene_triggered();
 	void on_actionSceneUp_triggered();
@@ -924,7 +925,7 @@ private slots:
 	void on_actionDiscord_triggered();
 
 	void on_preview_customContextMenuRequested(const QPoint &pos);
-	void on_program_customContextMenuRequested(const QPoint &pos);
+	void ProgramViewContextMenuRequested(const QPoint &pos);
 	void PreviewDisabledMenu(const QPoint &pos);
 
 	void on_actionNewSceneCollection_triggered();
@@ -952,7 +953,7 @@ private slots:
 	void on_toggleSourceIcons_toggled(bool visible);
 
 	void on_transitions_currentIndexChanged(int index);
-	void on_transitionRemove_clicked();
+	void RemoveTransitionClicked();
 	void on_transitionProps_clicked();
 	void on_transitionDuration_valueChanged(int value);
 
