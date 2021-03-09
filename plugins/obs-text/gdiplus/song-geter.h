@@ -23,9 +23,11 @@ public:
 	static constexpr wchar_t browser_app[] = L"- YouTube";
 	static char isBrowser(wchar_t *const __restrict title,
 			      size_t title_len);
-	static bool isSpotify(wchar_t *exeName, wchar_t *className);
 	static bool isFoobar2000(wchar_t *exeName, wchar_t *className);
 	static bool isOsu(wchar_t *exeName, wchar_t *className);
+	static bool isSpotify(wchar_t* exeName, wchar_t* className);
+	// VLC media player
+	static bool isVLC(wchar_t* exeName, wchar_t* className);
 	// A Desktop App for YouTube Music https://github.com/ytmdesktop/ytmdesktop
 	// you need YouTube Music Premium to prevent set advertising as song name potentially
 	static bool isYTMDesktop(wchar_t *exeName, wchar_t *className);
@@ -40,6 +42,8 @@ public:
 	get_song_foobar2000(wchar_t *const __restrict title, size_t str_len);
 	static const wchar_t *get_song_osu(wchar_t *const __restrict title,
 					   size_t str_len);
+	static const wchar_t *getVLC(wchar_t *const __restrict title,
+				      size_t str_len);
 };
 
 static bool wcs_endWith(wchar_t *__restrict str,

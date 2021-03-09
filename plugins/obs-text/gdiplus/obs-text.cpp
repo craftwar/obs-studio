@@ -1042,18 +1042,27 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		song_name = SongGeter::get_song_foobar2000(title.get(), len);
 		song.pFunc = &SongGeter::get_song_foobar2000;
 	}
-#if ENABLE_Spotify || _DEBUG
-	else if (SongGeter::isSpotify(exeName, className)) {
-		song_name = SongGeter::get_song_Spotify(title.get(), len);
-		song.pFunc = &SongGeter::get_song_Spotify;
-	}
-#endif
 #if ENABLE_OSU || _DEBUG
 	else if (SongGeter::isOsu(exeName, className)) {
 		song_name = SongGeter::get_song_osu(title.get(), len);
 		if (song_name)
 			song.pFunc = &SongGeter::get_song_osu;
 		else
+			return 0;
+	}
+#endif
+#if ENABLE_Spotify || _DEBUG
+	else if (SongGeter::isSpotify(exeName, className)) {
+		song_name = SongGeter::get_song_Spotify(title.get(), len);
+		song.pFunc = &SongGeter::get_song_Spotify;
+	}
+#endif
+#if ENABLE_VLC || _DEBUG
+	else if (SongGeter::isVLC(exeName, className)) {
+		song_name = SongGeter::getVLC(title.get(), len);
+		if (song_name)
+			song.pFunc = &SongGeter::getVLC;
+		else // filter "About" Qt5QWindowIcon
 			return 0;
 	}
 #endif
@@ -1499,7 +1508,10 @@ static obs_properties_t *get_properties(void *data)
 #if ENABLE_Spotify
 		", Spotify"
 #endif
-#if ENABLE_Spotify
+#if ENABLE_VLC
+		", VLC media player"
+#endif
+#if ENABLE_YTMDesktop
 		", YouTube Music Desktop"
 #endif
 	);

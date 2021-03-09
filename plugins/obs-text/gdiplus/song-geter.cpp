@@ -27,12 +27,6 @@ char SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
 	return -1;
 }
 
-bool SongGeter::isSpotify(wchar_t *exeName, wchar_t *className)
-{
-	return !WCSCMP_CONST(exeName, L"Spotify.exe") &&
-	       !WCSCMP_CONST(className, L"Chrome_WidgetWin_0");
-}
-
 bool SongGeter::isFoobar2000(wchar_t *exeName, wchar_t *className)
 {
 	return !WCSCMP_CONST(exeName, L"foobar2000.exe");
@@ -44,6 +38,18 @@ bool SongGeter::isFoobar2000(wchar_t *exeName, wchar_t *className)
 bool SongGeter::isOsu(wchar_t *exeName, wchar_t *className)
 {
 	return !WCSCMP_CONST(exeName, L"osu!.exe");
+}
+
+bool SongGeter::isSpotify(wchar_t* exeName, wchar_t* className)
+{
+	return !WCSCMP_CONST(exeName, L"Spotify.exe") &&
+		!WCSCMP_CONST(className, L"Chrome_WidgetWin_0");
+}
+
+bool SongGeter::isVLC(wchar_t* exeName, wchar_t* className)
+{
+	return !WCSCMP_CONST(exeName, L"vlc.exe") &&
+		!WCSCMP_CONST(className, L"Qt5QWindowIcon");
 }
 
 bool SongGeter::isYTMDesktop(wchar_t *exeName, wchar_t *className)
@@ -84,6 +90,7 @@ SongGeter::get_song_browser_youtube(wchar_t *const __restrict title,
 	return nullptr;
 }
 
+// title case
 const wchar_t *SongGeter::get_title_song(wchar_t *const __restrict title,
 					 [[maybe_unused]] size_t str_len)
 {
@@ -127,6 +134,24 @@ const wchar_t *SongGeter::get_song_foobar2000(wchar_t *const __restrict title,
 	//	return title;
 	//}
 	//return nullptr;
+}
+
+const wchar_t *SongGeter::getVLC(wchar_t *const __restrict title,
+				 size_t str_len)
+{
+	// when not playing, title is "VLC media player"
+	// title suffixes with "- VLC media player" only when playing and pause
+	// ex: - Track01 - VLC media player
+
+	static constexpr wchar_t app[] = L"VLC media player";
+	constexpr size_t app_len = WSTRLEN_CONST(app);
+	if (str_len > app_len) {
+		title[str_len - app_len - 3] =
+			0; // remove 3 character before suffix
+		return title;
+	}
+
+	return nullptr;
 }
 
 // startWith case
