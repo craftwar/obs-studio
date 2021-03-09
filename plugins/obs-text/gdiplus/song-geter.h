@@ -25,25 +25,24 @@ public:
 			      size_t title_len);
 	static bool isFoobar2000(wchar_t *exeName, wchar_t *className);
 	static bool isOsu(wchar_t *exeName, wchar_t *className);
-	static bool isSpotify(wchar_t* exeName, wchar_t* className);
+	static bool isSpotify(wchar_t *exeName, wchar_t *className);
 	// VLC media player
-	static bool isVLC(wchar_t* exeName, wchar_t* className);
+	static bool isVLC(wchar_t *exeName, wchar_t *className);
 	// A Desktop App for YouTube Music https://github.com/ytmdesktop/ytmdesktop
 	// you need YouTube Music Premium to prevent set advertising as song name potentially
 	static bool isYTMDesktop(wchar_t *exeName, wchar_t *className);
-	static const wchar_t *
-	get_song_browser_youtube(wchar_t *const __restrict title,
-				 size_t str_len);
-	static const wchar_t *get_title_song(wchar_t *const __restrict title,
-					     size_t str_len);
-	static const wchar_t *get_song_Spotify(wchar_t *const __restrict title,
-					       size_t str_len);
-	static const wchar_t *
-	get_song_foobar2000(wchar_t *const __restrict title, size_t str_len);
-	static const wchar_t *get_song_osu(wchar_t *const __restrict title,
-					   size_t str_len);
+	static const wchar_t *getBrowserYoutube(wchar_t *const __restrict title,
+						size_t str_len);
+	static const wchar_t *getTitle(wchar_t *const __restrict title,
+				       size_t str_len);
+	static const wchar_t *getSpotify(wchar_t *const __restrict title,
+					 size_t str_len);
+	static const wchar_t *getFoobar2000(wchar_t *const __restrict title,
+					    size_t str_len);
+	static const wchar_t *getOsu(wchar_t *const __restrict title,
+				     size_t str_len);
 	static const wchar_t *getVLC(wchar_t *const __restrict title,
-				      size_t str_len);
+				     size_t str_len);
 };
 
 static bool wcs_endWith(wchar_t *__restrict str,

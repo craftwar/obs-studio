@@ -1031,30 +1031,29 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	const wchar_t *song_name;
 
 	if (song.browser_suffix_len >= 0) {
-		song_name = SongGeter::get_song_browser_youtube(
+		song_name = SongGeter::getBrowserYoutube(
 			title.get(), len - song.browser_suffix_len);
 		if (song_name)
-			song.pFunc =
-				&SongGeter::SongGeter::get_song_browser_youtube;
+			song.pFunc = &SongGeter::SongGeter::getBrowserYoutube;
 		else // skip not brower based app
 			return 0;
 	} else if (SongGeter::isFoobar2000(exeName, className)) {
-		song_name = SongGeter::get_song_foobar2000(title.get(), len);
-		song.pFunc = &SongGeter::get_song_foobar2000;
+		song_name = SongGeter::getFoobar2000(title.get(), len);
+		song.pFunc = &SongGeter::getFoobar2000;
 	}
 #if ENABLE_OSU || _DEBUG
 	else if (SongGeter::isOsu(exeName, className)) {
-		song_name = SongGeter::get_song_osu(title.get(), len);
+		song_name = SongGeter::getOsu(title.get(), len);
 		if (song_name)
-			song.pFunc = &SongGeter::get_song_osu;
+			song.pFunc = &SongGeter::getOsu;
 		else
 			return 0;
 	}
 #endif
 #if ENABLE_Spotify || _DEBUG
 	else if (SongGeter::isSpotify(exeName, className)) {
-		song_name = SongGeter::get_song_Spotify(title.get(), len);
-		song.pFunc = &SongGeter::get_song_Spotify;
+		song_name = SongGeter::getSpotify(title.get(), len);
+		song.pFunc = &SongGeter::getSpotify;
 	}
 #endif
 #if ENABLE_VLC || _DEBUG
@@ -1068,8 +1067,8 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 #endif
 #if ENABLE_YTMDesktop || _DEBUG
 	else if (SongGeter::isYTMDesktop(exeName, className)) {
-		song_name = SongGeter::get_title_song(title.get(), len);
-		song.pFunc = &SongGeter::get_title_song;
+		song_name = SongGeter::getTitle(title.get(), len);
+		song.pFunc = &SongGeter::getTitle;
 	}
 #endif
 	else

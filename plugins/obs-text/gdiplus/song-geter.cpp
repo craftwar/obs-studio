@@ -40,16 +40,16 @@ bool SongGeter::isOsu(wchar_t *exeName, wchar_t *className)
 	return !WCSCMP_CONST(exeName, L"osu!.exe");
 }
 
-bool SongGeter::isSpotify(wchar_t* exeName, wchar_t* className)
+bool SongGeter::isSpotify(wchar_t *exeName, wchar_t *className)
 {
 	return !WCSCMP_CONST(exeName, L"Spotify.exe") &&
-		!WCSCMP_CONST(className, L"Chrome_WidgetWin_0");
+	       !WCSCMP_CONST(className, L"Chrome_WidgetWin_0");
 }
 
-bool SongGeter::isVLC(wchar_t* exeName, wchar_t* className)
+bool SongGeter::isVLC(wchar_t *exeName, wchar_t *className)
 {
 	return !WCSCMP_CONST(exeName, L"vlc.exe") &&
-		!WCSCMP_CONST(className, L"Qt5QWindowIcon");
+	       !WCSCMP_CONST(className, L"Qt5QWindowIcon");
 }
 
 bool SongGeter::isYTMDesktop(wchar_t *exeName, wchar_t *className)
@@ -59,9 +59,8 @@ bool SongGeter::isYTMDesktop(wchar_t *exeName, wchar_t *className)
 	       !WCSCMP_CONST(className, L"Chrome_WidgetWin_1");
 }
 
-const wchar_t *
-SongGeter::get_song_browser_youtube(wchar_t *const __restrict title,
-				    size_t str_len)
+const wchar_t *SongGeter::getBrowserYoutube(wchar_t *const __restrict title,
+					    size_t str_len)
 {
 	// these title suffixes are locale specific in M$ Edge
 	// song name - YouTube - Personal - Microsoft Edge
@@ -91,14 +90,14 @@ SongGeter::get_song_browser_youtube(wchar_t *const __restrict title,
 }
 
 // title case
-const wchar_t *SongGeter::get_title_song(wchar_t *const __restrict title,
-					 [[maybe_unused]] size_t str_len)
+const wchar_t *SongGeter::getTitle(wchar_t *const __restrict title,
+				   [[maybe_unused]] size_t str_len)
 {
 	return title;
 }
 
-const wchar_t *SongGeter::get_song_Spotify(wchar_t *const __restrict title,
-					   [[maybe_unused]] size_t str_len)
+const wchar_t *SongGeter::getSpotify(wchar_t *const __restrict title,
+				     [[maybe_unused]] size_t str_len)
 {
 	// not playing
 	if (!WCSCMP_CONST(title, L"Spotify Free") ||
@@ -108,8 +107,8 @@ const wchar_t *SongGeter::get_song_Spotify(wchar_t *const __restrict title,
 }
 
 // endWith case
-const wchar_t *SongGeter::get_song_foobar2000(wchar_t *const __restrict title,
-					      size_t str_len)
+const wchar_t *SongGeter::getFoobar2000(wchar_t *const __restrict title,
+					size_t str_len)
 {
 	// when not playing, title is "foobar2000 v1.5.3"
 	// title suffixes with "[foobar2000]" only when playing
@@ -155,8 +154,8 @@ const wchar_t *SongGeter::getVLC(wchar_t *const __restrict title,
 }
 
 // startWith case
-const wchar_t *SongGeter::get_song_osu(wchar_t *const __restrict title,
-				       size_t str_len)
+const wchar_t *SongGeter::getOsu(wchar_t *const __restrict title,
+				 size_t str_len)
 {
 	// when not playing, title is "osu!"
 	// title starts with "osu!  -" only when playing
