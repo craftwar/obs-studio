@@ -116,7 +116,7 @@ const wchar_t *SongGeter::getFoobar2000(wchar_t *const __restrict title,
 	// decide only by tile, no exeName and className
 	static constexpr wchar_t app[] = L"[foobar2000]";
 	constexpr size_t app_len = WSTRLEN_CONST(app);
-	if (wcs_endWith(title, app, str_len, app_len)) {
+	if (wcs_endWith(title, app, str_len, app_len)) [[likely]] {
 		title[str_len - app_len - 1] =
 			'\0'; // remove 1 space before suffix
 		return title;
@@ -144,7 +144,10 @@ const wchar_t *SongGeter::getVLC(wchar_t *const __restrict title,
 
 	static constexpr wchar_t app[] = L"VLC media player";
 	constexpr size_t app_len = WSTRLEN_CONST(app);
-	if (str_len > app_len) {
+	if (str_len == app_len) {
+		*title = 0; // not playing, clear song name
+		return title;
+	} else if (str_len > app_len) [[likely]] {
 		title[str_len - app_len - 3] =
 			0; // remove 3 character before suffix
 		return title;
