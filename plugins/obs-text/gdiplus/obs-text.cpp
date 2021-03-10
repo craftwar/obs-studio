@@ -247,7 +247,7 @@ struct TextSource {
 
 	static struct SONG {
 		HWND hWnd;
-		char browser_suffix_len;
+		int browser_suffix_len;
 		// prefer using over typedef in C++ Core Guidelines
 		// https://github.com/isocpp/CppCoreGuidelines
 		// typedef wchar_t *(*pFn)(wchar_t *const, size_t);
@@ -1151,7 +1151,10 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 			return;
 		const wchar_t *song_name = (song.thread_owner->song.pFunc)(
 			title.get(),
-			len - song.thread_owner->song.browser_suffix_len);
+			song.thread_owner->song.browser_suffix_len < 0
+				? len
+				: len - song.thread_owner->song
+						  .browser_suffix_len);
 		// if not found, close thread?
 		// can't handle window close
 		if (!song_name) [[unlikely]]
