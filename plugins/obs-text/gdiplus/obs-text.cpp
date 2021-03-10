@@ -1075,6 +1075,9 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		return 0;
 
 	// song_found
+	// clear to prevent Wineventproc repeated check
+	if (song.browser_suffix_len < 0)
+		song.browser_suffix_len = 0;
 	set_song_name(song_name);
 	// If you wana switch player, disable then enable song mode again
 	song.hWnd = hwnd;
@@ -1151,10 +1154,7 @@ void TextSource::Wineventproc([[maybe_unused]] HWINEVENTHOOK hWinEventHook,
 			return;
 		const wchar_t *song_name = (song.thread_owner->song.pFunc)(
 			title.get(),
-			song.thread_owner->song.browser_suffix_len < 0
-				? len
-				: len - song.thread_owner->song
-						  .browser_suffix_len);
+			len - song.thread_owner->song.browser_suffix_len);
 		// if not found, close thread?
 		// can't handle window close
 		if (!song_name) [[unlikely]]
