@@ -247,7 +247,7 @@ struct TextSource {
 
 	static struct SONG {
 		HWND hWnd;
-		int browser_suffix_len;
+		char browser_suffix_len;
 		// prefer using over typedef in C++ Core Guidelines
 		// https://github.com/isocpp/CppCoreGuidelines
 		// typedef wchar_t *(*pFn)(wchar_t *const, size_t);
@@ -1003,9 +1003,8 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	wchar_t *__restrict exeName;
 	if (hProcess &&
 	    GetProcessImageFileNameW(hProcess, path, _countof(path))) {
-		exeName = wcsrchr(path, L'\\') + 1;
-		if (!exeName)
-			exeName = path;
+		wchar_t *const dir = wcsrchr(path, L'\\');
+		exeName = dir ? dir + 1 : path;
 	} else [[unlikely]]
 		return FALSE;
 
