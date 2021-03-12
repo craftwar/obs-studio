@@ -755,6 +755,7 @@ public:
 	void SetService(obs_service_t *service);
 
 	int GetTransitionDuration();
+	int GetTbarPosition();
 
 	inline bool IsPreviewProgramMode() const
 	{
@@ -817,7 +818,6 @@ public:
 	void CreateSourcePopupMenu(int idx, bool preview);
 
 	void UpdateTitleBar();
-	void UpdateSceneSelection(OBSSource source);
 
 	void SystemTrayInit();
 	void SystemTray(bool firstStarted);
@@ -956,6 +956,7 @@ private slots:
 	void RemoveTransitionClicked();
 	void on_transitionProps_clicked();
 	void on_transitionDuration_valueChanged(int value);
+	void on_tbar_position_valueChanged(int value);
 
 	void on_modeSwitch_clicked();
 
