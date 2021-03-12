@@ -247,7 +247,7 @@ struct TextSource {
 
 	static struct SONG {
 		HWND hWnd;
-		char browser_suffix_len;
+		size_t browser_suffix_len;
 		// prefer using over typedef in C++ Core Guidelines
 		// https://github.com/isocpp/CppCoreGuidelines
 		// typedef wchar_t *(*pFn)(wchar_t *const, size_t);
@@ -1029,9 +1029,9 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	song.browser_suffix_len = SongGeter::isBrowser(title.get(), len);
 	const wchar_t *song_name;
 
-	if (song.browser_suffix_len >= 0) {
+	if (song.browser_suffix_len > 0) {
 		song_name = SongGeter::getBrowserYoutube(
-			title.get(), len - song.browser_suffix_len);
+			title.get(), len - (song.browser_suffix_len - 1));
 		if (song_name)
 			song.pFunc = &SongGeter::SongGeter::getBrowserYoutube;
 		else // skip not brower based app
@@ -1074,9 +1074,6 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 		return 0;
 
 	// song_found
-	// clear to prevent Wineventproc repeated check
-	if (song.browser_suffix_len < 0)
-		song.browser_suffix_len = 0;
 	set_song_name(song_name);
 	// If you wana switch player, disable then enable song mode again
 	song.hWnd = hwnd;

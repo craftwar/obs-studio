@@ -21,7 +21,7 @@ public:
 						      //L"Edge",
 						      L" - Google Chrome"};
 	static constexpr wchar_t browser_app[] = L"- YouTube";
-	static char isBrowser(wchar_t *const __restrict title,
+	static size_t isBrowser(wchar_t *const __restrict title,
 			      size_t title_len);
 	static bool isFoobar2000(wchar_t *exeName, wchar_t *className);
 	static bool isOsu(wchar_t *exeName, wchar_t *className);

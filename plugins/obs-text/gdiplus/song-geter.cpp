@@ -10,13 +10,14 @@ static bool wcs_endWith(wchar_t *__restrict str,
 						  suffixStr, suffix_len) == 0);
 }
 
-char SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
+// size_t is unsigned, so +1 to suffix_len, use 0 represent false
+size_t SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
 {
 	// msedge.exe
 	for (auto &__restrict brower : SongGeter::browsers) {
 		const size_t suffix_len = wcslen(brower);
 		if (wcs_endWith(title, brower, title_len, suffix_len))
-			return suffix_len;
+			return suffix_len + 1;
 	}
 
 	// for browser doesn't suffix window title with its name (ex: M$ Edge based on Chromium < 81.0?)
@@ -24,7 +25,7 @@ char SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
 	//if (wcs_endWith(title, browser_app, title_len, app_len))
 	//	return 0;
 
-	return -1;
+	return 0;
 }
 
 bool SongGeter::isFoobar2000(wchar_t *exeName, wchar_t *className)
