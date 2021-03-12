@@ -1083,7 +1083,7 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	song.hWnd = hwnd;
 	if (!song.thread_owner) {
 		TextSource::song.hThread = CreateThread(
-			NULL, 0, song_thread, this, 0, &song.thread_id);
+			NULL, 0, song_thread, nullptr, 0, &song.thread_id);
 		if (TextSource::song.hThread) {
 			// I don't need this handle, close it early
 			CloseHandle(song.hThread);
