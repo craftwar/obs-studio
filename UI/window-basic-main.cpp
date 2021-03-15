@@ -8113,6 +8113,8 @@ void OBSBasic::ResizeOutputSizeOfSource()
 	config_set_uint(basicConfig, "Video", "OutputCY", height);
 
 	ResetVideo();
+	ResetOutputs();
+	config_save_safe(basicConfig, "tmp", nullptr);
 	on_actionFitToScreen_triggered();
 }
 
