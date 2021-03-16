@@ -871,16 +871,26 @@ static obs_properties_t *noise_suppress_properties(void *data)
 	obs_properties_t *ppts = obs_properties_create();
 	struct noise_suppress_data *ng = (struct noise_suppress_data *)data;
 
-#if defined(LIBRNNOISE_ENABLED) && defined(LIBSPEEXDSP_ENABLED)
+#if defined(LIBRNNOISE_ENABLED) + defined(LIBSPEEXDSP_ENABLED) + defined(LIBNVAFX_ENABLED) > 1
 	obs_property_t *method = obs_properties_add_list(
 		ppts, S_METHOD, TEXT_METHOD, OBS_COMBO_TYPE_LIST,
 		OBS_COMBO_FORMAT_STRING);
+	size_t nvafx_index = 0;
+#if defined(LIBSPEEXDSP_ENABLED)
 	obs_property_list_add_string(method, TEXT_METHOD_SPEEX, S_METHOD_SPEEX);
+	++nvafx_index;
+#endif
+#if defined(LIBRNNOISE_ENABLED)
 	obs_property_list_add_string(method, TEXT_METHOD_RNN, S_METHOD_RNN);
+	++nvafx_index;
+#endif	
 #ifdef LIBNVAFX_ENABLED
 	if (ng->nvafx_enabled)
 		obs_property_list_add_string(method, TEXT_METHOD_NVAFX,
 					     S_METHOD_NVAFX);
+	if (!nvafx_loaded && nvafx_index) {
+		obs_property_list_item_disable(method, nvafx_index, true);
+	}
 #endif
 	obs_property_set_modified_callback(method,
 					   noise_suppress_method_modified);
@@ -898,9 +908,6 @@ static obs_properties_t *noise_suppress_properties(void *data)
 	obs_property_t *nvafx_slider = obs_properties_add_float_slider(
 		ppts, S_NVAFX_INTENSITY, TEXT_NVAFX_INTENSITY, 0.0f, 1.0f,
 		0.01f);
-	if (!nvafx_loaded) {
-		obs_property_list_item_disable(method, 2, true);
-	}
 
 #endif
 	return ppts;
