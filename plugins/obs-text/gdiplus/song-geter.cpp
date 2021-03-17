@@ -76,7 +76,7 @@ const wchar_t *SongGeter::getBrowserYoutube(wchar_t *const __restrict title,
 		std::regex_match(title, match, youtube_regex);
 		if (!match.empty()) {
 			const auto pos = match.position(1);
-			title[pos] = 0;
+			title[pos] = 0; // remove app suffix
 			return title;
 		}
 	}
