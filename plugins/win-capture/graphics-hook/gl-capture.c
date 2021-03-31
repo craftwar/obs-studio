@@ -73,6 +73,7 @@ struct gl_data {
 static HMODULE gl = NULL;
 static bool nv_capture_available = false;
 static struct gl_data data = {0};
+__declspec(thread) static int swap_recurse;
 
 static inline bool gl_error(const char *func, const char *str)
 {
@@ -761,20 +762,36 @@ static void gl_capture(HDC hdc)
 	}
 }
 
+static inline void gl_swap_begin(HDC hdc)
+{
+	const bool first = swap_recurse == 0;
+	++swap_recurse;
+
+	if (first && !global_hook_info->capture_overlay)
+		gl_capture(hdc);
+}
+
+static inline void gl_swap_end(HDC hdc)
+{
+	--swap_recurse;
+	const bool first = swap_recurse == 0;
+
+	if (first && global_hook_info->capture_overlay)
+		gl_capture(hdc);
+}
+
 static BOOL WINAPI hook_swap_buffers(HDC hdc)
 {
 	BOOL ret;
 
-	if (!global_hook_info->capture_overlay)
-		gl_capture(hdc);
+	gl_swap_begin(hdc);
 
 	unhook(&swap_buffers);
 	BOOL(WINAPI * call)(HDC) = swap_buffers.call_addr;
 	ret = call(hdc);
 	rehook(&swap_buffers);
 
-	if (global_hook_info->capture_overlay)
-		gl_capture(hdc);
+	gl_swap_end(hdc);
 
 	return ret;
 }
@@ -783,16 +800,14 @@ static BOOL WINAPI hook_wgl_swap_buffers(HDC hdc)
 {
 	BOOL ret;
 
-	if (!global_hook_info->capture_overlay)
-		gl_capture(hdc);
+	gl_swap_begin(hdc);
 
 	unhook(&wgl_swap_buffers);
 	BOOL(WINAPI * call)(HDC) = wgl_swap_buffers.call_addr;
 	ret = call(hdc);
 	rehook(&wgl_swap_buffers);
 
-	if (global_hook_info->capture_overlay)
-		gl_capture(hdc);
+	gl_swap_end(hdc);
 
 	return ret;
 }
@@ -801,16 +816,14 @@ static BOOL WINAPI hook_wgl_swap_layer_buffers(HDC hdc, UINT planes)
 {
 	BOOL ret;
 
-	if (!global_hook_info->capture_overlay)
-		gl_capture(hdc);
+	gl_swap_begin(hdc);
 
 	unhook(&wgl_swap_layer_buffers);
 	BOOL(WINAPI * call)(HDC, UINT) = wgl_swap_layer_buffers.call_addr;
 	ret = call(hdc, planes);
 	rehook(&wgl_swap_layer_buffers);
 
-	if (global_hook_info->capture_overlay)
-		gl_capture(hdc);
+	gl_swap_end(hdc);
 
 	return ret;
 }
