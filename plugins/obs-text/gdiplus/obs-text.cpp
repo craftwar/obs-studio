@@ -1030,7 +1030,6 @@ BOOL TextSource::get_song_name(const HWND hwnd)
 	const wchar_t *song_name;
 
 	if (song.browser_suffix_len > 0) {
-		--song.browser_suffix_len;
 		song_name = SongGeter::getBrowserYoutube(
 			title.get(), len - song.browser_suffix_len);
 		if (song_name)

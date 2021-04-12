@@ -17,7 +17,7 @@ size_t SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
 	for (auto &__restrict brower : SongGeter::browsers) {
 		const size_t suffix_len = wcslen(brower);
 		if (wcs_endWith(title, brower, title_len, suffix_len))
-			return suffix_len + 1;
+			return suffix_len;
 	}
 
 	// for browser doesn't suffix window title with its name (ex: M$ Edge based on Chromium < 81.0?)
@@ -25,6 +25,7 @@ size_t SongGeter::isBrowser(wchar_t *const __restrict title, size_t title_len)
 	//if (wcs_endWith(title, browser_app, title_len, app_len))
 	//	return 0;
 
+	// use -1 instead if browser suffix can be length 0
 	return 0;
 }
 
