@@ -74,9 +74,6 @@
 #include "ui_OBSBasic.h"
 #include "ui_ColorSelect.h"
 
-#include <fstream>
-#include <sstream>
-
 #include <QWindow>
 
 #include <json11.hpp>
@@ -1157,20 +1154,18 @@ retryScene:
 		opt_start_virtualcam = false;
 	}
 
-	copyStrings.clear();
-	copyFiltersString = nullptr;
-	copyFilter = nullptr;
-
 	LogScenes();
 
 	if (obs_missing_files_count(files) > 0) {
-		missDialog = new OBSMissingFiles(files, this);
-		missDialog->show();
-		missDialog->raise();
-
-		auto close = [=]() { delete missDialog; };
-
-		connect(missDialog, &OBSMissingFiles::finished, close);
+		/* the window hasn't fully initialized by this point on macOS,
+		 * so put this at the end of the current task queue. Fixes a
+		 * bug where the window be behind OBS on startup */
+		QTimer::singleShot(0, [this, files] {
+			missDialog = new OBSMissingFiles(files, this);
+			missDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+			missDialog->show();
+			missDialog->raise();
+		});
 	} else {
 		obs_missing_files_destroy(files);
 	}
@@ -3666,8 +3661,7 @@ void OBSBasic::DuplicateSelectedScene()
 			QTStr("Undo.Scene.Duplicate")
 				.arg(obs_source_get_name(source)),
 			undo, redo, obs_source_get_name(source),
-			obs_source_get_name(obs_scene_get_source(curScene)),
-			NULL);
+			obs_source_get_name(obs_scene_get_source(curScene)));
 
 		obs_scene_release(scene);
 
@@ -3768,7 +3762,7 @@ void OBSBasic::RemoveSelectedScene()
 	obs_data_set_int(data, "index", ui->scenes->currentRow());
 
 	undo_s.add_action("Delete Scene", undo, redo, obs_data_get_json(data),
-			  obs_source_get_name(source), NULL);
+			  obs_source_get_name(source));
 
 	obs_data_array_release(array);
 	obs_data_release(data);
@@ -4375,6 +4369,10 @@ void OBSBasic::ClearSceneData()
 	swapScene = nullptr;
 	programScene = nullptr;
 
+	copyStrings.clear();
+	copyFiltersString = nullptr;
+	copyFilter = nullptr;
+
 	auto cb = [](void *unused, obs_source_t *source) {
 		obs_source_remove(source);
 		UNUSED_PARAMETER(unused);
@@ -4471,7 +4469,6 @@ void OBSBasic::closeEvent(QCloseEvent *event)
 
 	/* Clear all scene data (dialogs, widgets, widget sub-items, scenes,
 	 * sources, etc) so that all references are released before shutdown */
-	undo_s.release();
 	ClearSceneData();
 
 	App()->quit();
@@ -4635,53 +4632,6 @@ void OBSBasic::on_actionAdvAudioProperties_triggered()
 
 	connect(advAudioWindow, SIGNAL(destroyed()), this,
 		SLOT(AdvAudioPropsDestroyed()));
-
-	obs_data_t *wrapper = obs_data_create();
-
-	save_audio_source(1, wrapper);
-	save_audio_source(2, wrapper);
-	save_audio_source(3, wrapper);
-	save_audio_source(4, wrapper);
-	save_audio_source(5, wrapper);
-	save_audio_source(6, wrapper);
-
-	std::string undo_data(obs_data_get_json(wrapper));
-
-	connect(advAudioWindow, &QDialog::finished, [this, undo_data]() {
-		auto undo_redo = [](const std::string &data) {
-			obs_data_t *audio_data =
-				obs_data_create_from_json(data.c_str());
-
-			load_audio_source(1, audio_data);
-			load_audio_source(2, audio_data);
-			load_audio_source(3, audio_data);
-			load_audio_source(4, audio_data);
-			load_audio_source(5, audio_data);
-			load_audio_source(6, audio_data);
-
-			obs_data_release(audio_data);
-		};
-
-		obs_data_t *wrapper = obs_data_create();
-
-		save_audio_source(1, wrapper);
-		save_audio_source(2, wrapper);
-		save_audio_source(3, wrapper);
-		save_audio_source(4, wrapper);
-		save_audio_source(5, wrapper);
-		save_audio_source(6, wrapper);
-
-		std::string redo_data(obs_data_get_json(wrapper));
-
-		if (undo_data.compare(redo_data) != 0)
-			undo_s.add_action(QTStr("Undo.Audio"), undo_redo,
-					  undo_redo, undo_data, redo_data,
-					  NULL);
-
-		obs_data_release(wrapper);
-	});
-
-	obs_data_release(wrapper);
 }
 
 void OBSBasic::AdvAudioPropsClicked()
@@ -4697,21 +4647,10 @@ void OBSBasic::AdvAudioPropsDestroyed()
 void OBSBasic::on_scenes_currentItemChanged(QListWidgetItem *current,
 					    QListWidgetItem *prev)
 {
-	obs_source_t *source = NULL;
-
 	if (current) {
-		obs_scene_t *scene;
-
-		scene = GetOBSRef<OBSScene>(current);
-		source = obs_scene_get_source(scene);
+		OBSScene scene = GetOBSRef<OBSScene>(current);
+		SetCurrentScene(scene);
 	}
-
-	SetCurrentScene(source);
-
-	if (api)
-		api->on_event(OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED);
-
-	UpdateContextBar();
 
 	UNUSED_PARAMETER(prev);
 }
@@ -4931,7 +4870,7 @@ void OBSBasic::on_actionAddScene_triggered()
 			obs_scene_release(scene);
 		};
 		undo_s.add_action(QTStr("Undo.Add").arg(QString(name.c_str())),
-				  undo_fn, redo_fn, name, name, NULL);
+				  undo_fn, redo_fn, name, name);
 
 		obs_scene_t *scene = obs_scene_create(name.c_str());
 		source = obs_scene_get_source(scene);
@@ -5494,49 +5433,8 @@ static bool remove_items(obs_scene_t *, obs_sceneitem_t *item, void *param)
 	return true;
 };
 
-void OBSBasic::on_actionRemoveSource_triggered()
+OBSData OBSBasic::BackupScene(obs_source_t *scene_source)
 {
-	vector<OBSSceneItem> items;
-	OBSScene scene = GetCurrentScene();
-	obs_source_t *scene_source = obs_scene_get_source(scene);
-
-	obs_scene_enum_items(scene, remove_items, &items);
-
-	if (!items.size())
-		return;
-
-	/* ------------------------------------- */
-	/* confirm action with user              */
-
-	bool confirmed = false;
-
-	if (items.size() > 1) {
-		QString text = QTStr("ConfirmRemove.TextMultiple")
-				       .arg(QString::number(items.size()));
-
-		QMessageBox remove_items(this);
-		remove_items.setText(text);
-		QPushButton *Yes = remove_items.addButton(QTStr("Yes"),
-							  QMessageBox::YesRole);
-		remove_items.setDefaultButton(Yes);
-		remove_items.addButton(QTStr("No"), QMessageBox::NoRole);
-		remove_items.setIcon(QMessageBox::Question);
-		remove_items.setWindowTitle(QTStr("ConfirmRemove.Title"));
-		remove_items.exec();
-
-		confirmed = remove_items.clickedButton();
-	} else {
-		OBSSceneItem &item = items[0];
-		obs_source_t *source = obs_sceneitem_get_source(item);
-		if (source && QueryRemoveSource(source))
-			confirmed = true;
-	}
-	if (!confirmed)
-		return;
-
-	/* ----------------------------------------------- */
-	/* save undo data                                  */
-
 	obs_data_array_t *undo_array = obs_data_array_create();
 
 	obs_source_enum_full_tree(scene_source, save_undo_source_enum,
@@ -5546,41 +5444,18 @@ void OBSBasic::on_actionRemoveSource_triggered()
 	obs_data_array_push_back(undo_array, scene_data);
 	obs_data_release(scene_data);
 
-	obs_data_t *undo_data = obs_data_create();
-	obs_data_set_array(undo_data, "array", undo_array);
+	OBSData data = obs_data_create();
+	obs_data_release(data);
+
+	obs_data_set_array(data, "array", undo_array);
+	obs_data_get_json(data);
 	obs_data_array_release(undo_array);
+	return data;
+}
 
-	/* because undo_array and redo_array will share settings data,
-	 * generate json here */
-	const char *undo_json = obs_data_get_json(undo_data);
-
-	/* ----------------------------------------------- */
-	/* remove items                                    */
-
-	for (auto &item : items)
-		obs_sceneitem_remove(item);
-
-	/* ----------------------------------------------- */
-	/* save redo data                                  */
-
-	obs_data_array_t *redo_array = obs_data_array_create();
-
-	obs_source_enum_full_tree(scene_source, save_undo_source_enum,
-				  redo_array);
-
-	scene_data = obs_save_source(scene_source);
-	obs_data_array_push_back(redo_array, scene_data);
-	obs_data_release(scene_data);
-
-	obs_data_t *redo_data = obs_data_create();
-	obs_data_set_array(redo_data, "array", redo_array);
-	obs_data_array_release(redo_array);
-
-	const char *redo_json = obs_data_get_json(redo_data);
-
-	/* ----------------------------------------------- */
-	/* undo/redo callback                              */
-
+void OBSBasic::CreateSceneUndoRedoAction(const QString &action_name,
+					 OBSData undo_data, OBSData redo_data)
+{
 	auto undo_redo = [this](const std::string &json) {
 		obs_data_t *base = obs_data_create_from_json(json.c_str());
 		obs_data_array_t *array = obs_data_get_array(base, "array");
@@ -5626,8 +5501,71 @@ void OBSBasic::on_actionRemoveSource_triggered()
 		ui->sources->RefreshItems();
 	};
 
+	const char *undo_json = obs_data_get_last_json(undo_data);
+	const char *redo_json = obs_data_get_last_json(redo_data);
+
+	undo_s.add_action(action_name, undo_redo, undo_redo, undo_json,
+			  redo_json);
+}
+
+void OBSBasic::on_actionRemoveSource_triggered()
+{
+	vector<OBSSceneItem> items;
+	OBSScene scene = GetCurrentScene();
+	obs_source_t *scene_source = obs_scene_get_source(scene);
+
+	obs_scene_enum_items(scene, remove_items, &items);
+
+	if (!items.size())
+		return;
+
+	/* ------------------------------------- */
+	/* confirm action with user              */
+
+	bool confirmed = false;
+
+	if (items.size() > 1) {
+		QString text = QTStr("ConfirmRemove.TextMultiple")
+				       .arg(QString::number(items.size()));
+
+		QMessageBox remove_items(this);
+		remove_items.setText(text);
+		QPushButton *Yes = remove_items.addButton(QTStr("Yes"),
+							  QMessageBox::YesRole);
+		remove_items.setDefaultButton(Yes);
+		remove_items.addButton(QTStr("No"), QMessageBox::NoRole);
+		remove_items.setIcon(QMessageBox::Question);
+		remove_items.setWindowTitle(QTStr("ConfirmRemove.Title"));
+		remove_items.exec();
+
+		confirmed = Yes == remove_items.clickedButton();
+	} else {
+		OBSSceneItem &item = items[0];
+		obs_source_t *source = obs_sceneitem_get_source(item);
+		if (source && QueryRemoveSource(source))
+			confirmed = true;
+	}
+	if (!confirmed)
+		return;
+
 	/* ----------------------------------------------- */
-	/* undo/redo                                       */
+	/* save undo data                                  */
+
+	OBSData undo_data = BackupScene(scene_source);
+
+	/* ----------------------------------------------- */
+	/* remove items                                    */
+
+	for (auto &item : items)
+		obs_sceneitem_remove(item);
+
+	/* ----------------------------------------------- */
+	/* save redo data                                  */
+
+	OBSData redo_data = BackupScene(scene_source);
+
+	/* ----------------------------------------------- */
+	/* add undo/redo action                            */
 
 	QString action_name;
 	if (items.size() > 1) {
@@ -5639,11 +5577,7 @@ void OBSBasic::on_actionRemoveSource_triggered()
 			obs_sceneitem_get_source(items[0])));
 	}
 
-	undo_s.add_action(action_name, undo_redo, undo_redo, undo_json,
-			  redo_json, nullptr);
-
-	obs_data_release(undo_data);
-	obs_data_release(redo_data);
+	CreateSceneUndoRedoAction(action_name, undo_data, redo_data);
 }
 
 void OBSBasic::on_actionInteract_triggered()
@@ -5664,40 +5598,52 @@ void OBSBasic::on_actionSourceProperties_triggered()
 		CreatePropertiesWindow(source);
 }
 
+void OBSBasic::MoveSceneItem(enum obs_order_movement movement,
+			     const QString &action_name)
+{
+	OBSSource scene_source = GetCurrentSceneSource();
+	OBSData undo_data = BackupScene(scene_source);
+
+	OBSSceneItem item = GetCurrentSceneItem();
+	obs_sceneitem_set_order(item, movement);
+
+	obs_source_t *source = obs_sceneitem_get_source(item);
+	const char *source_name = obs_source_get_name(source);
+	const char *scene_name = obs_source_get_name(scene_source);
+
+	OBSData redo_data = BackupScene(scene_source);
+	CreateSceneUndoRedoAction(action_name.arg(source_name, scene_name),
+				  undo_data, redo_data);
+}
+
 void OBSBasic::on_actionSourceUp_triggered()
 {
-	OBSSceneItem item = GetCurrentSceneItem();
-	obs_sceneitem_set_order(item, OBS_ORDER_MOVE_UP);
+	MoveSceneItem(OBS_ORDER_MOVE_UP, QTStr("Undo.MoveUp"));
 }
 
 void OBSBasic::on_actionSourceDown_triggered()
 {
-	OBSSceneItem item = GetCurrentSceneItem();
-	obs_sceneitem_set_order(item, OBS_ORDER_MOVE_DOWN);
+	MoveSceneItem(OBS_ORDER_MOVE_DOWN, QTStr("Undo.MoveDown"));
 }
 
 void OBSBasic::on_actionMoveUp_triggered()
 {
-	OBSSceneItem item = GetCurrentSceneItem();
-	obs_sceneitem_set_order(item, OBS_ORDER_MOVE_UP);
+	MoveSceneItem(OBS_ORDER_MOVE_UP, QTStr("Undo.MoveUp"));
 }
 
 void OBSBasic::on_actionMoveDown_triggered()
 {
-	OBSSceneItem item = GetCurrentSceneItem();
-	obs_sceneitem_set_order(item, OBS_ORDER_MOVE_DOWN);
+	MoveSceneItem(OBS_ORDER_MOVE_DOWN, QTStr("Undo.MoveDown"));
 }
 
 void OBSBasic::on_actionMoveToTop_triggered()
 {
-	OBSSceneItem item = GetCurrentSceneItem();
-	obs_sceneitem_set_order(item, OBS_ORDER_MOVE_TOP);
+	MoveSceneItem(OBS_ORDER_MOVE_TOP, QTStr("Undo.MoveToTop"));
 }
 
 void OBSBasic::on_actionMoveToBottom_triggered()
 {
-	OBSSceneItem item = GetCurrentSceneItem();
-	obs_sceneitem_set_order(item, OBS_ORDER_MOVE_BOTTOM);
+	MoveSceneItem(OBS_ORDER_MOVE_BOTTOM, QTStr("Undo.MoveToBottom"));
 }
 
 static BPtr<char> ReadLogFile(const char *subdir, const char *log)
@@ -5900,7 +5846,7 @@ static void RenameListItem(OBSBasic *parent, QListWidget *listWidget,
 		std::string redo_data(prevName);
 		parent->undo_s.add_action(
 			QTStr("Undo.Rename").arg(name.c_str()), undo, redo,
-			undo_data, redo_data, NULL);
+			undo_data, redo_data);
 
 		listItem->setText(QT_UTF8(name.c_str()));
 		obs_source_set_name(source, name.c_str());
@@ -7190,7 +7136,7 @@ void OBSBasic::on_actionPasteTransform_triggered()
 	undo_s.add_action(
 		QTStr("Undo.Transform.Paste")
 			.arg(obs_source_get_name(GetCurrentSceneSource())),
-		undo_redo, undo_redo, undo_data, redo_data, NULL);
+		undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7240,7 +7186,7 @@ void OBSBasic::on_actionResetTransform_triggered()
 	undo_s.add_action(
 		QTStr("Undo.Transform.Reset")
 			.arg(obs_source_get_name(obs_scene_get_source(scene))),
-		undo_redo, undo_redo, undo_data, redo_data, NULL);
+		undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7333,7 +7279,7 @@ void OBSBasic::on_actionRotate90CW_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.Rotate")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7353,7 +7299,7 @@ void OBSBasic::on_actionRotate90CCW_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.Rotate")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7373,7 +7319,7 @@ void OBSBasic::on_actionRotate180_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.Rotate")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7423,7 +7369,7 @@ void OBSBasic::on_actionFlipHorizontal_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.HFlip")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7445,7 +7391,7 @@ void OBSBasic::on_actionFlipVertical_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.VFlip")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7500,7 +7446,7 @@ void OBSBasic::on_actionFitToScreen_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.FitToScreen")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7521,7 +7467,7 @@ void OBSBasic::on_actionStretchToScreen_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.StretchToScreen")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7592,7 +7538,7 @@ void OBSBasic::on_actionCenterToScreen_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.Center")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7612,7 +7558,7 @@ void OBSBasic::on_actionVerticalCenter_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.VCenter")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7632,7 +7578,7 @@ void OBSBasic::on_actionHorizontalCenter_triggered()
 	undo_s.add_action(QTStr("Undo.Transform.HCenter")
 				  .arg(obs_source_get_name(obs_scene_get_source(
 					  GetCurrentScene()))),
-			  undo_redo, undo_redo, undo_data, redo_data, NULL);
+			  undo_redo, undo_redo, undo_data, redo_data);
 
 	obs_data_release(wrapper);
 	obs_data_release(rwrapper);
@@ -7747,7 +7693,7 @@ void OBSBasic::Nudge(int dist, MoveDir dir)
 						.arg(obs_source_get_name(
 							GetCurrentSceneSource())),
 					undo_redo, undo_redo, undo_data,
-					redo_data, NULL);
+					redo_data);
 
 				recent_nudge = false;
 				obs_data_release(rwrapper);
@@ -8511,6 +8457,44 @@ void OBSBasic::on_actionCopyFilters_triggered()
 	ui->actionPasteFilters->setEnabled(true);
 }
 
+void OBSBasic::CreateFilterPasteUndoRedoAction(const QString &text,
+					       obs_source_t *source,
+					       obs_data_array_t *undo_array,
+					       obs_data_array_t *redo_array)
+{
+	auto undo_redo = [this](const std::string &json) {
+		obs_data_t *data = obs_data_create_from_json(json.c_str());
+		obs_data_array_t *array = obs_data_get_array(data, "array");
+		const char *name = obs_data_get_string(data, "name");
+		obs_source_t *source = obs_get_source_by_name(name);
+
+		obs_source_restore_filters(source, array);
+		obs_source_release(source);
+
+		obs_data_array_release(array);
+		obs_data_release(data);
+
+		if (filters)
+			filters->UpdateSource(source);
+	};
+
+	const char *name = obs_source_get_name(source);
+
+	obs_data_t *undo_data = obs_data_create();
+	obs_data_t *redo_data = obs_data_create();
+	obs_data_set_array(undo_data, "array", undo_array);
+	obs_data_set_array(redo_data, "array", redo_array);
+	obs_data_set_string(undo_data, "name", name);
+	obs_data_set_string(redo_data, "name", name);
+
+	undo_s.add_action(text, undo_redo, undo_redo,
+			  obs_data_get_json(undo_data),
+			  obs_data_get_json(redo_data));
+
+	obs_data_release(undo_data);
+	obs_data_release(redo_data);
+}
+
 void OBSBasic::on_actionPasteFilters_triggered()
 {
 	OBSSource source = obs_get_source_by_name(copyFiltersString);
@@ -8522,7 +8506,20 @@ void OBSBasic::on_actionPasteFilters_triggered()
 	if (source == dstSource)
 		return;
 
+	obs_data_array_t *undo_array = obs_source_backup_filters(dstSource);
 	obs_source_copy_filters(dstSource, source);
+	obs_data_array_t *redo_array = obs_source_backup_filters(dstSource);
+
+	const char *srcName = obs_source_get_name(source);
+	const char *dstName = obs_source_get_name(dstSource);
+	QString text =
+		QTStr("Undo.Filters.Paste.Multiple").arg(srcName, dstName);
+
+	CreateFilterPasteUndoRedoAction(text, dstSource, undo_array,
+					redo_array);
+
+	obs_data_array_release(undo_array);
+	obs_data_array_release(redo_array);
 }
 
 static void ConfirmColor(SourceTree *sources, const QColor &color,
