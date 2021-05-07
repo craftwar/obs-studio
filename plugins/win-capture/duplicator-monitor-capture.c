@@ -529,8 +529,6 @@ static void duplicator_capture_render(void *data, gs_effect_t *effect)
 
 		rot = capture->rot;
 
-		const bool previous = gs_set_linear_srgb(false);
-
 		while (gs_effect_loop(effect, "Draw")) {
 			if (rot != 0) {
 				float x = 0.0f;
@@ -560,8 +558,6 @@ static void duplicator_capture_render(void *data, gs_effect_t *effect)
 			if (rot != 0)
 				gs_matrix_pop();
 		}
-
-		gs_set_linear_srgb(previous);
 
 		if (capture->capture_cursor) {
 			effect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
@@ -661,7 +657,7 @@ static obs_properties_t *duplicator_capture_properties(void *data)
 	obs_property_list_add_int(p, TEXT_METHOD_AUTO, METHOD_AUTO);
 	obs_property_list_add_int(p, TEXT_METHOD_DXGI, METHOD_DXGI);
 	obs_property_list_add_int(p, TEXT_METHOD_WGC, METHOD_WGC);
-	obs_property_list_item_disable(p, 1, !capture->wgc_supported);
+	obs_property_list_item_disable(p, 2, !capture->wgc_supported);
 	obs_property_set_modified_callback(p, display_capture_method_changed);
 
 	obs_property_t *monitors = obs_properties_add_list(

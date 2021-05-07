@@ -293,9 +293,9 @@ static void scale_filter_render(void *data, gs_effect_t *effect)
 		gs_effect_set_next_sampler(filter->image_param,
 					   filter->point_sampler);
 
-	obs_source_process_filter_tech_end_srgb(filter->context, filter->effect,
-						filter->cx_out, filter->cy_out,
-						technique);
+	obs_source_process_filter_tech_end(filter->context, filter->effect,
+					   filter->cx_out, filter->cy_out,
+					   technique);
 
 	UNUSED_PARAMETER(effect);
 }
@@ -415,17 +415,18 @@ static uint32_t scale_filter_height(void *data)
 	return (uint32_t)filter->cy_out;
 }
 
-struct obs_source_info scale_filter = {.id = "scale_filter",
-				       .type = OBS_SOURCE_TYPE_FILTER,
-				       .output_flags = OBS_SOURCE_VIDEO,
-				       .get_name = scale_filter_name,
-				       .create = scale_filter_create,
-				       .destroy = scale_filter_destroy,
-				       .video_tick = scale_filter_tick,
-				       .video_render = scale_filter_render,
-				       .update = scale_filter_update,
-				       .get_properties =
-					       scale_filter_properties,
-				       .get_defaults = scale_filter_defaults,
-				       .get_width = scale_filter_width,
-				       .get_height = scale_filter_height};
+struct obs_source_info scale_filter = {
+	.id = "scale_filter",
+	.type = OBS_SOURCE_TYPE_FILTER,
+	.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB,
+	.get_name = scale_filter_name,
+	.create = scale_filter_create,
+	.destroy = scale_filter_destroy,
+	.video_tick = scale_filter_tick,
+	.video_render = scale_filter_render,
+	.update = scale_filter_update,
+	.get_properties = scale_filter_properties,
+	.get_defaults = scale_filter_defaults,
+	.get_width = scale_filter_width,
+	.get_height = scale_filter_height,
+};
