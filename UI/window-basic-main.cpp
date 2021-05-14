@@ -4368,6 +4368,7 @@ void OBSBasic::ClearSceneData()
 	lastScene = nullptr;
 	swapScene = nullptr;
 	programScene = nullptr;
+	prevFTBSource = nullptr;
 
 	copyStrings.clear();
 	copyFiltersString = nullptr;
@@ -8380,6 +8381,11 @@ void OBSBasic::on_actionCopySource_triggered()
 
 void OBSBasic::on_actionPasteRef_triggered()
 {
+	OBSSource scene_source = GetCurrentSceneSource();
+	OBSData undo_data = BackupScene(scene_source);
+
+	undo_s.push_disabled();
+
 	for (auto &copyString : copyStrings) {
 		/* do not allow duplicate refs of the same group in the same scene */
 		OBSScene scene = GetCurrentScene();
@@ -8390,15 +8396,38 @@ void OBSBasic::on_actionPasteRef_triggered()
 						  false);
 		on_actionPasteTransform_triggered();
 	}
+
+	undo_s.pop_disabled();
+
+	QString action_name = QTStr("Undo.PasteSourceRef");
+	const char *scene_name = obs_source_get_name(scene_source);
+
+	OBSData redo_data = BackupScene(scene_source);
+	CreateSceneUndoRedoAction(action_name.arg(scene_name), undo_data,
+				  redo_data);
 }
 
 void OBSBasic::on_actionPasteDup_triggered()
 {
+	OBSSource scene_source = GetCurrentSceneSource();
+	OBSData undo_data = BackupScene(scene_source);
+
+	undo_s.push_disabled();
+
 	for (auto &copyString : copyStrings) {
 		OBSBasicSourceSelect::SourcePaste(copyString, copyVisible,
 						  true);
 		on_actionPasteTransform_triggered();
 	}
+
+	undo_s.pop_disabled();
+
+	QString action_name = QTStr("Undo.PasteSource");
+	const char *scene_name = obs_source_get_name(scene_source);
+
+	OBSData redo_data = BackupScene(scene_source);
+	CreateSceneUndoRedoAction(action_name.arg(scene_name), undo_data,
+				  redo_data);
 }
 
 void OBSBasic::AudioMixerCopyFilters()

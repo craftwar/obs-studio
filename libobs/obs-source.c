@@ -2224,7 +2224,7 @@ static inline void obs_source_main_render(obs_source_t *source)
 	bool srgb_aware = (flags & OBS_SOURCE_SRGB) != 0;
 	bool default_effect = !source->filter_parent &&
 			      source->filters.num == 0 && !custom_draw;
-	bool previous_srgb;
+	bool previous_srgb = false;
 
 	if (!srgb_aware) {
 		previous_srgb = gs_get_linear_srgb();
@@ -3684,7 +3684,7 @@ static inline bool can_bypass(obs_source_t *target, obs_source_t *parent,
 	       ((parent_flags & OBS_SOURCE_CUSTOM_DRAW) == 0) &&
 	       ((parent_flags & OBS_SOURCE_ASYNC) == 0) &&
 	       (((filter_flags & OBS_SOURCE_SRGB) == 0) ||
-		((parent_flags & OBS_SOURCE_SRGB) == 0));
+		((parent_flags & OBS_SOURCE_SRGB) != 0));
 }
 
 bool obs_source_process_filter_begin(obs_source_t *filter,
