@@ -100,6 +100,14 @@ install:
 #  - echo set(VCPKG_BUILD_TYPE release) >> C:\tools\vcpkg\triplets\x64-windows.cmake # bug curl can't build
   - vcpkg install curl[core,winssl]:x64-windows
   - set curlPath=C:\tools\vcpkg\installed\x64-windows\include
+# Detours for graphics-hook
+  - vcpkg install detours:x64-windows detours:x86-windows
+#  - set detoursPath=C:\tools\vcpkg\installed\x64-windows\include\detours
+  - copy /Y C:\tools\vcpkg\installed\x86-windows\include\detours\detours.h %DepsPath32%\include\detours.h
+  - copy /Y C:\tools\vcpkg\installed\x86-windows\lib\detours.lib %DepsPath32%\bin\detours.lib
+  - copy /Y C:\tools\vcpkg\installed\x64-windows\include\detours\detours.h %DepsPath64%\include\detours.h
+  - copy /Y C:\tools\vcpkg\installed\x64-windows\lib\detours.lib %DepsPath64%\bin\detours.lib
+# mbedtls  
   - if "%vc_inc_arch%"=="SSE2" vcpkg install mbedtls:x64-windows
 # mbedtls use these 3 paths
   - set mbedtlsPath=C:\Tools\vcpkg\installed\x64-windows\include
