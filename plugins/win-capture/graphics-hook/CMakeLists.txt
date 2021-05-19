@@ -56,7 +56,7 @@ target_include_directories(graphics-hook PUBLIC
 target_link_libraries(graphics-hook
 	dxguid
 	ipc-util
-	Kernel32)
+	Kernel32
 	${DETOURS_LIBRARIES})
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
