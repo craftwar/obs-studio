@@ -148,8 +148,9 @@ deploy:
     tag: git
     release: $(release)
 #    description: $(APPVEYOR_REPO_COMMIT)
-    auth_token:
-      secure: KxeGOEgx0+XWdjLWDsyhC+B/w3m8zpvtVY/e+90lCLZgd/2VSuraPZDxdIPB5rfY
+    auth_token: $(github_auth_token)
+#    auth_token: 
+#      secure: KxeGOEgx0+XWdjLWDsyhC+B/w3m8zpvtVY/e+90lCLZgd/2VSuraPZDxdIPB5rfY
     force_update: true
     on:
       branch: master
