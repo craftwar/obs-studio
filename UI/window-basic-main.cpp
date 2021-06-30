@@ -1279,13 +1279,8 @@ bool OBSBasic::InitBasicConfigDefaults()
 	uint32_t cx = primaryScreen->size().width();
 	uint32_t cy = primaryScreen->size().height();
 
-#ifdef SUPPORTS_FRACTIONAL_SCALING
 	cx *= devicePixelRatioF();
 	cy *= devicePixelRatioF();
-#elif
-	cx *= devicePixelRatio();
-	cy *= devicePixelRatio();
-#endif
 
 	bool oldResolutionDefaults = config_get_bool(
 		App()->GlobalConfig(), "General", "Pre19Defaults");
@@ -4718,6 +4713,7 @@ void OBSBasic::AddProjectorMenuMonitors(QMenu *parent, QObject *target,
 	for (int i = 0; i < screens.size(); i++) {
 		QScreen *screen = screens[i];
 		QRect screenGeometry = screen->geometry();
+		qreal ratio = screen->devicePixelRatio();
 		QString name = "";
 #ifdef _WIN32
 		QTextStream fullname(&name);
@@ -4743,8 +4739,10 @@ void OBSBasic::AddProjectorMenuMonitors(QMenu *parent, QObject *target,
 		QString str =
 			QString("%1: %2x%3 @ %4,%5")
 				.arg(name,
-				     QString::number(screenGeometry.width()),
-				     QString::number(screenGeometry.height()),
+				     QString::number(screenGeometry.width() *
+						     ratio),
+				     QString::number(screenGeometry.height() *
+						     ratio),
 				     QString::number(screenGeometry.x()),
 				     QString::number(screenGeometry.y()));
 

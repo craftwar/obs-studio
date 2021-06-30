@@ -77,7 +77,6 @@ struct window_capture {
 
 	struct dc_capture capture;
 
-	bool wgc_supported;
 	bool previously_failed;
 	void *winrt_module;
 	struct winrt_exports exports;
@@ -172,6 +171,8 @@ static void log_settings(struct window_capture *wc, obs_data_t *s)
 	}
 }
 
+extern bool wgc_supported;
+
 static void update_settings(struct window_capture *wc, obs_data_t *s)
 {
 	pthread_mutex_lock(&wc->update_mutex);
@@ -186,7 +187,7 @@ static void update_settings(struct window_capture *wc, obs_data_t *s)
 
 	build_window_strings(window, &wc->class, &wc->title, &wc->executable);
 
-	wc->method = choose_method(method, wc->wgc_supported, wc->class);
+	wc->method = choose_method(method, wgc_supported, wc->class);
 	wc->priority = (enum window_priority)priority;
 	wc->cursor = obs_data_get_bool(s, "cursor");
 	wc->use_wildcards = obs_data_get_bool(s, "use_wildcards");
@@ -234,6 +235,8 @@ static bool load_winrt_imports(struct winrt_exports *exports, void *module,
 	return success;
 }
 
+extern bool graphics_uses_d3d11;
+
 static void *wc_create(obs_data_t *settings, obs_source_t *source)
 {
 	struct window_capture *wc = bzalloc(sizeof(struct window_capture));
@@ -241,18 +244,12 @@ static void *wc_create(obs_data_t *settings, obs_source_t *source)
 
 	pthread_mutex_init(&wc->update_mutex, NULL);
 
-	obs_enter_graphics();
-	const bool uses_d3d11 = gs_get_device_type() == GS_DEVICE_DIRECT3D_11;
-	obs_leave_graphics();
-
-	if (uses_d3d11) {
+	if (graphics_uses_d3d11) {
 		static const char *const module = "libobs-winrt";
 		wc->winrt_module = os_dlopen(module);
-		if (wc->winrt_module &&
-		    load_winrt_imports(&wc->exports, wc->winrt_module,
-				       module) &&
-		    wc->exports.winrt_capture_supported()) {
-			wc->wgc_supported = true;
+		if (wc->winrt_module) {
+			load_winrt_imports(&wc->exports, wc->winrt_module,
+					   module);
 		}
 	}
 
@@ -364,6 +361,9 @@ static bool wc_capture_method_changed(obs_properties_t *props,
 	UNUSED_PARAMETER(p);
 
 	struct window_capture *wc = obs_properties_get_param(props);
+	if (!wc)
+		return false;
+
 	update_settings(wc, settings);
 
 	update_settings_visibility(props, wc);
@@ -380,6 +380,9 @@ static bool wc_window_changed(obs_properties_t *props, obs_property_t *p,
 			      obs_data_t *settings)
 {
 	struct window_capture *wc = obs_properties_get_param(props);
+	if (!wc)
+		return false;
+
 	update_settings(wc, settings);
 
 	update_settings_visibility(props, wc);
@@ -408,7 +411,7 @@ static obs_properties_t *wc_properties(void *data)
 	obs_property_list_add_int(p, TEXT_METHOD_AUTO, METHOD_AUTO);
 	obs_property_list_add_int(p, TEXT_METHOD_BITBLT, METHOD_BITBLT);
 	obs_property_list_add_int(p, TEXT_METHOD_WGC, METHOD_WGC);
-	obs_property_list_item_disable(p, 2, !wc->wgc_supported);
+	obs_property_list_item_disable(p, 2, !wgc_supported);
 	obs_property_set_modified_callback(p, wc_capture_method_changed);
 
 	p = obs_properties_add_list(ppts, "priority", TEXT_MATCH_PRIORITY,
